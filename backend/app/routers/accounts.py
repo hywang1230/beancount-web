@@ -65,8 +65,7 @@ async def get_accounts_by_type():
             "Liabilities": [],
             "Equity": [],
             "Income": [],
-            "Expenses": [],
-            "Other": []
+            "Expenses": []
         }
         
         for account in accounts:
@@ -80,8 +79,6 @@ async def get_accounts_by_type():
                 grouped["Income"].append(account)
             elif account.startswith('Expenses:'):
                 grouped["Expenses"].append(account)
-            else:
-                grouped["Other"].append(account)
         
         # 对每个分组进行排序
         for key in grouped:

@@ -81,8 +81,7 @@ const typeLabels: Record<string, string> = {
   Liabilities: '负债账户',
   Equity: '权益账户',
   Income: '收入账户',
-  Expenses: '支出账户',
-  Other: '其他账户'
+  Expenses: '支出账户'
 }
 
 // 获取类型标签
