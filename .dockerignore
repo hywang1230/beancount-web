@@ -1,0 +1,81 @@
+# Git相关
+.git
+.gitignore
+.github
+
+# 文档和说明
+README.md
+*.md
+docs/
+
+# 开发环境
+.env
+.env.local
+.env.*.local
+
+# Python相关
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# 虚拟环境
+venv/
+env/
+ENV/
+
+# IDE相关
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# 前端相关
+frontend/node_modules/
+frontend/dist/
+frontend/.nuxt/
+frontend/.output/
+frontend/.vscode/
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+*.tmp
+*.temp
+temp/
+
+# 测试相关
+.coverage
+.pytest_cache/
+.tox/
+.nox/
+
+# MacOS
+.DS_Store
+
+# Windows
+Thumbs.db
+ehthumbs.db
+
+# 数据文件（如果不需要打包到镜像中）
+data/*.beancount
+data/*.csv 

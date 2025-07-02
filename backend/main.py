@@ -41,6 +41,11 @@ app.add_middleware(
 data_dir = Path("../data")
 data_dir.mkdir(exist_ok=True)
 
+# 挂载静态文件目录（用于生产环境）
+static_dir = Path("static")
+if static_dir.exists():
+    app.mount("/", StaticFiles(directory="static", html=True), name="static")
+
 # 注册路由
 app.include_router(transactions.router, prefix="/api/transactions", tags=["交易"])
 app.include_router(reports.router, prefix="/api/reports", tags=["报表"])

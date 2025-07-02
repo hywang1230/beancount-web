@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  beancount-web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      # 挂载数据目录到宿主机，持久化数据
+      - ./data:/app/data
+    environment:
+      - PYTHONPATH=/app
+      - DATA_DIR=/app/data
+      # 可以通过环境变量配置其他选项
+      - ALLOWED_ORIGINS=http://localhost:8000
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # 可选：Nginx反向代理（生产环境推荐）
+  # nginx:
+  #   image: nginx:alpine
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #   volumes:
+  #     - ./nginx.conf:/etc/nginx/nginx.conf:ro
+  #     - ./ssl:/etc/nginx/ssl:ro
+  #   depends_on:
+  #     - beancount-web
+  #   restart: unless-stopped 
