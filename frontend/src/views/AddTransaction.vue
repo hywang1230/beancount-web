@@ -102,10 +102,10 @@
                     :class="{ 
                       'negative-amount': posting.computedAmount && posting.computedAmount < 0,
                       'formula-input': isFormula(posting.amount),
-                      'empty-amount': posting.amount.trim() === '',
-                      'invalid-amount': posting.amount.trim() !== '' && posting.computedAmount === undefined
+                      'empty-amount': !posting.amount || posting.amount.trim() === '',
+                      'invalid-amount': posting.amount && posting.amount.trim() !== '' && posting.computedAmount === undefined
                     }"
-                    @input="onAmountInput(posting, $event)"
+                    @input="(value: string) => onAmountInput(posting, value)"
                     @blur="onAmountBlur(posting)"
                     @keydown="onAmountKeydown(posting, $event)"
                   >
@@ -233,13 +233,10 @@ onMounted(async () => {
 // 加载所有账户
 const loadAllAccounts = async () => {
   try {
-    console.log('开始加载账户列表...')
     const response = await getAllAccounts()
-    console.log('API响应:', response)
     
     // getAllAccounts 直接返回字符串数组，不是包装在data中
     const accounts = response.data || response || []
-    console.log('解析的账户数据:', accounts)
     
     allAccounts.value = Array.isArray(accounts) ? accounts : []
     accountSuggestions.value = allAccounts.value // 显示所有账户
@@ -520,7 +517,8 @@ const onAmountKeydown = (posting: Posting, event: KeyboardEvent) => {
 
 // 检查是否为公式
 const isFormula = (value: string): boolean => {
-  if (!value || value.trim() === '') return false
+  // 添加类型检查
+  if (typeof value !== 'string' || !value || value.trim() === '') return false
   // 包含运算符且不只是负号的情况
   return /[+\-*/()]/.test(value) && !/^-?[\d.]*$/.test(value)
 }
@@ -547,24 +545,25 @@ const evaluateFormula = (formula: string): number | null => {
 }
 
 // 金额输入处理
-const onAmountInput = (posting: Posting, event: Event) => {
-  const target = event.target as HTMLInputElement
-  let value = target.value.trim()
+const onAmountInput = (posting: Posting, value: string | number) => {
+  // 安全地将输入值转换为字符串
+  const stringValue = value?.toString() || ''
+  const trimmedValue = stringValue.trim()
   
-  posting.amount = value
+  posting.amount = trimmedValue
   
-  if (value === '') {
+  if (trimmedValue === '') {
     posting.computedAmount = undefined
     return
   }
   
-  if (isFormula(value)) {
+  if (isFormula(trimmedValue)) {
     // 如果是公式，尝试计算结果
-    const result = evaluateFormula(value)
+    const result = evaluateFormula(trimmedValue)
     posting.computedAmount = result || undefined
   } else {
     // 如果是普通数字，直接解析
-    const numValue = parseFloat(value)
+    const numValue = parseFloat(trimmedValue)
     posting.computedAmount = isNaN(numValue) ? undefined : numValue
   }
 }

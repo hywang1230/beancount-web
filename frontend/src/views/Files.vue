@@ -55,7 +55,7 @@
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <el-button
-              type="text"
+              link
               size="small"
               @click="validateFile(row.name)"
               :loading="validatingFile === row.name"
@@ -68,7 +68,7 @@
         <el-table-column label="操作" width="200">
           <template #default="{ row }">
             <el-button
-              type="text"
+              link
               size="small"
               @click="viewFile(row.name)"
             >
@@ -76,7 +76,7 @@
             </el-button>
             
             <el-button
-              type="text"
+              link
               size="small"
               @click="editFile(row.name)"
             >
@@ -84,7 +84,7 @@
             </el-button>
             
             <el-button
-              type="text"
+              link
               size="small"
               @click="downloadFile(row.name)"
             >
@@ -93,7 +93,7 @@
             
             <el-button
               v-if="!row.is_main"
-              type="text"
+              link
               size="small"
               @click="deleteFile(row.name)"
               style="color: #f56c6c"
@@ -187,9 +187,12 @@ const loadFiles = async () => {
   
   try {
     const result = await getFileList()
-    files.value = result.data.files
+    // 后端直接返回FileListResponse，不是包装在data字段中
+    const fileData = result.data || result || {}
+    files.value = fileData.files || []
   } catch (error) {
     console.error('加载文件列表失败:', error)
+    files.value = []
   } finally {
     loading.value = false
   }
@@ -230,7 +233,9 @@ const viewFile = async (filename: string) => {
     const result = await getFileContent(filename)
     
     currentFileName.value = filename
-    fileContent.value = result.data.content
+    // 后端直接返回内容对象，不是包装在data字段中
+    const contentData = result.data || result || {}
+    fileContent.value = contentData.content || ''
     dialogMode.value = 'view'
     dialogTitle.value = `查看文件: ${filename}`
     dialogVisible.value = true
@@ -246,7 +251,9 @@ const editFile = async (filename: string) => {
     const result = await getFileContent(filename)
     
     currentFileName.value = filename
-    fileContent.value = result.data.content
+    // 后端直接返回内容对象，不是包装在data字段中
+    const contentData = result.data || result || {}
+    fileContent.value = contentData.content || ''
     dialogMode.value = 'edit'
     dialogTitle.value = `编辑文件: ${filename}`
     dialogVisible.value = true
@@ -277,7 +284,11 @@ const downloadFile = async (filename: string) => {
   try {
     const result = await getFileContent(filename)
     
-    const blob = new Blob([result.data.content], { type: 'text/plain' })
+    // 后端直接返回内容对象，不是包装在data字段中
+    const contentData = result.data || result || {}
+    const content = contentData.content || ''
+    
+    const blob = new Blob([content], { type: 'text/plain' })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     
@@ -324,14 +335,17 @@ const validateFile = async (filename: string) => {
   try {
     const result = await validateFileApi(filename)
     
-    if (result.data.valid) {
-      ElMessage.success(`文件验证通过，包含 ${result.data.entries_count} 条记录`)
+    // 后端直接返回验证结果对象，不是包装在data字段中
+    const validationData = result.data || result || {}
+    
+    if (validationData.valid) {
+      ElMessage.success(`文件验证通过，包含 ${validationData.entries_count || 0} 条记录`)
     } else {
-      ElMessage.warning(`文件验证失败，发现 ${result.data.errors_count} 个错误`)
+      ElMessage.warning(`文件验证失败，发现 ${validationData.errors_count || 0} 个错误`)
       
-      if (result.data.errors.length > 0) {
+      if (validationData.errors && validationData.errors.length > 0) {
         ElMessageBox.alert(
-          result.data.errors.join('\n'),
+          validationData.errors.join('\n'),
           '验证错误详情',
           { type: 'warning' }
         )

@@ -105,7 +105,13 @@
         
         <el-table-column prop="flag" label="标记" width="80">
           <template #default="{ row }">
-            <el-tag :type="getFlagType(row.flag)">{{ row.flag }}</el-tag>
+            <el-tag 
+              v-if="getFlagType(row.flag)"
+              :type="getFlagType(row.flag)"
+            >
+              {{ row.flag }}
+            </el-tag>
+            <el-tag v-else>{{ row.flag }}</el-tag>
           </template>
         </el-table-column>
         
@@ -197,7 +203,7 @@ const getFlagType = (flag: string) => {
     case '*': return 'success'
     case '!': return 'warning'
     case 'txn': return 'info'
-    default: return ''
+    default: return undefined
   }
 }
 
@@ -240,11 +246,15 @@ const searchTransactions = async () => {
     })
     
     const result = await getTransactions(params)
-      transactions.value = result.data
-  totalCount.value = result.data.length
+    // 后端直接返回数组，不是包装在data字段中
+    const transactionData = result.data || result || []
+    transactions.value = Array.isArray(transactionData) ? transactionData : []
+    totalCount.value = transactions.value.length
     
   } catch (error) {
     console.error('搜索交易失败:', error)
+    transactions.value = []
+    totalCount.value = 0
   } finally {
     loading.value = false
   }
@@ -279,9 +289,12 @@ const handleCurrentChange = (val: number) => {
 const loadAccounts = async () => {
   try {
     const accountsResult = await getAccounts()
-  accounts.value = accountsResult.data
+    // 后端直接返回数组，不是包装在data字段中
+    const accountData = accountsResult.data || accountsResult || []
+    accounts.value = Array.isArray(accountData) ? accountData : []
   } catch (error) {
     console.error('加载账户列表失败:', error)
+    accounts.value = []
   }
 }
 

@@ -154,7 +154,9 @@ const loadAccounts = async () => {
   
   try {
     const response = await getAccountsByType()
-  accountGroups.value = response.data
+    // 后端直接返回分组对象，不是包装在data字段中
+    const accountData = response.data || response || {}
+    accountGroups.value = typeof accountData === 'object' && accountData !== null ? accountData : {}
     
     // 设置默认激活的类型
     const types = Object.keys(accountGroups.value)
@@ -164,6 +166,7 @@ const loadAccounts = async () => {
     
   } catch (error) {
     console.error('加载账户失败:', error)
+    accountGroups.value = {}
   } finally {
     loading.value = false
   }
