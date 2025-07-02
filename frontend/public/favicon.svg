@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#4CAF50;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2E7D32;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- 外圆 -->
+  <circle cx="16" cy="16" r="15" fill="url(#grad1)" stroke="#1B5E20" stroke-width="1"/>
+  
+  <!-- 内圆框 -->
+  <circle cx="16" cy="16" r="11" fill="none" stroke="#ffffff" stroke-width="1.5"/>
+  
+  <!-- ¥ 符号 -->
+  <g fill="#ffffff" stroke="#ffffff" stroke-width="0.5">
+    <!-- Y的上半部分 -->
+    <line x1="12" y1="10" x2="16" y2="14" stroke-width="2" stroke-linecap="round"/>
+    <line x1="20" y1="10" x2="16" y2="14" stroke-width="2" stroke-linecap="round"/>
+    <!-- Y的下半部分 -->
+    <line x1="16" y1="14" x2="16" y2="22" stroke-width="2" stroke-linecap="round"/>
+    <!-- 横线 -->
+    <line x1="13" y1="16" x2="19" y2="16" stroke-width="1.5" stroke-linecap="round"/>
+    <line x1="13" y1="18" x2="19" y2="18" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+</svg> 

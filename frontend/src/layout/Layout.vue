@@ -48,22 +48,6 @@
             <el-breadcrumb-item>{{ currentPageTitle }}</el-breadcrumb-item>
           </el-breadcrumb>
         </div>
-        
-        <div class="header-right">
-          <el-dropdown>
-            <span class="user-dropdown">
-              <el-icon><Avatar /></el-icon>
-              <span>用户</span>
-              <el-icon><ArrowDown /></el-icon>
-            </span>
-            <template #dropdown>
-              <el-dropdown-menu>
-                <el-dropdown-item>个人设置</el-dropdown-item>
-                <el-dropdown-item divided>退出登录</el-dropdown-item>
-              </el-dropdown-menu>
-            </template>
-          </el-dropdown>
-        </div>
       </el-header>
       
       <!-- 主内容 -->
@@ -81,8 +65,6 @@ import {
   Wallet,
   Expand,
   Fold,
-  Avatar,
-  ArrowDown,
   DataAnalysis,
   Money,
   Plus,
@@ -156,19 +138,6 @@ const toggleCollapse = () => {
 }
 
 .collapse-btn {
-  color: #606266;
-}
-
-.header-right {
-  display: flex;
-  align-items: center;
-}
-
-.user-dropdown {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
   color: #606266;
 }
 
