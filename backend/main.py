@@ -59,8 +59,12 @@ async def root():
     return {"message": "Beancount Web API", "version": "1.0.0"}
 
 if static_dir.exists():
-    # 挂载静态文件
-    app.mount("/assets", StaticFiles(directory="static/assets"), name="assets")
+    # 挂载静态文件目录（如果存在的话）
+    assets_dirs = ["js", "css", "img", "fonts", "media"]
+    for asset_dir in assets_dirs:
+        asset_path = static_dir / asset_dir
+        if asset_path.exists():
+            app.mount(f"/{asset_dir}", StaticFiles(directory=f"static/{asset_dir}"), name=asset_dir)
     
     # 处理SPA路由回退 - 必须在所有其他路由之后
     @app.get("/{full_path:path}")
