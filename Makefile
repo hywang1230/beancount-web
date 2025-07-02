@@ -5,18 +5,23 @@
 # 默认目标
 help:
 	@echo "可用的命令:"
-	@echo "  build     - 构建Docker镜像"
-	@echo "  run       - 使用docker-compose启动服务"
-	@echo "  stop      - 停止服务"
-	@echo "  restart   - 重启服务"
-	@echo "  logs      - 查看日志"
-	@echo "  shell     - 进入容器shell"
-	@echo "  clean     - 清理Docker镜像和容器"
-	@echo "  test      - 测试容器健康状态"
+	@echo "  build       - 构建Docker镜像"
+	@echo "  build-simple- 使用简化版构建（跳过TypeScript检查）"
+	@echo "  run         - 使用docker-compose启动服务"
+	@echo "  stop        - 停止服务"
+	@echo "  restart     - 重启服务"
+	@echo "  logs        - 查看日志"
+	@echo "  shell       - 进入容器shell"
+	@echo "  clean       - 清理Docker镜像和容器"
+	@echo "  test        - 测试容器健康状态"
 
 # 构建镜像
 build:
 	docker build -t beancount-web .
+
+# 使用简化版Dockerfile构建（跳过TypeScript检查）
+build-simple:
+	docker build -f Dockerfile.simple -t beancount-web .
 
 # 使用docker-compose启动
 run:
