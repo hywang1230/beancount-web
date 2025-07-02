@@ -3,16 +3,60 @@
 .gitignore
 .github
 
-# 文档和说明
-README.md
-DOCKER.md
-*.md
-docs/
+# 依赖目录
+**/node_modules
+**/__pycache__
+**/.pytest_cache
+venv/
+env/
 
-# 开发环境
+# 构建产物
+frontend/dist
+backend/static
+
+# IDE配置
+.vscode
+.idea
+*.swp
+*.swo
+
+# 日志文件
+*.log
+logs/
+
+# 临时文件
+.DS_Store
+Thumbs.db
+.tmp
+.temp
+
+# 环境配置文件
 .env
 .env.local
-.env.*.local
+.env.production
+
+# 测试覆盖率
+coverage/
+.coverage
+*.cover
+
+# 文档
+README.md
+DOCKER.md
+OPTIMIZATION.md
+
+# 脚本文件
+start.sh
+start.bat
+Makefile
+
+# Docker相关
+docker-compose*.yml
+Dockerfile*
+
+# 文档和说明
+*.md
+docs/
 
 # Python相关
 __pycache__/
@@ -54,28 +98,6 @@ frontend/dist/
 frontend/.nuxt/
 frontend/.output/
 frontend/.vscode/
-
-# 日志文件
-*.log
-logs/
-
-# 临时文件
-*.tmp
-*.temp
-temp/
-
-# 测试相关
-.coverage
-.pytest_cache/
-.tox/
-.nox/
-
-# MacOS
-.DS_Store
-
-# Windows
-Thumbs.db
-ehthumbs.db
 
 # 数据文件（如果不需要打包到镜像中）
 data/*.beancount
@@ -124,23 +146,6 @@ logs/
 # 操作系统
 .DS_Store
 Thumbs.db
-
-# 临时文件
-*.tmp
-*.temp
-tmp/
-temp/
-
-# Docker相关
-Dockerfile*
-docker-compose*.yml
-.dockerignore
-
-# CI/CD
-.github/
-Makefile
-start.sh
-start.bat
 
 # 备份文件
 *.bak

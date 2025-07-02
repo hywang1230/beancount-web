@@ -1,128 +1,179 @@
-# Docker 部署说明
+# Docker部署指南
 
-本项目支持通过Docker进行容器化部署，包含完整的前端和后端服务。
+本文档介绍如何使用Docker部署Beancount Web记账系统。
 
-## 前置要求
+## 快速开始
 
-1. 安装 Docker 和 Docker Compose
-2. 如果要推送到DockerHub，需要配置GitHub Secrets
-
-## GitHub Secrets 配置
-
-为了使GitHub Actions能够推送镜像到DockerHub，需要在GitHub仓库中配置以下Secrets：
-
-1. 进入GitHub仓库 -> Settings -> Secrets and variables -> Actions
-2. 添加以下Secrets：
-   - `DOCKERHUB_USERNAME`: 你的DockerHub用户名
-   - `DOCKERHUB_TOKEN`: 你的DockerHub访问令牌（在DockerHub -> Account Settings -> Security -> Access Tokens中创建）
-
-## 本地构建和运行
-
-### 使用Docker Compose（推荐）
+### 使用Docker Compose
 
 ```bash
-# 构建并启动服务
+# 克隆项目
+git clone <your-repo>
+cd beancount-web
+
+# 使用docker-compose启动
 docker-compose up -d
+
+# 查看服务状态
+docker-compose ps
 
 # 查看日志
 docker-compose logs -f
-
-# 停止服务
-docker-compose down
 ```
 
-### 使用Docker命令
+访问 http://localhost:8000 即可使用系统。
+
+### 使用预构建镜像
 
 ```bash
-# 构建镜像
-docker build -t beancount-web .
+# 拉取最新镜像
+docker pull <your-dockerhub-username>/beancount-web:latest
 
 # 运行容器
 docker run -d \
   --name beancount-web \
   -p 8000:8000 \
   -v $(pwd)/data:/app/data \
-  beancount-web
+  <your-dockerhub-username>/beancount-web:latest
 ```
 
-## 访问应用
+## 生产环境部署
 
-- 应用地址: http://localhost:8000
-- API文档: http://localhost:8000/docs
-- 健康检查: http://localhost:8000/health
+### 环境变量配置
+
+创建 `.env` 文件：
+
+```bash
+# DockerHub用户名
+DOCKERHUB_USERNAME=your-username
+
+# 允许的跨域源
+ALLOWED_ORIGINS=https://yourdomain.com,https://www.yourdomain.com
+```
+
+### 使用生产配置
+
+```bash
+# 使用生产环境配置
+docker-compose -f docker-compose.prod.yml up -d
+```
+
+## GitHub Actions自动化部署
+
+### 设置DockerHub Secrets
+
+在GitHub仓库的Settings -> Secrets and variables -> Actions中添加以下secrets：
+
+1. `DOCKERHUB_USERNAME`: 你的DockerHub用户名
+2. `DOCKERHUB_TOKEN`: 你的DockerHub访问令牌
+
+#### 创建DockerHub访问令牌
+
+1. 登录 [DockerHub](https://hub.docker.com)
+2. 点击右上角头像 -> Account Settings
+3. 选择 Security -> New Access Token
+4. 输入令牌名称（如：github-actions）
+5. 选择权限：Read, Write, Delete
+6. 点击Generate生成令牌
+7. 复制令牌并添加到GitHub Secrets
+
+### 自动构建触发条件
+
+镜像会在以下情况自动构建和推送：
+
+- 推送到 `main` 或 `develop` 分支
+- 创建版本标签（如 `v1.0.0`）
+
+### 镜像标签规则
+
+- `latest`: main分支的最新构建
+- `develop`: develop分支的最新构建
+- `v1.0.0`: 对应版本标签
+- `1.0`: 主要版本号
+- `1`: 大版本号
 
 ## 数据持久化
 
-应用的数据文件存储在 `./data` 目录中，通过Docker卷挂载到容器的 `/app/data` 目录。
+### 数据目录
 
-## 环境变量配置
+容器中的数据存储在 `/app/data` 目录，建议挂载到宿主机：
 
-可以通过环境变量配置应用：
+```bash
+-v /path/to/your/data:/app/data
+```
 
-- `PYTHONPATH`: Python路径 (默认: /app)
-- `DATA_DIR`: 数据目录路径 (默认: /app/data)
-- `ALLOWED_ORIGINS`: 允许的CORS源地址，多个地址用逗号分隔
+### 备份数据
 
-## 生产部署建议
+```bash
+# 备份数据目录
+docker exec beancount-web tar czf /tmp/backup.tar.gz /app/data
 
-1. 使用Nginx作为反向代理
-2. 配置SSL证书
-3. 设置适当的环境变量
-4. 定期备份数据目录
-5. 监控容器健康状态
+# 从容器复制备份文件
+docker cp beancount-web:/tmp/backup.tar.gz ./backup-$(date +%Y%m%d).tar.gz
+```
 
-## CI/CD 流程
+## 健康检查
 
-当代码推送到 `main` 或 `develop` 分支时，GitHub Actions会自动：
+容器包含健康检查，可以监控服务状态：
 
-1. 构建Docker镜像
-2. 推送到DockerHub
-3. 支持多平台构建 (linux/amd64, linux/arm64)
+```bash
+# 查看健康状态
+docker inspect beancount-web | grep -A5 Health
 
-镜像标签规则：
-- `latest`: main分支的最新代码
-- `main`: main分支
-- `develop`: develop分支  
-- `v1.0.0`: 版本标签
+# 手动检查健康状态
+curl http://localhost:8000/health
+```
 
 ## 故障排除
 
-### 构建失败
+### 查看日志
 
-#### 通用解决方案
-- 检查依赖是否正确安装
-- 查看构建日志中的错误信息
-- 确保Docker daemon正在运行
+```bash
+# Docker Compose
+docker-compose logs -f beancount-web
 
-#### ARM64平台（Apple Silicon Mac）专用解决方案
-如果遇到构建问题，按以下顺序尝试：
+# Docker直接运行
+docker logs -f beancount-web
+```
 
-1. **快速构建**（推荐首选）:
-   ```bash
-   make build-fast
-   ```
+### 进入容器调试
 
-2. **Debian版本**（如果快速构建功能不够）:
-   ```bash
-   make build-debian
-   ```
+```bash
+docker exec -it beancount-web /bin/bash
+```
 
-3. **智能Alpine版本**（完整功能）:
-   ```bash
-   make build
-   ```
+### 常见问题
 
-#### 常见错误解决方案
+1. **端口冲突**: 确保8000端口未被其他服务占用
+2. **权限问题**: 确保数据目录有正确的读写权限
+3. **内存不足**: 生产环境建议至少512MB内存
 
-- **wheel构建失败**: 使用 `build-fast` 跳过pandas等大型依赖
-- **pandas/beancount编译超时**: 使用 `build-debian` 或智能安装脚本会自动降级版本
-- **TypeScript构建失败**: 智能构建会自动回退到vite构建
+## 性能优化
 
-### 容器启动失败
-- 检查端口是否被占用
-- 验证数据目录权限
-- 查看容器日志: `docker logs beancount-web`
+### 资源限制
 
-### 推送到DockerHub失败
-- 确认GitHub Secrets配置正确
-- 检查DockerHub访问令牌权限 
+```yaml
+deploy:
+  resources:
+    limits:
+      memory: 512M
+      cpus: '0.5'
+    reservations:
+      memory: 256M
+```
+
+### 使用多阶段构建
+
+Dockerfile已使用多阶段构建优化镜像大小：
+- 构建阶段：Node.js环境构建前端
+- 运行阶段：Python精简环境运行应用
+
+## 安全建议
+
+1. **不要在镜像中包含敏感信息**
+2. **定期更新基础镜像**
+3. **使用非root用户运行容器**
+4. **限制容器权限**
+5. **定期扫描镜像安全漏洞**
+
+GitHub Actions会自动进行安全扫描，只报告高危和严重漏洞。 

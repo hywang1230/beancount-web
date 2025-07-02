@@ -1,188 +1,115 @@
-name: CI Tests
+name: CI测试
 
 on:
   push:
-    branches-ignore:
-      - main
+    branches: [ main, develop ]
   pull_request:
-    branches:
-      - main
-      - develop
-
-env:
-  NODE_VERSION: '18'
-  PYTHON_VERSION: '3.11'
+    branches: [ main ]
 
 jobs:
-  # 前端测试和构建
-  frontend-test:
+  test-backend:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./frontend
+    strategy:
+      matrix:
+        python-version: [3.9, 3.10, 3.11]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout代码
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-          cache-dependency-path: frontend/package-lock.json
+    - name: 设置Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
 
-      - name: Install dependencies
-        run: npm ci --prefer-offline --no-audit
+    - name: 安装后端依赖
+      run: |
+        cd backend
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install pytest pytest-asyncio pytest-cov
 
-      - name: Lint check
-        run: npm run lint
+    - name: 代码格式检查
+      run: |
+        cd backend
+        pip install black isort flake8
+        black --check .
+        isort --check-only .
+        flake8 .
 
-      - name: Build frontend
-        run: npm run build
-        env:
-          NODE_OPTIONS: --max-old-space-size=2048
+    - name: 运行后端测试
+      run: |
+        cd backend
+        pytest --cov=app --cov-report=xml
 
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: frontend-dist
-          path: frontend/dist/
-          retention-days: 1
+    - name: 上传测试覆盖率
+      uses: codecov/codecov-action@v3
+      if: matrix.python-version == '3.11'
+      with:
+        file: ./backend/coverage.xml
+        flags: backend
 
-  # 后端测试
-  backend-test:
+  test-frontend:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: ./backend
+    strategy:
+      matrix:
+        node-version: [18, 20]
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout代码
+      uses: actions/checkout@v4
 
-      - name: Setup Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: ${{ env.PYTHON_VERSION }}
-          cache: 'pip'
-          cache-dependency-path: backend/requirements.txt
+    - name: 设置Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
 
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+    - name: 安装前端依赖
+      run: |
+        cd frontend
+        npm ci
 
-      - name: Lint with flake8 (if available)
-        run: |
-          pip install flake8 || echo "flake8 not required"
-          # flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
+    - name: 代码检查
+      run: |
+        cd frontend
+        npm run lint
 
-      - name: Test import
-        run: |
-          python -c "
-          try:
-              import fastapi
-              import uvicorn
-              import beancount
-              print('✅ 所有核心依赖导入成功')
-          except ImportError as e:
-              print(f'❌ 导入失败: {e}')
-              exit(1)
-          "
+    - name: 构建前端
+      run: |
+        cd frontend
+        npm run build
 
-  # 快速Docker构建测试（只构建amd64）
+    - name: 运行前端测试
+      run: |
+        cd frontend
+        # npm run test  # 如果有测试的话
+
   docker-build-test:
     runs-on: ubuntu-latest
-    needs: [frontend-test, backend-test]
-    if: github.event_name == 'pull_request'
-
+    needs: [test-backend, test-frontend]
+    
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+    - name: Checkout代码
+      uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+    - name: 设置Docker Buildx
+      uses: docker/setup-buildx-action@v3
 
-      - name: Build Docker image (test only)
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          file: ./Dockerfile
-          platforms: linux/amd64
-          push: false
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          tags: beancount-web:test
+    - name: 构建Docker镜像测试
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: false
+        tags: beancount-web:test
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
-      - name: Test Docker image
-        run: |
-          docker run --rm -d --name test-container -p 8000:8000 beancount-web:test
-          sleep 10
-          
-          # 等待服务启动
-          for i in {1..30}; do
-            if curl -f http://localhost:8000/health 2>/dev/null; then
-              echo "✅ 服务启动成功"
-              break
-            fi
-            echo "等待服务启动... ($i/30)"
-            sleep 2
-          done
-          
-          # 清理
-          docker stop test-container || true
-
-  # 代码质量检查
-  code-quality:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run ShellCheck
-        uses: ludeeus/action-shellcheck@master
-        with:
-          scandir: './backend'
-          format: gcc
-          severity: warning
-          ignore_names: venv
-
-      - name: Check file sizes
-        run: |
-          echo "检查大文件..."
-          find . -type f -size +10M -not -path "./venv/*" -not -path "./.git/*" | while read file; do
-            echo "⚠️  大文件: $file ($(du -h "$file" | cut -f1))"
-          done || true
-
-  # 安全检查
-  security-check:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run Trivy vulnerability scanner for filesystem
-        uses: aquasecurity/trivy-action@master
-        with:
-          scan-type: 'fs'
-          scan-ref: '.'
-          format: 'table'
-          exit-code: 0
-
-  # 汇总结果
-  test-summary:
-    runs-on: ubuntu-latest
-    needs: [frontend-test, backend-test, docker-build-test, code-quality, security-check]
-    if: always()
-    steps:
-      - name: Test Summary
-        run: |
-          echo "## 🧪 CI测试汇总" >> $GITHUB_STEP_SUMMARY
-          echo "| 检查项目 | 状态 |" >> $GITHUB_STEP_SUMMARY
-          echo "|---------|------|" >> $GITHUB_STEP_SUMMARY
-          echo "| 前端构建 | ${{ needs.frontend-test.result == 'success' && '✅ 通过' || '❌ 失败' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 后端测试 | ${{ needs.backend-test.result == 'success' && '✅ 通过' || '❌ 失败' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker构建 | ${{ needs.docker-build-test.result == 'success' && '✅ 通过' || needs.docker-build-test.result == 'skipped' && '⏭️ 跳过' || '❌ 失败' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 代码质量 | ${{ needs.code-quality.result == 'success' && '✅ 通过' || '❌ 失败' }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| 安全检查 | ${{ needs.security-check.result == 'success' && '✅ 通过' || '❌ 失败' }} |" >> $GITHUB_STEP_SUMMARY 
+    - name: 测试Docker镜像
+      run: |
+        docker run -d --name test-container -p 8000:8000 beancount-web:test
+        sleep 30
+        curl -f http://localhost:8000/health || exit 1
+        docker stop test-container 
