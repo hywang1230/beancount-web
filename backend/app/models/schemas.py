@@ -51,6 +51,7 @@ class TransactionFilter(BaseModel):
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     account: Optional[str] = None
+    payee: Optional[str] = None
     narration: Optional[str] = None
     min_amount: Optional[Decimal] = None
     max_amount: Optional[Decimal] = None

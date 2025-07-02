@@ -131,8 +131,14 @@
       
       <el-table :data="recentTransactions" v-loading="loading">
         <el-table-column prop="date" label="日期" width="120" />
-        <el-table-column prop="narration" label="摘要" min-width="200" />
-        <el-table-column label="账户" min-width="180">
+        <el-table-column prop="payee" label="收付方" width="140">
+          <template #default="{ row }">
+            <span v-if="row.payee" class="payee-text">{{ row.payee }}</span>
+            <span v-else class="no-payee">-</span>
+          </template>
+        </el-table-column>
+        <el-table-column prop="narration" label="摘要" min-width="180" />
+        <el-table-column label="账户" min-width="160">
           <template #default="{ row }">
             <div v-for="posting in row.postings" :key="posting.account">
               {{ posting.account }}
@@ -201,17 +207,19 @@ const trendsOption = ref<any>(null)
 const expensesPieOption = ref<any>(null)
 
 // 格式化货币
-const formatCurrency = (amount: number) => {
+const formatCurrency = (amount: string | number) => {
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
   return new Intl.NumberFormat('zh-CN', {
     style: 'currency',
     currency: 'CNY'
-  }).format(amount)
+  }).format(numAmount)
 }
 
 // 获取金额样式类
-const getAmountClass = (amount: number) => {
-  if (amount > 0) return 'amount-positive'
-  if (amount < 0) return 'amount-negative'
+const getAmountClass = (amount: string | number) => {
+  const numAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+  if (numAmount > 0) return 'amount-positive'
+  if (numAmount < 0) return 'amount-negative'
   return 'amount-zero'
 }
 
@@ -237,7 +245,7 @@ const loadData = async () => {
     
     balanceSheet.value = balanceRes
     incomeStatement.value = incomeRes
-    recentTransactions.value = recentRes.data
+    recentTransactions.value = (recentRes as any) || []
     trendsData.value = trendsRes
     
     // 生成图表配置
@@ -404,5 +412,29 @@ onMounted(() => {
 
 .chart-container {
   min-height: 300px;
+}
+
+.amount-positive {
+  color: #67c23a;
+  font-weight: 500;
+}
+
+.amount-negative {
+  color: #f56c6c;
+  font-weight: 500;
+}
+
+.amount-zero {
+  color: #909399;
+}
+
+.payee-text {
+  color: #606266;
+  font-weight: 500;
+}
+
+.no-payee {
+  color: #c0c4cc;
+  font-style: italic;
 }
 </style> 

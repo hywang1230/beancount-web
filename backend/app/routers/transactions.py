@@ -12,6 +12,7 @@ async def get_transactions(
     start_date: Optional[date] = Query(None, description="开始日期"),
     end_date: Optional[date] = Query(None, description="结束日期"),
     account: Optional[str] = Query(None, description="账户筛选"),
+    payee: Optional[str] = Query(None, description="收付方筛选"),
     narration: Optional[str] = Query(None, description="摘要筛选"),
     limit: int = Query(100, description="返回条数限制", le=1000)
 ):
@@ -21,6 +22,7 @@ async def get_transactions(
             start_date=start_date,
             end_date=end_date,
             account=account,
+            payee=payee,
             narration=narration
         )
         

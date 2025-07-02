@@ -50,6 +50,8 @@ class BeancountService:
                         continue
                     if filter_params.end_date and entry.date > filter_params.end_date:
                         continue
+                    if filter_params.payee and (not entry.payee or filter_params.payee.lower() not in entry.payee.lower()):
+                        continue
                     if filter_params.narration and filter_params.narration.lower() not in entry.narration.lower():
                         continue
                     if filter_params.account:

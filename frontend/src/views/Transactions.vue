@@ -35,6 +35,15 @@
           </el-select>
         </el-form-item>
         
+        <el-form-item label="收付方">
+          <el-input
+            v-model="filterForm.payee"
+            placeholder="搜索收付方"
+            clearable
+            style="width: 200px"
+          />
+        </el-form-item>
+        
         <el-form-item label="摘要">
           <el-input
             v-model="filterForm.narration"
@@ -179,6 +188,7 @@ const filterForm = ref({
   start_date: '',
   end_date: '',
   account: '',
+  payee: '',
   narration: ''
 })
 
@@ -267,6 +277,7 @@ const resetFilter = () => {
     start_date: '',
     end_date: '',
     account: '',
+    payee: '',
     narration: ''
   }
   currentPage.value = 1

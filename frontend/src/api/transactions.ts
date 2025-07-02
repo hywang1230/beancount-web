@@ -12,7 +12,7 @@ export interface Transaction {
 
 export interface Posting {
   account: string
-  amount?: number
+  amount?: string | number
   currency?: string
   price?: any
 }
@@ -21,6 +21,7 @@ export interface TransactionFilter {
   start_date?: string
   end_date?: string
   account?: string
+  payee?: string
   narration?: string
   limit?: number
 }
