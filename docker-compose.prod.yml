@@ -10,6 +10,7 @@ services:
     environment:
       - PYTHONPATH=/app
       - PORT=8000
+      - DATA_DIR=/app/data
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-*}
     restart: unless-stopped
     healthcheck:

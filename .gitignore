@@ -59,6 +59,7 @@ Thumbs.db
 
 # Data files (except examples)
 data/*.beancount
+data/*.bean
 !data/main.beancount
 
 # Cache and logs

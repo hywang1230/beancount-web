@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     debug: bool = True
     
     # 数据目录配置
-    data_dir: Path = Path("../data")
+    data_dir: Path = Path(os.getenv("DATA_DIR", "../data"))
     default_beancount_file: str = "main.beancount"
     
     # API配置

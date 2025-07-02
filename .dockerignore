@@ -101,6 +101,7 @@ frontend/.vscode/
 
 # 数据文件（如果不需要打包到镜像中）
 data/*.beancount
+data/*.bean
 data/*.csv
 
 # 开发工具配置

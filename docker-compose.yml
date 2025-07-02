@@ -9,10 +9,10 @@ services:
       - "8000:8000"
     volumes:
       - ./data:/app/data
-      - ./backend/data:/app/data  # 兼容性映射
     environment:
       - PYTHONPATH=/app
       - PORT=8000
+      - DATA_DIR=/app/data
       - ALLOWED_ORIGINS=http://localhost:8000
     restart: unless-stopped
     healthcheck:

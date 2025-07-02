@@ -8,7 +8,7 @@
         :before-upload="beforeUpload"
         :http-request="handleUpload"
         :show-file-list="false"
-        accept=".beancount"
+        accept=".beancount,.bean"
       >
         <el-button type="primary">
           <el-icon><Upload /></el-icon>
@@ -200,10 +200,10 @@ const loadFiles = async () => {
 
 // 上传前验证
 const beforeUpload = (file: File) => {
-  const isValidType = file.name.endsWith('.beancount')
+  const isValidType = file.name.endsWith('.beancount') || file.name.endsWith('.bean')
   
   if (!isValidType) {
-    ElMessage.error('只能上传 .beancount 文件')
+    ElMessage.error('只能上传 Beancount 文件(.bean/.beancount)')
     return false
   }
   

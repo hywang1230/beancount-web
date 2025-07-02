@@ -6,6 +6,7 @@ from datetime import datetime
 
 from app.core.config import settings
 from app.models.schemas import FileInfo, FileListResponse
+from app.utils.file_utils import is_beancount_file, get_beancount_files, get_backup_filename
 
 router = APIRouter()
 
@@ -17,17 +18,22 @@ async def list_files():
         files = []
         
         if data_dir.exists():
-            for file_path in data_dir.glob("*.beancount"):
-                if file_path.is_file():
-                    stat = file_path.stat()
-                    file_info = FileInfo(
-                        name=file_path.name,
-                        path=str(file_path.relative_to(data_dir)),
-                        size=stat.st_size,
-                        modified=datetime.fromtimestamp(stat.st_mtime),
-                        is_main=(file_path.name == settings.default_beancount_file)
-                    )
-                    files.append(file_info)
+            # 使用工具函数获取所有Beancount文件
+            beancount_files = get_beancount_files(data_dir)
+            for file_path in beancount_files:
+                stat = file_path.stat()
+                file_info = FileInfo(
+                    name=file_path.name,
+                    path=str(file_path.relative_to(data_dir)),
+                    size=stat.st_size,
+                    modified=datetime.fromtimestamp(stat.st_mtime),
+                    is_main=(file_path.name == settings.default_beancount_file)
+                )
+                files.append(file_info)
+        
+        # 去重（如果有重复的文件）
+        unique_files = {f.name: f for f in files}.values()
+        files = list(unique_files)
         
         # 按修改时间排序
         files.sort(key=lambda x: x.modified, reverse=True)
@@ -52,8 +58,8 @@ async def get_file_content(filename: str):
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="文件不存在")
         
-        if not file_path.suffix == '.beancount':
-            raise HTTPException(status_code=400, detail="只支持beancount文件")
+        if not is_beancount_file(filename):
+            raise HTTPException(status_code=400, detail="只支持Beancount文件(.bean/.beancount)")
         
         with open(file_path, 'r', encoding='utf-8') as f:
             content = f.read()
@@ -76,12 +82,13 @@ async def update_file_content(filename: str, content: dict):
     try:
         file_path = settings.data_dir / filename
         
-        if not file_path.suffix == '.beancount':
-            raise HTTPException(status_code=400, detail="只支持beancount文件")
+        if not is_beancount_file(filename):
+            raise HTTPException(status_code=400, detail="只支持Beancount文件(.bean/.beancount)")
         
         # 备份原文件
         if file_path.exists():
-            backup_path = file_path.with_suffix('.beancount.backup')
+            # 使用工具函数生成备份文件名
+            backup_path = get_backup_filename(file_path)
             import shutil
             shutil.copy2(file_path, backup_path)
         
@@ -102,8 +109,8 @@ async def update_file_content(filename: str, content: dict):
 async def upload_file(file: UploadFile = File(...)):
     """上传beancount文件"""
     try:
-        if not file.filename.endswith('.beancount'):
-            raise HTTPException(status_code=400, detail="只支持上传.beancount文件")
+        if not is_beancount_file(file.filename):
+            raise HTTPException(status_code=400, detail="只支持上传Beancount文件(.bean/.beancount)")
         
         file_path = settings.data_dir / file.filename
         
