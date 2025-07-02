@@ -1,14 +1,14 @@
 # 多阶段构建Dockerfile
 # 阶段1: 构建前端
-FROM node:20-alpine as frontend-builder
+FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app/frontend
 
 # 复制前端package文件
 COPY frontend/package*.json ./
 
-# 安装前端依赖
-RUN npm ci --only=production
+# 安装前端依赖（包括开发依赖，构建时需要）
+RUN npm ci
 
 # 复制前端源码
 COPY frontend/ .
