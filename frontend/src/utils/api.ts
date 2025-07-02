@@ -1,14 +1,16 @@
 import axios from 'axios'
 
 // 根据环境确定API基础URL
-const getBaseURL = () => {
+const getBaseURL = (): string => {
   // 如果是开发环境，使用localhost
-  if (import.meta.env.DEV) {
+  // @ts-ignore
+  if (import.meta.env && import.meta.env.DEV) {
     return 'http://localhost:8000/api'
   }
   // 生产环境使用相对路径
   return '/api'
 }
+
 
 const api = axios.create({
   baseURL: getBaseURL(),
