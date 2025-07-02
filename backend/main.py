@@ -49,20 +49,36 @@ async def health_check():
 static_dir = Path("static")
 
 if static_dir.exists():
-    # 挂载静态资源文件
-    app.mount("/js", StaticFiles(directory="static/js"), name="js")
-    app.mount("/css", StaticFiles(directory="static/css"), name="css")
-    app.mount("/img", StaticFiles(directory="static/img"), name="img")
-    app.mount("/fonts", StaticFiles(directory="static/fonts"), name="fonts")
-    app.mount("/media", StaticFiles(directory="static/media"), name="media")
+    # 定义可能的静态资源子目录
+    static_subdirs = {
+        "js": "js",
+        "css": "css", 
+        "img": "img",
+        "fonts": "fonts",
+        "media": "media"
+    }
+    
+    # 只挂载存在的子目录
+    for mount_path, dir_name in static_subdirs.items():
+        subdir_path = static_dir / dir_name
+        if subdir_path.exists() and subdir_path.is_dir():
+            app.mount(f"/{mount_path}", StaticFiles(directory=str(subdir_path)), name=mount_path)
     
     # 处理favicon和其他根级文件
     @app.get("/favicon.ico")
     async def favicon():
+        # 首先尝试查找favicon.ico
         favicon_path = static_dir / "favicon.ico"
         if favicon_path.exists():
             return FileResponse(favicon_path)
-        return FileResponse(static_dir / "favicon.svg")
+        
+        # 然后尝试favicon.svg
+        favicon_svg_path = static_dir / "favicon.svg"
+        if favicon_svg_path.exists():
+            return FileResponse(favicon_svg_path)
+        
+        # 如果都不存在，返回404
+        raise HTTPException(status_code=404, detail="Favicon not found")
 
 @app.get("/")
 async def root():
