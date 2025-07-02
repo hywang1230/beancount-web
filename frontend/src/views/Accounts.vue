@@ -47,7 +47,7 @@
             default-expand-all
             class="account-tree"
           >
-            <template #default="{ node, data }">
+            <template #default="{ data }">
               <div class="tree-node">
                 <span class="node-label">{{ data.label }}</span>
                 <span v-if="data.isLeaf" class="node-path">{{ data.fullPath }}</span>
@@ -153,7 +153,8 @@ const loadAccounts = async () => {
   loading.value = true
   
   try {
-    accountGroups.value = await getAccountsByType()
+    const response = await getAccountsByType()
+  accountGroups.value = response.data
     
     // 设置默认激活的类型
     const types = Object.keys(accountGroups.value)

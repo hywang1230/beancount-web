@@ -240,8 +240,8 @@ const searchTransactions = async () => {
     })
     
     const result = await getTransactions(params)
-    transactions.value = result
-    totalCount.value = result.length
+      transactions.value = result.data
+  totalCount.value = result.data.length
     
   } catch (error) {
     console.error('搜索交易失败:', error)
@@ -278,7 +278,8 @@ const handleCurrentChange = (val: number) => {
 // 加载账户列表
 const loadAccounts = async () => {
   try {
-    accounts.value = await getAccounts()
+    const accountsResult = await getAccounts()
+  accounts.value = accountsResult.data
   } catch (error) {
     console.error('加载账户列表失败:', error)
   }

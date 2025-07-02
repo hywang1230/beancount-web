@@ -190,7 +190,7 @@ import { ref, reactive, nextTick, onMounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import { createTransaction } from '@/api/transactions'
-import { suggestAccounts, getAllAccounts } from '@/api/accounts'
+import { getAllAccounts } from '@/api/accounts'
 
 const formRef = ref()
 const tagInputRef = ref()
@@ -319,7 +319,7 @@ const getAccountType = (account: string): string => {
 }
 
 // 账户变化处理
-const onAccountChange = (index: number) => {
+const onAccountChange = (_index: number) => {
   // 可以在这里添加账户变化的逻辑
 }
 

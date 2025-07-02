@@ -71,7 +71,7 @@ export default defineConfig({
   },
   // 开发服务器配置
   server: {
-    port: 3000,
+    port: 5173,
     host: true,
     cors: true,
     proxy: {
@@ -84,7 +84,7 @@ export default defineConfig({
   },
   // 预览服务器配置
   preview: {
-    port: 3000,
+    port: 5173,
     host: true,
   },
   // 依赖预构建优化

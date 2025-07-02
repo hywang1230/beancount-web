@@ -187,7 +187,7 @@ const loadFiles = async () => {
   
   try {
     const result = await getFileList()
-    files.value = result.files
+    files.value = result.data.files
   } catch (error) {
     console.error('加载文件列表失败:', error)
   } finally {
@@ -230,7 +230,7 @@ const viewFile = async (filename: string) => {
     const result = await getFileContent(filename)
     
     currentFileName.value = filename
-    fileContent.value = result.content
+    fileContent.value = result.data.content
     dialogMode.value = 'view'
     dialogTitle.value = `查看文件: ${filename}`
     dialogVisible.value = true
@@ -246,7 +246,7 @@ const editFile = async (filename: string) => {
     const result = await getFileContent(filename)
     
     currentFileName.value = filename
-    fileContent.value = result.content
+    fileContent.value = result.data.content
     dialogMode.value = 'edit'
     dialogTitle.value = `编辑文件: ${filename}`
     dialogVisible.value = true
@@ -277,7 +277,7 @@ const downloadFile = async (filename: string) => {
   try {
     const result = await getFileContent(filename)
     
-    const blob = new Blob([result.content], { type: 'text/plain' })
+    const blob = new Blob([result.data.content], { type: 'text/plain' })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     
@@ -324,14 +324,14 @@ const validateFile = async (filename: string) => {
   try {
     const result = await validateFileApi(filename)
     
-    if (result.valid) {
-      ElMessage.success(`文件验证通过，包含 ${result.entries_count} 条记录`)
+    if (result.data.valid) {
+      ElMessage.success(`文件验证通过，包含 ${result.data.entries_count} 条记录`)
     } else {
-      ElMessage.warning(`文件验证失败，发现 ${result.errors_count} 个错误`)
+      ElMessage.warning(`文件验证失败，发现 ${result.data.errors_count} 个错误`)
       
-      if (result.errors.length > 0) {
+      if (result.data.errors.length > 0) {
         ElMessageBox.alert(
-          result.errors.join('\n'),
+          result.data.errors.join('\n'),
           '验证错误详情',
           { type: 'warning' }
         )

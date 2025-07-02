@@ -237,7 +237,7 @@ const loadData = async () => {
     
     balanceSheet.value = balanceRes
     incomeStatement.value = incomeRes
-    recentTransactions.value = recentRes
+    recentTransactions.value = recentRes.data
     trendsData.value = trendsRes
     
     // 生成图表配置
