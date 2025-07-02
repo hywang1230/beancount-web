@@ -90,6 +90,12 @@ docker run -d \
 ### 构建失败
 - 检查依赖是否正确安装
 - 查看构建日志中的错误信息
+- **ARM64平台（如Apple Silicon Mac）**: 如果构建很慢或失败，使用Debian版本：
+  ```bash
+  make build-debian
+  # 或
+  docker build -f Dockerfile.debian -t beancount-web .
+  ```
 
 ### 容器启动失败
 - 检查端口是否被占用

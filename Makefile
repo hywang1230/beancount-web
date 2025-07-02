@@ -5,8 +5,9 @@
 # 默认目标
 help:
 	@echo "可用的命令:"
-	@echo "  build       - 构建Docker镜像"
-	@echo "  build-simple- 使用简化版构建（跳过TypeScript检查）"
+	@echo "  build       - 构建Docker镜像（Alpine版本）"
+	@echo "  build-debian- 使用Debian版本构建（ARM64推荐）"
+	@echo "  build-fast  - 快速构建版本（最小依赖）"
 	@echo "  run         - 使用docker-compose启动服务"
 	@echo "  stop        - 停止服务"
 	@echo "  restart     - 重启服务"
@@ -19,9 +20,13 @@ help:
 build:
 	docker build -t beancount-web .
 
-# 使用简化版Dockerfile构建（跳过TypeScript检查）
-build-simple:
-	docker build -f Dockerfile.simple -t beancount-web .
+# 使用Debian版本构建（ARM64平台推荐）
+build-debian:
+	docker build -f Dockerfile.debian -t beancount-web .
+
+# 快速构建版本（最小依赖，用于测试）
+build-fast:
+	docker build -f Dockerfile.fast -t beancount-web .
 
 # 使用docker-compose启动
 run:
