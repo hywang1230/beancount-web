@@ -45,8 +45,24 @@ async def api_root():
 async def health_check():
     return {"status": "healthy", "message": "服务运行正常"}
 
-# 挂载静态文件目录（用于生产环境）
+# 静态文件配置
 static_dir = Path("static")
+
+if static_dir.exists():
+    # 挂载静态资源文件
+    app.mount("/js", StaticFiles(directory="static/js"), name="js")
+    app.mount("/css", StaticFiles(directory="static/css"), name="css")
+    app.mount("/img", StaticFiles(directory="static/img"), name="img")
+    app.mount("/fonts", StaticFiles(directory="static/fonts"), name="fonts")
+    app.mount("/media", StaticFiles(directory="static/media"), name="media")
+    
+    # 处理favicon和其他根级文件
+    @app.get("/favicon.ico")
+    async def favicon():
+        favicon_path = static_dir / "favicon.ico"
+        if favicon_path.exists():
+            return FileResponse(favicon_path)
+        return FileResponse(static_dir / "favicon.svg")
 
 @app.get("/")
 async def root():
@@ -58,13 +74,6 @@ async def root():
     return {"message": "Beancount Web API", "version": "1.0.0"}
 
 if static_dir.exists():
-    # 挂载静态文件目录（如果存在的话）
-    assets_dirs = ["js", "css", "img", "fonts", "media"]
-    for asset_dir in assets_dirs:
-        asset_path = static_dir / asset_dir
-        if asset_path.exists():
-            app.mount(f"/{asset_dir}", StaticFiles(directory=f"static/{asset_dir}"), name=asset_dir)
-    
     # 处理SPA路由回退 - 必须在所有其他路由之后
     @app.get("/{full_path:path}")
     async def serve_spa(full_path: str):
@@ -74,12 +83,6 @@ if static_dir.exists():
         # 如果是API路由，让FastAPI处理
         if full_path.startswith("api/"):
             raise HTTPException(status_code=404, detail="API endpoint not found")
-        
-        # 特殊文件处理
-        if full_path in ["favicon.ico", "robots.txt", "sitemap.xml"]:
-            file_path = static_dir / full_path
-            if file_path.exists():
-                return FileResponse(file_path)
         
         # 检查是否为静态文件
         file_path = static_dir / full_path

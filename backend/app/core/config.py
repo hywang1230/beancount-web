@@ -8,7 +8,8 @@ class Settings(BaseSettings):
     debug: bool = True
     
     # 数据目录配置
-    data_dir: Path = Path(os.getenv("DATA_DIR", "../data"))
+    # Docker环境中使用 /app/data，本地开发使用 ../data
+    data_dir: Path = Path(os.getenv("DATA_DIR", "./data" if os.path.exists("/app") else "../data"))
     default_beancount_file: str = "main.beancount"
     
     # API配置
