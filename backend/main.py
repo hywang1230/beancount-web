@@ -16,18 +16,8 @@ app = FastAPI(
 )
 
 # 添加CORS中间件
-# 获取允许的源地址，支持环境变量配置
-allowed_origins = [
-    "http://localhost:5173", 
-    "http://127.0.0.1:5173",
-    "http://192.168.32.152:5173"
-]
-
-# 如果是开发环境，也可以从环境变量中获取额外的允许源
-extra_origins = os.environ.get("ALLOWED_ORIGINS", "").split(",")
-for origin in extra_origins:
-    if origin.strip():
-        allowed_origins.append(origin.strip())
+# 允许所有域名的跨域访问
+allowed_origins = ["*"]
 
 app.add_middleware(
     CORSMiddleware,
