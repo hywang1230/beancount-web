@@ -6,7 +6,7 @@ from datetime import datetime
 
 from app.core.config import settings
 from app.models.schemas import FileInfo, FileListResponse
-from app.utils.file_utils import is_beancount_file, get_beancount_files, get_backup_filename
+from app.utils.file_utils import is_beancount_file, get_beancount_files
 
 router = APIRouter()
 
@@ -84,13 +84,6 @@ async def update_file_content(filename: str, content: dict):
         
         if not is_beancount_file(filename):
             raise HTTPException(status_code=400, detail="只支持Beancount文件(.bean/.beancount)")
-        
-        # 备份原文件
-        if file_path.exists():
-            # 使用工具函数生成备份文件名
-            backup_path = get_backup_filename(file_path)
-            import shutil
-            shutil.copy2(file_path, backup_path)
         
         # 写入新内容
         with open(file_path, 'w', encoding='utf-8') as f:

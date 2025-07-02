@@ -72,3 +72,4 @@ cache.db
 *.temp 
 .history/
 main.beancount
+/data/*.json

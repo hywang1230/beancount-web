@@ -67,32 +67,11 @@
             >
               <el-row :gutter="16" align="middle">
                 <el-col :span="14">
-                  <el-select
+                  <AccountSelector
                     v-model="posting.account"
-                    filterable
-                    remote
                     placeholder="选择账户"
-                    :remote-method="searchAccounts"
-                    :loading="accountLoading"
                     @change="onAccountChange(index)"
-                    @focus="onAccountFocus"
-                    style="width: 100%"
-                    popper-class="account-select-dropdown"
-                    :no-data-text="accountSuggestions.length === 0 ? '未找到匹配账户' : ''"
-                    reserve-keyword
-                  >
-                    <el-option
-                      v-for="account in accountSuggestions"
-                      :key="account"
-                      :label="account"
-                      :value="account"
-                    >
-                      <span style="float: left">{{ account }}</span>
-                      <span style="float: right; color: #8492a6; font-size: 13px">
-                        {{ getAccountType(account) }}
-                      </span>
-                    </el-option>
-                  </el-select>
+                  />
                 </el-col>
                 
                 <el-col :span="5">
@@ -186,18 +165,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, nextTick, onMounted } from 'vue'
+import { ref, reactive, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
+import AccountSelector from '@/components/AccountSelector.vue'
 import { createTransaction } from '@/api/transactions'
-import { getAllAccounts } from '@/api/accounts'
 
 const formRef = ref()
 const tagInputRef = ref()
 const submitting = ref(false)
-const accountLoading = ref(false)
-const accountSuggestions = ref<string[]>([])
-const allAccounts = ref<string[]>([])
 const tagInputVisible = ref(false)
 const tagInputValue = ref('')
 
@@ -223,96 +199,6 @@ const transactionForm = reactive({
 const formRules = {
   date: [{ required: true, message: '请选择日期', trigger: 'blur' }],
   flag: [{ required: true, message: '请选择标记', trigger: 'blur' }]
-}
-
-// 初始化时加载所有账户
-onMounted(async () => {
-  await loadAllAccounts()
-})
-
-// 加载所有账户
-const loadAllAccounts = async () => {
-  try {
-    const response = await getAllAccounts()
-    
-    // getAllAccounts 直接返回字符串数组，不是包装在data中
-    const accounts = response.data || response || []
-    
-    allAccounts.value = Array.isArray(accounts) ? accounts : []
-    accountSuggestions.value = allAccounts.value // 显示所有账户
-    
-    console.log('加载账户成功，总数:', allAccounts.value.length)
-  } catch (error) {
-    console.error('加载账户列表失败:', error)
-    ElMessage.error('加载账户列表失败')
-    // 设置默认值避免后续错误
-    allAccounts.value = []
-    accountSuggestions.value = []
-  }
-}
-
-// 搜索账户
-const searchAccounts = async (query: string) => {
-  if (!query || query.length === 0) {
-    // 如果查询为空，显示所有账户
-    accountSuggestions.value = allAccounts.value
-    return
-  }
-  
-  // 本地搜索，支持更智能的匹配
-  const queryLower = query.toLowerCase()
-  const filtered = allAccounts.value.filter(account => {
-    const accountLower = account.toLowerCase()
-    
-    // 支持多种匹配方式：
-    // 1. 完整包含匹配
-    if (accountLower.includes(queryLower)) return true
-    
-    // 2. 按:分割后的部分匹配
-    const parts = account.split(':')
-    for (const part of parts) {
-      if (part.toLowerCase().includes(queryLower)) return true
-    }
-    
-    // 3. 拼音首字母匹配等可以在这里扩展
-    return false
-  })
-  
-  // 按匹配度排序：优先显示精确匹配和前缀匹配
-  filtered.sort((a, b) => {
-    const aLower = a.toLowerCase()
-    const bLower = b.toLowerCase()
-    
-    // 精确匹配优先
-    if (aLower === queryLower && bLower !== queryLower) return -1
-    if (bLower === queryLower && aLower !== queryLower) return 1
-    
-    // 前缀匹配优先
-    if (aLower.startsWith(queryLower) && !bLower.startsWith(queryLower)) return -1
-    if (bLower.startsWith(queryLower) && !aLower.startsWith(queryLower)) return 1
-    
-    // 最后按字母顺序
-    return a.localeCompare(b)
-  })
-  
-  accountSuggestions.value = filtered
-}
-
-// 账户选择器获得焦点时显示所有账户
-const onAccountFocus = () => {
-  if (accountSuggestions.value.length === 0 && allAccounts.value.length > 0) {
-    accountSuggestions.value = allAccounts.value
-  }
-}
-
-// 获取账户类型
-const getAccountType = (account: string): string => {
-  if (account.startsWith('Assets:')) return '资产'
-  if (account.startsWith('Liabilities:')) return '负债'
-  if (account.startsWith('Expenses:')) return '支出'
-  if (account.startsWith('Income:')) return '收入'
-  if (account.startsWith('Equity:')) return '权益'
-  return '其他'
 }
 
 // 账户变化处理

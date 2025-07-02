@@ -42,6 +42,12 @@ const routes: RouteRecordRaw[] = [
         name: 'Files',
         component: () => import('@/views/Files.vue'),
         meta: { title: '文件管理', icon: 'folder' }
+      },
+      {
+        path: 'recurring',
+        name: 'RecurringTransactions',
+        component: () => import('@/views/RecurringTransactions.vue'),
+        meta: { title: '周期记账', icon: 'refresh' }
       }
     ]
   }

@@ -70,7 +70,8 @@ import {
   Plus,
   User,
   Folder,
-  Odometer
+  Odometer,
+  Refresh
 } from '@element-plus/icons-vue'
 
 const route = useRoute()
@@ -80,6 +81,7 @@ const menuItems = [
   { path: '/dashboard', title: '仪表盘', icon: Odometer },
   { path: '/transactions', title: '交易流水', icon: Money },
   { path: '/add-transaction', title: '新增交易', icon: Plus },
+  { path: '/recurring', title: '周期记账', icon: Refresh },
   { path: '/reports', title: '报表分析', icon: DataAnalysis },
   { path: '/accounts', title: '账户管理', icon: User },
   { path: '/files', title: '文件管理', icon: Folder }

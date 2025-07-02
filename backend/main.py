@@ -5,15 +5,27 @@ from fastapi.responses import FileResponse
 import uvicorn
 import os
 from pathlib import Path
+from contextlib import asynccontextmanager
 
-from app.routers import transactions, reports, accounts, files
+from app.routers import transactions, reports, accounts, files, recurring
 from app.core.config import settings
+from app.services.scheduler import scheduler
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    # 启动时
+    scheduler.start()
+    yield
+    # 关闭时
+    scheduler.shutdown()
 
 # 创建FastAPI应用
 app = FastAPI(
     title="Beancount Web API",
     description="Beancount记账系统API",
-    version="1.0.0"
+    version="1.0.0",
+    lifespan=lifespan
 )
 
 # 添加CORS中间件
@@ -36,6 +48,7 @@ app.include_router(transactions.router, prefix="/api/transactions", tags=["交�
 app.include_router(reports.router, prefix="/api/reports", tags=["报表"])
 app.include_router(accounts.router, prefix="/api/accounts", tags=["账户"])
 app.include_router(files.router, prefix="/api/files", tags=["文件"])
+app.include_router(recurring.router, prefix="/api/recurring", tags=["周期记账"])
 
 @app.get("/api")
 async def api_root():
