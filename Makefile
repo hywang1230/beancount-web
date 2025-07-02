@@ -5,7 +5,7 @@
 # 默认目标
 help:
 	@echo "可用的命令:"
-	@echo "  build       - 构建Docker镜像（Alpine版本）"
+	@echo "  build       - 构建Docker镜像（Alpine版本，智能安装）"
 	@echo "  build-debian- 使用Debian版本构建（ARM64推荐）"
 	@echo "  build-fast  - 快速构建版本（最小依赖）"
 	@echo "  run         - 使用docker-compose启动服务"
@@ -15,6 +15,10 @@ help:
 	@echo "  shell       - 进入容器shell"
 	@echo "  clean       - 清理Docker镜像和容器"
 	@echo "  test        - 测试容器健康状态"
+	@echo ""
+	@echo "推荐的构建顺序（根据平台）:"
+	@echo "  ARM64/Apple Silicon: build-fast -> build-debian -> build"
+	@echo "  AMD64/Intel:         build -> build-debian -> build-fast"
 
 # 构建镜像
 build:

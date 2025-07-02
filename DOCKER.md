@@ -88,14 +88,35 @@ docker run -d \
 ## 故障排除
 
 ### 构建失败
+
+#### 通用解决方案
 - 检查依赖是否正确安装
 - 查看构建日志中的错误信息
-- **ARM64平台（如Apple Silicon Mac）**: 如果构建很慢或失败，使用Debian版本：
-  ```bash
-  make build-debian
-  # 或
-  docker build -f Dockerfile.debian -t beancount-web .
-  ```
+- 确保Docker daemon正在运行
+
+#### ARM64平台（Apple Silicon Mac）专用解决方案
+如果遇到构建问题，按以下顺序尝试：
+
+1. **快速构建**（推荐首选）:
+   ```bash
+   make build-fast
+   ```
+
+2. **Debian版本**（如果快速构建功能不够）:
+   ```bash
+   make build-debian
+   ```
+
+3. **智能Alpine版本**（完整功能）:
+   ```bash
+   make build
+   ```
+
+#### 常见错误解决方案
+
+- **wheel构建失败**: 使用 `build-fast` 跳过pandas等大型依赖
+- **pandas/beancount编译超时**: 使用 `build-debian` 或智能安装脚本会自动降级版本
+- **TypeScript构建失败**: 智能构建会自动回退到vite构建
 
 ### 容器启动失败
 - 检查端口是否被占用

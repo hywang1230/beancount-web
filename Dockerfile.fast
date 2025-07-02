@@ -10,7 +10,7 @@ WORKDIR /app/frontend
 COPY frontend/package*.json ./
 
 # 安装前端依赖
-RUN npm install --production
+RUN npm ci
 
 # 复制前端源代码
 COPY frontend/ ./
