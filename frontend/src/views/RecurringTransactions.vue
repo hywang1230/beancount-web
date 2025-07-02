@@ -30,8 +30,7 @@
 
     <!-- 周期记账列表 -->
     <el-table :data="recurringTransactions" v-loading="loading" class="transaction-table">
-      <el-table-column prop="name" label="名称" min-width="150" />
-      <el-table-column prop="narration" label="摘要" min-width="200" />
+      <el-table-column prop="name" label="名称" min-width="180" />
       <el-table-column label="周期类型" width="120">
         <template #default="scope">
           <el-tag :type="getRecurrenceTypeTagType(scope.row.recurrence_type)">
@@ -39,7 +38,7 @@
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="周期详情" min-width="150">
+      <el-table-column label="周期详情" min-width="180">
         <template #default="scope">
           <span>{{ getRecurrenceDetail(scope.row) }}</span>
         </template>
@@ -68,27 +67,29 @@
           />
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="180" fixed="right">
+      <el-table-column label="操作" width="200" fixed="right">
         <template #default="scope">
-          <el-button
-            size="small"
-            @click="editTransaction(scope.row)"
-          >
-            编辑
-          </el-button>
-          <el-button
-            size="small"
-            @click="viewLogs(scope.row)"
-          >
-            日志
-          </el-button>
-          <el-button
-            size="small"
-            type="danger"
-            @click="deleteTransaction(scope.row)"
-          >
-            删除
-          </el-button>
+          <div class="action-buttons">
+            <el-button
+              size="small"
+              @click="editTransaction(scope.row)"
+            >
+              编辑
+            </el-button>
+            <el-button
+              size="small"
+              @click="viewLogs(scope.row)"
+            >
+              日志
+            </el-button>
+            <el-button
+              size="small"
+              type="danger"
+              @click="deleteTransaction(scope.row)"
+            >
+              删除
+            </el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -721,5 +722,16 @@ const formatDateTime = (dateStr: string) => {
 
 .balance-amount.unbalanced {
   color: #f56c6c;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.action-buttons .el-button {
+  margin: 0;
 }
 </style> 
