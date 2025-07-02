@@ -42,6 +42,9 @@ COPY --from=frontend-builder /app/frontend/dist/ ./static/
 # 创建数据目录并设置权限
 RUN mkdir -p /app/data && chmod 755 /app/data
 
+# 设置环境变量
+ENV DATA_DIR=/app/data
+
 # 暴露端口
 EXPOSE 8000
 
