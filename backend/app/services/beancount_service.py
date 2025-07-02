@@ -109,12 +109,17 @@ class BeancountService:
                             account_balances[key] = Decimal('0')
                         account_balances[key] += amount_val
         
-        # 分类账户
+        # 分类账户和计算收支
         assets = []
         liabilities = []
         equity = []
+        income_total = Decimal('0')
+        expense_total = Decimal('0')
         
         default_currency = options_map.get('operating_currency', ['CNY'])[0]
+        
+        # 获取汇率信息
+        exchange_rates = self._get_latest_exchange_rates(entries, date_filter, default_currency)
         
         for (account, currency), balance in account_balances.items():
             if balance == 0:
@@ -133,9 +138,35 @@ class BeancountService:
                 liabilities.append(account_info)
             elif account.startswith('Equity:'):
                 equity.append(account_info)
+            elif account.startswith('Income:'):
+                # 计算收入总额（用于当期收益计算）
+                if currency == default_currency:
+                    income_total += balance
+                elif currency in exchange_rates:
+                    income_total += balance * exchange_rates[currency]
+            elif account.startswith('Expenses:'):
+                # 计算支出总额（用于当期收益计算）
+                if currency == default_currency:
+                    expense_total += balance
+                elif currency in exchange_rates:
+                    expense_total += balance * exchange_rates[currency]
         
-        # 获取汇率信息
-        exchange_rates = self._get_latest_exchange_rates(entries, date_filter, default_currency)
+        # 计算净收益并添加到权益中（如果不存在Equity:Earnings:Current）
+        # 在 Beancount 中，净收益 = -收入 - 支出
+        net_earnings = -income_total - expense_total
+        
+        # 检查是否已存在 Equity:Earnings:Current
+        has_earnings_current = any(acc.name == 'Equity:Earnings:Current' for acc in equity)
+        
+        # 如果不存在且有净收益，则添加当期收益账户
+        if not has_earnings_current and abs(net_earnings) > Decimal('0.01'):
+            earnings_account = AccountInfo(
+                name="Equity:Earnings:Current",
+                balance=net_earnings,
+                currency=default_currency,
+                account_type="Equity"
+            )
+            equity.append(earnings_account)
         
         # 计算总计（包含汇率转换）
         total_assets = self._calculate_total_with_currency_conversion(
@@ -146,14 +177,66 @@ class BeancountService:
             liabilities, default_currency, exchange_rates)
         total_liabilities = abs(total_liabilities_raw)  # 显示为正数
         
-        total_equity = self._calculate_total_with_currency_conversion(
-            equity, default_currency, exchange_rates)
+        # 权益处理：计算包含当期收益的总权益
+        # 重新计算权益总计，避免重复计算
+        total_equity_before_conversion = Decimal('0')
+        
+        for acc in equity:
+            if acc.currency == default_currency:
+                total_equity_before_conversion += acc.balance
+            elif acc.currency in exchange_rates:
+                converted_amount = acc.balance * exchange_rates[acc.currency]
+                total_equity_before_conversion += converted_amount
+        
+        # 调整权益账户显示，确保汇率转换正确
+        processed_accounts = []
+        merged_accounts = {}  # 用于合并相同名称的账户
+        
+        for acc in equity:
+            # 创建新的账户对象避免修改原始数据
+            display_acc = AccountInfo(
+                name=acc.name,
+                balance=acc.balance,
+                currency=acc.currency,
+                account_type=acc.account_type
+            )
+            
+            # 转换到基础货币
+            if display_acc.currency != default_currency and display_acc.currency in exchange_rates:
+                display_acc.balance = display_acc.balance * exchange_rates[display_acc.currency]
+                display_acc.currency = default_currency
+            
+            # 合并相同名称的账户
+            if display_acc.name in merged_accounts:
+                merged_accounts[display_acc.name].balance += display_acc.balance
+            else:
+                merged_accounts[display_acc.name] = display_acc
+        
+        # 处理合并后的账户显示
+        for account_name, account in merged_accounts.items():
+            # 权益账户显示逻辑：
+            # 1. Equity:Earnings:Current 显示为正数（亏损显示为正数）
+            # 2. 其他权益账户保持符合会计惯例的显示
+            if account.name == "Equity:Earnings:Current":
+                # 当期收益：显示绝对值（正数表示收益或亏损的金额）
+                account.balance = abs(account.balance)
+            elif account.balance < 0:
+                # 其他权益账户：负数显示为正数（符合资产负债表惯例）
+                account.balance = abs(account.balance)
+                
+            processed_accounts.append(account)
+        
+        # 使用转换后的账户计算正确的权益总计
+        total_equity_calculated = sum(acc.balance for acc in processed_accounts)
+        
+        # 在资产负债表中，如果权益总和为负数，显示为正数（会计惯例）
+        total_equity = abs(total_equity_calculated) if total_equity_calculated < 0 else total_equity_calculated
         
         # 计算净资产 = 总资产 - 总负债(绝对值)
         net_worth = total_assets - total_liabilities
         
         return BalanceResponse(
-            accounts=assets + liabilities + equity,
+            accounts=assets + liabilities + processed_accounts,
             total_assets=total_assets,
             total_liabilities=total_liabilities,
             total_equity=total_equity,
