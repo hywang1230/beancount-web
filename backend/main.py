@@ -28,9 +28,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 确保data目录存在
-data_dir = Path("data")
-data_dir.mkdir(exist_ok=True)
+# 确保data目录存在（使用配置中的路径）
+settings.data_dir.mkdir(exist_ok=True)
 
 # 注册API路由
 app.include_router(transactions.router, prefix="/api/transactions", tags=["交易"])

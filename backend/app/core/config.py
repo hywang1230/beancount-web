@@ -8,7 +8,7 @@ class Settings(BaseSettings):
     debug: bool = True
     
     # 数据目录配置
-    data_dir: Path = Path(os.getenv("DATA_DIR", "../data"))
+    data_dir: Path = Path(os.getenv("DATA_DIR", "./data"))
     default_beancount_file: str = "main.beancount"
     
     # API配置
@@ -30,7 +30,7 @@ class Settings(BaseSettings):
 settings = Settings()
 
 # 确保数据目录存在
-settings.data_dir.mkdir(exist_ok=True)
+settings.data_dir.mkdir(parents=True, exist_ok=True)
 
 # 如果不存在默认beancount文件，创建一个示例文件
 default_file_path = settings.data_dir / settings.default_beancount_file
