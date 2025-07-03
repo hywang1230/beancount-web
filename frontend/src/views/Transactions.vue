@@ -206,7 +206,6 @@ const filterForm = ref({
 // 扁平化交易数据，将每笔交易及其分录展示为多行
 const flattenedTransactions = computed(() => {
   const result: any[] = []
-  let id = 0
   
   transactions.value.forEach((transaction, transactionIndex) => {
     // 添加交易头行

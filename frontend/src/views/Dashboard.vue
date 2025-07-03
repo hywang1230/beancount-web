@@ -212,7 +212,7 @@ import {
 } from '@element-plus/icons-vue'
 
 import { getBalanceSheet, getIncomeStatement, getTrends } from '@/api/reports'
-import { getTransactions, type TransactionFilter } from '@/api/transactions'
+import { getTransactions } from '@/api/transactions'
 
 // 注册 ECharts 组件
 use([
