@@ -33,7 +33,11 @@
         <el-col :span="8">
           <h3>资产</h3>
           <el-table :data="assetAccounts" size="small">
-            <el-table-column prop="name" label="账户" />
+            <el-table-column prop="name" label="账户">
+              <template #default="{ row }">
+                {{ row.name.replace('Assets:', '') }}
+              </template>
+            </el-table-column>
             <el-table-column prop="balance" label="余额" align="right">
               <template #default="{ row }">
                 <span class="amount-positive">{{ formatCurrency(row.balance) }}</span>
@@ -49,7 +53,11 @@
         <el-col :span="8">
           <h3>负债</h3>
           <el-table :data="liabilityAccounts" size="small">
-            <el-table-column prop="name" label="账户" />
+            <el-table-column prop="name" label="账户">
+              <template #default="{ row }">
+                {{ row.name.replace('Liabilities:', '') }}
+              </template>
+            </el-table-column>
             <el-table-column prop="balance" label="余额" align="right">
               <template #default="{ row }">
                 <span class="amount-negative">{{ formatCurrency(Math.abs(row.balance)) }}</span>
@@ -65,7 +73,11 @@
         <el-col :span="8">
           <h3>所有者权益</h3>
           <el-table :data="equityAccounts" size="small">
-            <el-table-column prop="name" label="账户" />
+            <el-table-column prop="name" label="账户">
+              <template #default="{ row }">
+                {{ row.name.replace('Equity:', '') }}
+              </template>
+            </el-table-column>
             <el-table-column prop="balance" label="余额" align="right">
               <template #default="{ row }">
                 <span>{{ formatCurrency(row.balance) }}</span>
@@ -169,6 +181,152 @@
         />
       </div>
     </el-card>
+    
+    <!-- 月度报告 -->
+    <el-card v-if="activeTab === 'monthly'" v-loading="loading">
+      <template #header>
+        <div class="card-header">
+          <span>月度报告</span>
+          <div class="date-selectors">
+            <el-select v-model="selectedYear" @change="onDateChange" placeholder="选择年份" style="width: 100px;">
+              <el-option 
+                v-for="year in getYearOptions()" 
+                :key="year" 
+                :label="`${year}年`" 
+                :value="year" 
+              />
+            </el-select>
+            <el-select v-model="selectedMonth" @change="onDateChange" placeholder="选择月份" style="width: 100px;">
+              <el-option 
+                v-for="month in getMonthOptions()" 
+                :key="month.value" 
+                :label="month.label" 
+                :value="month.value" 
+              />
+            </el-select>
+          </div>
+        </div>
+      </template>
+      
+      <div v-if="monthlySummary && yearToDateSummary">
+        <!-- 月度汇总卡片 -->
+        <el-row :gutter="20" class="mb-4">
+          <el-col :xs="24" :sm="12" :lg="6">
+            <el-card class="summary-card monthly-income">
+              <div class="summary-content">
+                <div class="summary-value">{{ formatCurrency(monthlySummary.income_statement.total_income) }}</div>
+                <div class="summary-label">本月收入</div>
+              </div>
+            </el-card>
+          </el-col>
+          <el-col :xs="24" :sm="12" :lg="6">
+            <el-card class="summary-card monthly-expense">
+              <div class="summary-content">
+                <div class="summary-value">{{ formatCurrency(Math.abs(monthlySummary.income_statement.total_expenses)) }}</div>
+                <div class="summary-label">本月支出</div>
+              </div>
+            </el-card>
+          </el-col>
+          <el-col :xs="24" :sm="12" :lg="6">
+            <el-card class="summary-card monthly-net">
+              <div class="summary-content">
+                <div class="summary-value" :class="monthlySummary.income_statement.net_income >= 0 ? 'positive' : 'negative'">
+                  {{ formatCurrency(monthlySummary.income_statement.net_income) }}
+                </div>
+                <div class="summary-label">本月净收益</div>
+              </div>
+            </el-card>
+          </el-col>
+          <el-col :xs="24" :sm="12" :lg="6">
+            <el-card class="summary-card monthly-assets">
+              <div class="summary-content">
+                <div class="summary-value">{{ formatCurrency(monthlySummary.balance_sheet.total_assets) }}</div>
+                <div class="summary-label">月末总资产</div>
+              </div>
+            </el-card>
+          </el-col>
+        </el-row>
+        
+        <!-- 年度至今对比 -->
+        <el-row :gutter="20" class="mb-4">
+          <el-col :span="24">
+            <el-card>
+              <template #header>
+                <span>{{ selectedYear }}年度至今汇总</span>
+              </template>
+              
+              <el-row :gutter="20">
+                <el-col :xs="24" :sm="8">
+                  <div class="ytd-item">
+                    <div class="ytd-label">累计收入</div>
+                    <div class="ytd-value positive">{{ formatCurrency(yearToDateSummary.income_statement.total_income) }}</div>
+                  </div>
+                </el-col>
+                <el-col :xs="24" :sm="8">
+                  <div class="ytd-item">
+                    <div class="ytd-label">累计支出</div>
+                    <div class="ytd-value negative">{{ formatCurrency(Math.abs(yearToDateSummary.income_statement.total_expenses)) }}</div>
+                  </div>
+                </el-col>
+                <el-col :xs="24" :sm="8">
+                  <div class="ytd-item">
+                    <div class="ytd-label">累计净收益</div>
+                    <div class="ytd-value" :class="yearToDateSummary.income_statement.net_income >= 0 ? 'positive' : 'negative'">
+                      {{ formatCurrency(yearToDateSummary.income_statement.net_income) }}
+                    </div>
+                  </div>
+                </el-col>
+              </el-row>
+            </el-card>
+          </el-col>
+        </el-row>
+        
+        <!-- 月度详细分析 -->
+        <el-row :gutter="20">
+          <el-col :xs="24" :lg="12">
+            <el-card>
+              <template #header>
+                <span>{{ selectedMonth }}月收入明细</span>
+              </template>
+              
+              <el-table :data="monthlySummary.income_statement.income_accounts" size="small" max-height="300">
+                <el-table-column prop="name" label="账户">
+                  <template #default="{ row }">
+                    {{ row.name.replace('Income:', '') }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="balance" label="金额" align="right">
+                  <template #default="{ row }">
+                    <span class="amount-positive">{{ formatCurrency(-row.balance) }}</span>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
+          </el-col>
+          
+          <el-col :xs="24" :lg="12">
+            <el-card>
+              <template #header>
+                <span>{{ selectedMonth }}月支出明细</span>
+              </template>
+              
+              <el-table :data="monthlySummary.income_statement.expense_accounts" size="small" max-height="300">
+                <el-table-column prop="name" label="账户">
+                  <template #default="{ row }">
+                    {{ row.name.replace('Expenses:', '') }}
+                  </template>
+                </el-table-column>
+                <el-table-column prop="balance" label="金额" align="right">
+                  <template #default="{ row }">
+                    <span class="amount-negative">{{ formatCurrency(Math.abs(row.balance)) }}</span>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </el-card>
+          </el-col>
+        </el-row>
+      </div>
+    </el-card>
   </div>
 </template>
 
@@ -188,7 +346,9 @@ import VChart from 'vue-echarts'
 import { 
   getBalanceSheet, 
   getIncomeStatement, 
-  getTrends 
+  getTrends,
+  getMonthlySummary,
+  getYearToDateSummary
 } from '@/api/reports'
 
 // 注册 ECharts 组件
@@ -211,6 +371,12 @@ const balanceSheet = ref<any>(null)
 const incomeStatement = ref<any>(null)
 const trendsData = ref<any>(null)
 const trendsOption = ref<any>(null)
+
+// 月度报告相关数据
+const selectedYear = ref(new Date().getFullYear())
+const selectedMonth = ref(new Date().getMonth() + 1)
+const monthlySummary = ref<any>(null)
+const yearToDateSummary = ref<any>(null)
 
 // 计算属性
 const assetAccounts = computed(() => 
@@ -276,7 +442,7 @@ const generateTrendsChart = () => {
   if (!trendsData.value?.trends) return
   
   const periods = trendsData.value.trends.map((item: any) => item.period)
-  const incomes = trendsData.value.trends.map((item: any) => Math.abs(item.total_income))
+  const incomes = trendsData.value.trends.map((item: any) => item.total_income)
   const expenses = trendsData.value.trends.map((item: any) => Math.abs(item.total_expenses))
   const netIncomes = trendsData.value.trends.map((item: any) => item.net_income)
   
@@ -330,6 +496,56 @@ const generateTrendsChart = () => {
   }
 }
 
+// 加载月度报告
+const loadMonthlyReport = async () => {
+  loading.value = true
+  try {
+    const [monthlyRes, ytdRes] = await Promise.all([
+      getMonthlySummary(selectedYear.value, selectedMonth.value),
+      getYearToDateSummary(selectedYear.value)
+    ])
+    monthlySummary.value = monthlyRes
+    yearToDateSummary.value = ytdRes
+  } catch (error) {
+    console.error('加载月度报告失败:', error)
+  } finally {
+    loading.value = false
+  }
+}
+
+// 年份或月份变化处理
+const onDateChange = () => {
+  loadMonthlyReport()
+}
+
+// 获取年份选项
+const getYearOptions = () => {
+  const currentYear = new Date().getFullYear()
+  const years = []
+  for (let i = currentYear; i >= currentYear - 5; i--) {
+    years.push(i)
+  }
+  return years
+}
+
+// 获取月份选项
+const getMonthOptions = () => {
+  return [
+    { value: 1, label: '1月' },
+    { value: 2, label: '2月' },
+    { value: 3, label: '3月' },
+    { value: 4, label: '4月' },
+    { value: 5, label: '5月' },
+    { value: 6, label: '6月' },
+    { value: 7, label: '7月' },
+    { value: 8, label: '8月' },
+    { value: 9, label: '9月' },
+    { value: 10, label: '10月' },
+    { value: 11, label: '11月' },
+    { value: 12, label: '12月' }
+  ]
+}
+
 // 标签页切换
 const onTabChange = (tabName: string) => {
   switch (tabName) {
@@ -342,11 +558,30 @@ const onTabChange = (tabName: string) => {
     case 'trends':
       loadTrends()
       break
+    case 'monthly':
+      loadMonthlyReport()
+      break
   }
 }
 
 onMounted(() => {
-  loadBalanceSheet()
+  // 根据当前选中的标签页加载对应数据
+  switch (activeTab.value) {
+    case 'balance-sheet':
+      loadBalanceSheet()
+      break
+    case 'income-statement':
+      loadIncomeStatement()
+      break
+    case 'trends':
+      loadTrends()
+      break
+    case 'monthly':
+      loadMonthlyReport()
+      break
+    default:
+      loadBalanceSheet()
+  }
 })
 </script>
 
@@ -376,5 +611,74 @@ onMounted(() => {
 
 .chart-container {
   min-height: 400px;
+}
+
+.date-selectors {
+  display: flex;
+  gap: 12px;
+}
+
+.summary-card {
+  margin-bottom: 16px;
+}
+
+.summary-content {
+  text-align: center;
+  padding: 16px 0;
+}
+
+.summary-value {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.summary-value.positive {
+  color: #67c23a;
+}
+
+.summary-value.negative {
+  color: #f56c6c;
+}
+
+.summary-label {
+  font-size: 14px;
+  color: #909399;
+}
+
+.monthly-income .summary-value {
+  color: #67c23a;
+}
+
+.monthly-expense .summary-value {
+  color: #f56c6c;
+}
+
+.monthly-assets .summary-value {
+  color: #409eff;
+}
+
+.ytd-item {
+  text-align: center;
+  padding: 16px 0;
+}
+
+.ytd-label {
+  font-size: 14px;
+  color: #909399;
+  margin-bottom: 8px;
+}
+
+.ytd-value {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.ytd-value.positive {
+  color: #67c23a;
+}
+
+.ytd-value.negative {
+  color: #f56c6c;
 }
 </style> 
