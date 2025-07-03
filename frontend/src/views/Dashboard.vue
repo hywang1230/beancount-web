@@ -102,6 +102,9 @@
           <template #header>
             <div class="card-header">
               <span>支出分类</span>
+              <span v-if="selectedCategory" class="selected-category">
+                已选择: {{ selectedCategory }}
+              </span>
             </div>
           </template>
           <div class="chart-container">
@@ -109,6 +112,7 @@
               v-if="expensesPieOption" 
               :option="expensesPieOption" 
               style="height: 300px"
+              @click="onPieChartClick"
             />
             <div v-else class="loading-container">
               <el-icon class="is-loading"><Loading /></el-icon>
@@ -118,18 +122,38 @@
       </el-col>
     </el-row>
     
-    <!-- 最近交易 -->
+    <!-- 分类支出明细 -->
     <el-card>
       <template #header>
         <div class="card-header">
-          <span>最近交易</span>
-          <el-button type="primary" @click="$router.push('/transactions')">
-            查看全部
-          </el-button>
+          <span>
+            {{ selectedCategory ? `${selectedCategory} 支出明细` : '支出明细' }}
+          </span>
+          <div class="header-actions">
+            <el-button 
+              v-if="selectedCategory" 
+              @click="clearSelection"
+              size="small"
+            >
+              清除选择
+            </el-button>
+            <el-button type="primary" @click="$router.push('/transactions')">
+              查看全部
+            </el-button>
+          </div>
         </div>
       </template>
       
-      <el-table :data="recentTransactions" v-loading="loading">
+      <div v-if="!selectedCategory" class="no-selection">
+        <el-empty description="点击上方支出分类饼图查看对应的交易明细" />
+      </div>
+      
+      <el-table 
+        v-else
+        :data="categoryTransactions" 
+        v-loading="transactionLoading"
+        max-height="400"
+      >
         <el-table-column prop="date" label="日期" width="120" />
         <el-table-column prop="payee" label="收付方" width="140">
           <template #default="{ row }">
@@ -141,7 +165,11 @@
         <el-table-column label="账户" min-width="160">
           <template #default="{ row }">
             <div v-for="posting in row.postings" :key="posting.account">
-              {{ posting.account }}
+              <span 
+                :class="{ 'highlight-account': posting.account.includes(selectedAccountName) }"
+              >
+                {{ posting.account }}
+              </span>
             </div>
           </template>
         </el-table-column>
@@ -184,7 +212,7 @@ import {
 } from '@element-plus/icons-vue'
 
 import { getBalanceSheet, getIncomeStatement, getTrends } from '@/api/reports'
-import { getRecentTransactions } from '@/api/transactions'
+import { getTransactions, type TransactionFilter } from '@/api/transactions'
 
 // 注册 ECharts 组件
 use([
@@ -198,13 +226,26 @@ use([
 ])
 
 const loading = ref(false)
+const transactionLoading = ref(false)
 const balanceSheet = ref<any>(null)
 const incomeStatement = ref<any>(null)
-const recentTransactions = ref<any[]>([])
 const trendsData = ref<any>(null)
+const selectedCategory = ref<string>('')
+const selectedAccountName = ref<string>('')
+const categoryTransactions = ref<any[]>([])
 
 const trendsOption = ref<any>(null)
 const expensesPieOption = ref<any>(null)
+
+// 当前月份的日期范围
+const getCurrentMonthRange = () => {
+  const now = new Date()
+  const year = now.getFullYear()
+  const month = now.getMonth() + 1
+  const startDate = `${year}-${month.toString().padStart(2, '0')}-01`
+  const endDate = `${year}-${month.toString().padStart(2, '0')}-${new Date(year, month, 0).getDate().toString().padStart(2, '0')}`
+  return { startDate, endDate }
+}
 
 // 格式化货币
 const formatCurrency = (amount: string | number) => {
@@ -223,29 +264,71 @@ const getAmountClass = (amount: string | number) => {
   return 'amount-zero'
 }
 
+// 饼图点击事件
+const onPieChartClick = async (params: any) => {
+  if (params.data) {
+    selectedCategory.value = params.data.name
+    selectedAccountName.value = params.data.fullAccountName || params.data.name
+    await loadCategoryTransactions()
+  }
+}
+
+// 清除选择
+const clearSelection = () => {
+  selectedCategory.value = ''
+  selectedAccountName.value = ''
+  categoryTransactions.value = []
+}
+
+// 加载分类交易明细
+const loadCategoryTransactions = async () => {
+  if (!selectedAccountName.value) return
+  
+  transactionLoading.value = true
+  
+  try {
+    const { startDate, endDate } = getCurrentMonthRange()
+    
+    // 获取该月的所有交易
+    const response = await getTransactions({
+      start_date: startDate,
+      end_date: endDate,
+      page_size: 200
+    })
+    
+    // 筛选包含选中账户的交易
+    const filteredTransactions = response.data.filter(transaction => 
+      transaction.postings?.some((posting: any) => 
+        posting.account && posting.account.includes(selectedAccountName.value)
+      )
+    )
+    
+    categoryTransactions.value = filteredTransactions.slice(0, 50) // 限制显示50条
+    
+  } catch (error) {
+    console.error('加载分类交易失败:', error)
+    categoryTransactions.value = []
+  } finally {
+    transactionLoading.value = false
+  }
+}
+
 // 加载数据
 const loadData = async () => {
   loading.value = true
   
   try {
-    // 获取本月的开始和结束日期
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = now.getMonth() + 1
-    const startDate = `${year}-${month.toString().padStart(2, '0')}-01`
-    const endDate = `${year}-${month.toString().padStart(2, '0')}-${new Date(year, month, 0).getDate().toString().padStart(2, '0')}`
+    const { startDate, endDate } = getCurrentMonthRange()
     
     // 并行加载数据
-    const [balanceRes, incomeRes, recentRes, trendsRes] = await Promise.all([
+    const [balanceRes, incomeRes, trendsRes] = await Promise.all([
       getBalanceSheet(),
       getIncomeStatement(startDate, endDate), // 获取本月收入支出
-      getRecentTransactions(10),
       getTrends(6)
     ])
     
     balanceSheet.value = balanceRes
     incomeStatement.value = incomeRes
-    recentTransactions.value = (recentRes as any) || []
     trendsData.value = trendsRes
     
     // 生成图表配置
@@ -313,6 +396,7 @@ const generateChartOptions = () => {
       .filter((account: any) => Math.abs(account.balance) > 0)
       .map((account: any) => ({
         name: account.name.split(':').pop(),
+        fullAccountName: account.name,
         value: Math.abs(account.balance)
       }))
     
@@ -412,6 +496,32 @@ onMounted(() => {
 
 .chart-container {
   min-height: 300px;
+}
+
+.selected-category {
+  font-size: 12px;
+  color: #409eff;
+  background: #ecf5ff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  margin-left: 8px;
+}
+
+.header-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.no-selection {
+  padding: 40px 0;
+}
+
+.highlight-account {
+  background: #f0f9ff;
+  color: #409eff;
+  padding: 2px 4px;
+  border-radius: 4px;
+  font-weight: 500;
 }
 
 .amount-positive {
