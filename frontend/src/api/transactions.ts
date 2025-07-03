@@ -23,11 +23,20 @@ export interface TransactionFilter {
   account?: string
   payee?: string
   narration?: string
-  limit?: number
+  page?: number
+  page_size?: number
+}
+
+export interface TransactionResponse {
+  data: Transaction[]
+  total: number
+  page: number
+  page_size: number
+  total_pages: number
 }
 
 // 获取交易列表
-export const getTransactions = (params?: TransactionFilter) => {
+export const getTransactions = (params?: TransactionFilter): Promise<TransactionResponse> => {
   return api.get('/transactions/', { params })
 }
 

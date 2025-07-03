@@ -7,14 +7,15 @@ from app.services.beancount_service import beancount_service
 
 router = APIRouter()
 
-@router.get("/", response_model=List[TransactionResponse])
+@router.get("/")
 async def get_transactions(
     start_date: Optional[date] = Query(None, description="开始日期"),
     end_date: Optional[date] = Query(None, description="结束日期"),
     account: Optional[str] = Query(None, description="账户筛选"),
     payee: Optional[str] = Query(None, description="收付方筛选"),
     narration: Optional[str] = Query(None, description="摘要筛选"),
-    limit: int = Query(100, description="返回条数限制", le=1000)
+    page: int = Query(1, description="页码", ge=1),
+    page_size: int = Query(50, description="每页条数", ge=1, le=200)
 ):
     """获取交易列表"""
     try:
@@ -26,13 +27,21 @@ async def get_transactions(
             narration=narration
         )
         
-        transactions = beancount_service.get_transactions(filter_params)
+        # 获取所有符合条件的交易
+        all_transactions = beancount_service.get_transactions(filter_params)
+        total_count = len(all_transactions)
         
-        # 应用限制
-        if limit > 0:
-            transactions = transactions[:limit]
-            
-        return transactions
+        # 计算分页
+        offset = (page - 1) * page_size
+        paginated_transactions = all_transactions[offset:offset + page_size]
+        
+        return {
+            "data": paginated_transactions,
+            "total": total_count,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": (total_count + page_size - 1) // page_size
+        }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取交易列表失败: {str(e)}")

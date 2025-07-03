@@ -79,78 +79,89 @@
       </template>
       
       <el-table 
-        :data="transactions" 
+        :data="flattenedTransactions" 
         v-loading="loading"
-        row-key="date"
-        default-expand-all
+        row-key="id"
+        :row-class-name="getRowClassName"
       >
-        <el-table-column type="expand">
+        
+        <el-table-column prop="date" label="日期" width="120" sortable>
           <template #default="{ row }">
-            <div class="transaction-detail">
-              <h4>分录详情</h4>
-              <el-table :data="row.postings" size="small">
-                <el-table-column prop="account" label="账户" min-width="200" />
-                <el-table-column label="借方" width="120" align="right">
-                  <template #default="{ row: posting }">
-                    <span v-if="posting.amount > 0" class="amount-positive">
-                      {{ formatCurrency(posting.amount) }}
-                    </span>
-                  </template>
-                </el-table-column>
-                <el-table-column label="贷方" width="120" align="right">
-                  <template #default="{ row: posting }">
-                    <span v-if="posting.amount < 0" class="amount-negative">
-                      {{ formatCurrency(Math.abs(posting.amount)) }}
-                    </span>
-                  </template>
-                </el-table-column>
-                <el-table-column prop="currency" label="币种" width="80" />
-              </el-table>
-            </div>
+            <span v-if="row.isHeader">{{ row.date }}</span>
           </template>
         </el-table-column>
-        
-        <el-table-column prop="date" label="日期" width="120" sortable />
         
         <el-table-column prop="flag" label="标记" width="80">
           <template #default="{ row }">
-            <el-tag 
-              v-if="getFlagType(row.flag)"
-              :type="getFlagType(row.flag)"
-            >
-              {{ row.flag }}
-            </el-tag>
-            <el-tag v-else>{{ row.flag }}</el-tag>
-          </template>
-        </el-table-column>
-        
-        <el-table-column prop="payee" label="收付方" width="150" />
-        <el-table-column prop="narration" label="摘要" min-width="200" />
-        
-        <el-table-column label="主要账户" min-width="180">
-          <template #default="{ row }">
-            {{ getMainAccount(row.postings) }}
-          </template>
-        </el-table-column>
-        
-        <el-table-column label="金额" width="120" align="right">
-          <template #default="{ row }">
-            <span :class="getAmountClass(getMainAmount(row.postings))">
-              {{ formatCurrency(Math.abs(getMainAmount(row.postings))) }}
+            <span v-if="row.isHeader">
+              <el-tag 
+                v-if="getFlagType(row.flag)"
+                :type="getFlagType(row.flag)"
+              >
+                {{ row.flag }}
+              </el-tag>
+              <el-tag v-else>{{ row.flag }}</el-tag>
             </span>
+          </template>
+        </el-table-column>
+        
+        <el-table-column prop="payee" label="收付方" width="150">
+          <template #default="{ row }">
+            <span v-if="row.isHeader">{{ row.payee }}</span>
+          </template>
+        </el-table-column>
+        
+        <el-table-column prop="narration" label="摘要" min-width="100">
+          <template #default="{ row }">
+            <template v-if="row.isHeader">
+              <span v-if="row.flag !== 'P'">{{ row.narration }}</span>
+            </template>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="账户" min-width="280">
+          <template #default="{ row }">
+            <span class="detail-account">
+              {{ row.account }}
+            </span>
+            
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="借方" width="120" align="right">
+          <template #default="{ row }">
+            <span v-if="!row.isHeader && row.amount > 0" class="amount-positive">
+              {{ formatCurrency(row.amount) }}
+            </span>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="贷方" width="120" align="right">
+          <template #default="{ row }">
+            <span v-if="!row.isHeader && row.amount < 0" class="amount-negative">
+              {{ formatCurrency(Math.abs(row.amount)) }}
+            </span>
+          </template>
+        </el-table-column>
+        
+        <el-table-column label="币种" width="80">
+          <template #default="{ row }">
+            <span v-if="!row.isHeader">{{ row.currency }}</span>
           </template>
         </el-table-column>
         
         <el-table-column label="标签" width="120">
           <template #default="{ row }">
-            <el-tag 
-              v-for="tag in row.tags" 
-              :key="tag" 
-              size="small"
-              class="tag-item"
-            >
-              {{ tag }}
-            </el-tag>
+            <span v-if="row.isHeader">
+              <el-tag 
+                v-for="tag in row.tags" 
+                :key="tag" 
+                size="small"
+                class="tag-item"
+              >
+                {{ tag }}
+              </el-tag>
+            </span>
           </template>
         </el-table-column>
       </el-table>
@@ -172,7 +183,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import { getTransactions, getAccounts } from '@/api/transactions'
 
@@ -192,6 +203,51 @@ const filterForm = ref({
   narration: ''
 })
 
+// 扁平化交易数据，将每笔交易及其分录展示为多行
+const flattenedTransactions = computed(() => {
+  const result: any[] = []
+  let id = 0
+  
+  transactions.value.forEach((transaction, transactionIndex) => {
+    // 添加交易头行
+    result.push({
+      id: `transaction-${transactionIndex}`,
+      isHeader: true,
+      transactionIndex,
+      date: transaction.date,
+      flag: transaction.flag,
+      payee: transaction.payee,
+      narration: transaction.narration,
+      tags: transaction.tags,
+      postings: transaction.postings
+    })
+    
+    // 添加每个分录行
+    transaction.postings?.forEach((posting: any, postingIndex: number) => {
+      result.push({
+        id: `posting-${transactionIndex}-${postingIndex}`,
+        isHeader: false,
+        transactionIndex,
+        postingIndex,
+        account: posting.account,
+        amount: posting.amount,
+        currency: posting.currency
+      })
+    })
+  })
+  
+  return result
+})
+
+// 行样式类名
+const getRowClassName = ({ row }: { row: any }) => {
+  if (row.isHeader) {
+    return 'transaction-header-row'
+  } else {
+    return 'transaction-detail-row'
+  }
+}
+
 // 格式化货币
 const formatCurrency = (amount: number) => {
   return new Intl.NumberFormat('zh-CN', {
@@ -200,12 +256,7 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
-// 获取金额样式类
-const getAmountClass = (amount: number) => {
-  if (amount > 0) return 'amount-positive'
-  if (amount < 0) return 'amount-negative'
-  return 'amount-zero'
-}
+
 
 // 获取标记类型
 const getFlagType = (flag: string) => {
@@ -217,15 +268,6 @@ const getFlagType = (flag: string) => {
   }
 }
 
-// 获取主要账户
-const getMainAccount = (postings: any[]) => {
-  return postings[0]?.account || ''
-}
-
-// 获取主要金额
-const getMainAmount = (postings: any[]) => {
-  return postings[0]?.amount || 0
-}
 
 // 日期范围变化
 const onDateRangeChange = (dates: [string, string] | null) => {
@@ -245,7 +287,8 @@ const searchTransactions = async () => {
   try {
     const params = {
       ...filterForm.value,
-      limit: pageSize.value * currentPage.value
+      page: currentPage.value,
+      page_size: pageSize.value
     }
     
     // 移除空值
@@ -256,10 +299,25 @@ const searchTransactions = async () => {
     })
     
     const result = await getTransactions(params)
-    // 后端直接返回数组，不是包装在data字段中
-    const transactionData = result.data || result || []
-    transactions.value = Array.isArray(transactionData) ? transactionData : []
-    totalCount.value = transactions.value.length
+    // 响应拦截器已经返回了response.data，所以result就是我们的分页数据
+    
+    // 检查是否是分页响应格式
+    if (result && typeof result === 'object' && 'data' in result && 'total' in result) {
+      // 新的分页格式
+      transactions.value = result.data || []
+      totalCount.value = result.total || 0
+      console.log('分页数据:', {
+        data: result.data?.length,
+        total: result.total,
+        page: result.page,
+        totalPages: result.total_pages
+      })
+    } else {
+      // 兼容旧格式（直接返回数组）
+      transactions.value = Array.isArray(result) ? result : []
+      totalCount.value = transactions.value.length
+      console.log('非分页数据:', transactions.value.length)
+    }
     
   } catch (error) {
     console.error('搜索交易失败:', error)
@@ -341,5 +399,41 @@ onMounted(() => {
 .pagination-container {
   margin-top: 20px;
   text-align: center;
+}
+
+/* 交易行样式 */
+:deep(.transaction-header-row) {
+  background-color: #f8f9fa;
+  border-top: 2px solid #e9ecef;
+  font-weight: 500;
+}
+
+:deep(.transaction-header-row:hover) {
+  background-color: #e9ecef;
+}
+
+:deep(.transaction-detail-row) {
+  background-color: #ffffff;
+  border-left: 3px solid #dee2e6;
+}
+
+:deep(.transaction-detail-row:hover) {
+  background-color: #f8f9fa;
+}
+
+:deep(.transaction-detail-row td) {
+  padding-left: 20px;
+}
+
+/* 账户样式 */
+.main-account {
+  font-weight: 500;
+  color: #303133;
+}
+
+.detail-account {
+  color: #606266;
+  margin-left: 16px;
+  font-size: 14px;
 }
 </style> 
