@@ -83,7 +83,8 @@ const loadPayees = async () => {
     loading.value = true
     const response = await getPayees()
     // 由于响应拦截器已经返回了 response.data，所以直接使用 response
-    payees.value = response || []
+    const payeeData = response?.data || response || []
+    payees.value = Array.isArray(payeeData) ? payeeData : []
     console.log('获取收付方列表成功，总数:', payees.value.length)
   } catch (error) {
     console.error('获取收付方列表失败:', error)

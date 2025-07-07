@@ -331,7 +331,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
@@ -366,6 +366,7 @@ const activeTab = ref('balance-sheet')
 const asOfDate = ref(new Date().toISOString().split('T')[0])
 const periodRange = ref<[string, string] | null>(null)
 const trendsMonths = ref(12)
+const isMobile = ref(false)
 
 const balanceSheet = ref<any>(null)
 const incomeStatement = ref<any>(null)
@@ -564,7 +565,14 @@ const onTabChange = (tabName: string) => {
   }
 }
 
+// 检测屏幕尺寸
+const checkScreenSize = () => {
+  isMobile.value = window.innerWidth < 768
+}
+
 onMounted(() => {
+  checkScreenSize()
+  window.addEventListener('resize', checkScreenSize)
   // 根据当前选中的标签页加载对应数据
   switch (activeTab.value) {
     case 'balance-sheet':
@@ -582,6 +590,10 @@ onMounted(() => {
     default:
       loadBalanceSheet()
   }
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkScreenSize)
 })
 </script>
 
@@ -680,5 +692,84 @@ onMounted(() => {
 
 .ytd-value.negative {
   color: #f56c6c;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .el-row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  
+  .el-col {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+  }
+  
+  .el-tabs__item {
+    font-size: 12px;
+    padding: 0 8px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .date-selectors {
+    flex-direction: column;
+    gap: 8px;
+  }
+  
+  .date-selectors .el-select {
+    width: 100% !important;
+  }
+  
+  .el-table {
+    font-size: 12px;
+  }
+  
+  .el-table .cell {
+    padding: 4px 8px;
+  }
+  
+  .total-row {
+    font-size: 14px;
+    text-align: center;
+  }
+  
+  .net-income h3 {
+    font-size: 16px;
+  }
+  
+  .chart-container {
+    min-height: 300px;
+  }
+  
+  .summary-card .summary-content {
+    padding: 12px 0;
+  }
+  
+  .summary-value {
+    font-size: 16px;
+  }
+  
+  .summary-label {
+    font-size: 12px;
+  }
+  
+  .ytd-item {
+    text-align: center;
+    margin-bottom: 16px;
+  }
+  
+  .ytd-value {
+    font-size: 16px;
+  }
+  
+  .ytd-label {
+    font-size: 12px;
+  }
 }
 </style> 

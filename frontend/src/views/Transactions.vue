@@ -3,8 +3,8 @@
     <h1 class="page-title">交易流水</h1>
     
     <!-- 筛选条件 -->
-    <el-card class="mb-4">
-      <el-form :model="filterForm" inline>
+    <el-card class="mb-4" :class="{ 'mobile-filter-form': isMobile }">
+      <el-form :model="filterForm" :inline="!isMobile">
         <el-form-item label="日期范围">
           <el-date-picker
             v-model="dateRange"
@@ -15,6 +15,7 @@
             format="YYYY-MM-DD"
             value-format="YYYY-MM-DD"
             @change="onDateRangeChange"
+            :style="{ width: isMobile ? '100%' : '300px' }"
           />
         </el-form-item>
         
@@ -24,7 +25,7 @@
             placeholder="选择账户"
             clearable
             filterable
-            style="width: 200px"
+            :style="{ width: isMobile ? '100%' : '200px' }"
           >
             <el-option
               v-for="account in accounts"
@@ -39,7 +40,7 @@
           <PayeeSelector
             v-model="filterForm.payee"
             placeholder="搜索收付方"
-            style="width: 200px"
+            :style="{ width: isMobile ? '100%' : '200px' }"
           />
         </el-form-item>
         
@@ -48,11 +49,11 @@
             v-model="filterForm.narration"
             placeholder="搜索摘要"
             clearable
-            style="width: 200px"
+            :style="{ width: isMobile ? '100%' : '200px' }"
           />
         </el-form-item>
         
-        <el-form-item>
+        <el-form-item v-if="!isMobile">
           <el-button type="primary" @click="searchTransactions">
             <el-icon><Search /></el-icon>
             搜索
@@ -63,6 +64,18 @@
           </el-button>
         </el-form-item>
       </el-form>
+      
+      <!-- 移动端按钮区域 -->
+      <div v-if="isMobile" class="mobile-filter-actions">
+        <el-button type="primary" @click="searchTransactions">
+          <el-icon><Search /></el-icon>
+          搜索
+        </el-button>
+        <el-button @click="resetFilter">
+          <el-icon><Refresh /></el-icon>
+          重置
+        </el-button>
+      </div>
     </el-card>
     
     <!-- 交易列表 -->
@@ -70,19 +83,25 @@
       <template #header>
         <div class="card-header">
           <span>交易记录</span>
-          <el-button type="primary" @click="$router.push('/add-transaction')">
+          <el-button 
+            v-if="!isMobile"
+            type="primary" 
+            @click="$router.push('/add-transaction')"
+          >
             <el-icon><Plus /></el-icon>
             新增交易
           </el-button>
         </div>
       </template>
       
-      <el-table 
-        :data="flattenedTransactions" 
-        v-loading="loading"
-        row-key="id"
-        :row-class-name="getRowClassName"
-      >
+      <div :class="{ 'mobile-table-container': isMobile }">
+        <el-table 
+          :data="flattenedTransactions" 
+          v-loading="loading"
+          row-key="id"
+          :row-class-name="getRowClassName"
+          :size="isMobile ? 'small' : 'default'"
+        >
         
         <el-table-column prop="date" label="日期" width="120" sortable>
           <template #default="{ row }">
@@ -163,7 +182,8 @@
             </span>
           </template>
         </el-table-column>
-      </el-table>
+        </el-table>
+      </div>
       
       <!-- 分页 -->
       <div class="pagination-container">
@@ -178,11 +198,20 @@
         />
       </div>
     </el-card>
+    
+    <!-- 移动端浮动新增按钮 -->
+    <button 
+      v-if="isMobile"
+      class="mobile-fab"
+      @click="$router.push('/add-transaction')"
+    >
+      <el-icon><Plus /></el-icon>
+    </button>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, onUnmounted, computed } from 'vue'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import { getTransactions, getAccounts } from '@/api/transactions'
 import PayeeSelector from '@/components/PayeeSelector.vue'
@@ -193,6 +222,7 @@ const accounts = ref<string[]>([])
 const totalCount = ref(0)
 const currentPage = ref(1)
 const pageSize = ref(50)
+const isMobile = ref(false)
 
 const dateRange = ref<[string, string] | null>(null)
 const filterForm = ref({
@@ -366,9 +396,20 @@ const loadAccounts = async () => {
   }
 }
 
+// 检测屏幕尺寸
+const checkScreenSize = () => {
+  isMobile.value = window.innerWidth < 768
+}
+
 onMounted(() => {
+  checkScreenSize()
+  window.addEventListener('resize', checkScreenSize)
   loadAccounts()
   searchTransactions()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkScreenSize)
 })
 </script>
 
@@ -393,6 +434,75 @@ onMounted(() => {
 
 .tag-item {
   margin-right: 4px;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .mobile-filter-form .el-form {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .mobile-filter-form .el-form-item {
+    margin-bottom: 0;
+  }
+  
+  .mobile-filter-form .el-form-item__content {
+    margin-left: 0 !important;
+  }
+  
+  .mobile-filter-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 12px;
+  }
+  
+  .mobile-filter-actions .el-button {
+    flex: 1;
+  }
+  
+  .mobile-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .mobile-table-container .el-table {
+    min-width: 800px;
+  }
+  
+  .mobile-table-container .el-table .cell {
+    padding: 6px 4px;
+    font-size: 12px;
+  }
+  
+  .transaction-header-row {
+    background-color: #f8f9fa;
+    font-weight: 500;
+  }
+  
+  .transaction-detail-row {
+    color: #606266;
+  }
+  
+  .pagination-container {
+    margin-top: 12px;
+    padding: 0 8px;
+  }
+  
+  .pagination-container .el-pagination {
+    justify-content: center;
+  }
+  
+  .pagination-container .el-pagination .el-pager li {
+    min-width: 32px;
+    height: 32px;
+    line-height: 32px;
+  }
+  
+  .pagination-container .el-pagination .el-pagination__sizes {
+    display: none;
+  }
 }
 
 .pagination-container {

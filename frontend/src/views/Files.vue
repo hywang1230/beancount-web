@@ -137,7 +137,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { 
   Upload, 
@@ -158,6 +158,7 @@ const loading = ref(false)
 const saving = ref(false)
 const validatingFile = ref('')
 const files = ref<any[]>([])
+const isMobile = ref(false)
 
 const dialogVisible = ref(false)
 const dialogMode = ref<'view' | 'edit'>('view')
@@ -359,8 +360,19 @@ const validateFile = async (filename: string) => {
   }
 }
 
+// 检测屏幕尺寸
+const checkScreenSize = () => {
+  isMobile.value = window.innerWidth < 768
+}
+
 onMounted(() => {
+  checkScreenSize()
+  window.addEventListener('resize', checkScreenSize)
   loadFiles()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkScreenSize)
 })
 </script>
 
@@ -384,5 +396,56 @@ onMounted(() => {
 
 .file-dialog :deep(.el-textarea__inner) {
   resize: none;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .card-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .el-table {
+    font-size: 12px;
+  }
+  
+  .el-table .cell {
+    padding: 6px 4px;
+  }
+  
+  .file-name {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .file-name .el-tag {
+    font-size: 10px;
+    padding: 1px 4px;
+  }
+  
+  .el-button--small {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+  
+  .file-dialog {
+    width: 95% !important;
+    margin-top: 5vh !important;
+  }
+  
+  .file-dialog :deep(.el-dialog__body) {
+    padding: 10px;
+  }
+  
+  .file-dialog .el-textarea {
+    font-size: 12px;
+  }
+  
+  .file-dialog .el-textarea__inner {
+    font-size: 12px;
+    line-height: 1.4;
+  }
 }
 </style> 

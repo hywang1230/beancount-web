@@ -7,11 +7,11 @@
         ref="formRef"
         :model="transactionForm"
         :rules="formRules"
-        label-width="100px"
+        :label-width="isMobile ? '80px' : '100px'"
         @submit.prevent="submitTransaction"
       >
-        <el-row :gutter="20">
-          <el-col :span="12">
+        <el-row :gutter="isMobile ? 0 : 20">
+          <el-col :span="isMobile ? 24 : 12">
             <el-form-item label="日期" prop="date">
               <el-date-picker
                 v-model="transactionForm.date"
@@ -24,7 +24,7 @@
             </el-form-item>
           </el-col>
           
-          <el-col :span="12">
+          <el-col :span="isMobile ? 24 : 12">
             <el-form-item label="标记" prop="flag">
               <el-select v-model="transactionForm.flag" style="width: 100%">
                 <el-option label="已确认 (*)" value="*" />
@@ -34,14 +34,14 @@
           </el-col>
         </el-row>
         
-        <el-row :gutter="20">
-          <el-col :span="12">
+        <el-row :gutter="isMobile ? 0 : 20">
+          <el-col :span="isMobile ? 24 : 12">
             <el-form-item label="收付方">
               <PayeeSelector v-model="transactionForm.payee" placeholder="选择或输入收付方" />
             </el-form-item>
           </el-col>
           
-          <el-col :span="12">
+          <el-col :span="isMobile ? 24 : 12">
             <el-form-item label="摘要">
               <el-input v-model="transactionForm.narration" placeholder="请输入摘要" />
             </el-form-item>
@@ -65,17 +65,45 @@
               :key="index"
               class="posting-row"
             >
-              <el-row :gutter="16" align="middle">
-                <el-col :span="14">
+              <el-row :gutter="isMobile ? 8 : 16" align="middle">
+                <el-col :span="isMobile ? 24 : 14">
+                  <el-form-item v-if="isMobile" label="账户" :label-width="60">
+                    <AccountSelector
+                      v-model="posting.account"
+                      placeholder="选择账户"
+                      @change="onAccountChange(index)"
+                    />
+                  </el-form-item>
                   <AccountSelector
+                    v-else
                     v-model="posting.account"
                     placeholder="选择账户"
                     @change="onAccountChange(index)"
                   />
                 </el-col>
                 
-                <el-col :span="5">
+                <el-col :span="isMobile ? 24 : 5">
+                  <el-form-item v-if="isMobile" label="金额" :label-width="60">
+                    <el-input
+                      v-model="posting.amount"
+                      placeholder="金额或公式 (如: 1+2+3, 可为空)"
+                      :class="{ 
+                        'negative-amount': posting.computedAmount && posting.computedAmount < 0,
+                        'formula-input': isFormula(posting.amount),
+                        'empty-amount': !posting.amount || posting.amount.trim() === '',
+                        'invalid-amount': posting.amount && posting.amount.trim() !== '' && posting.computedAmount === undefined
+                      }"
+                      @input="(value: string) => onAmountInput(posting, value)"
+                      @blur="onAmountBlur(posting)"
+                      @keydown="onAmountKeydown(posting, $event)"
+                    >
+                      <template #suffix v-if="posting.computedAmount !== undefined && posting.amount !== posting.computedAmount.toString()">
+                        <span class="computed-result">= {{ posting.computedAmount.toFixed(2) }}</span>
+                      </template>
+                    </el-input>
+                  </el-form-item>
                   <el-input
+                    v-else
                     v-model="posting.amount"
                     placeholder="金额或公式 (如: 1+2+3, 可为空)"
                     :class="{ 
@@ -94,19 +122,26 @@
                   </el-input>
                 </el-col>
                 
-                <el-col :span="3">
-                  <el-select v-model="posting.currency" style="width: 100%">
+                <el-col :span="isMobile ? 12 : 3">
+                  <el-form-item v-if="isMobile" label="币种" :label-width="60">
+                    <el-select v-model="posting.currency" style="width: 100%">
+                      <el-option label="CNY" value="CNY" />
+                      <el-option label="USD" value="USD" />
+                    </el-select>
+                  </el-form-item>
+                  <el-select v-else v-model="posting.currency" style="width: 100%">
                     <el-option label="CNY" value="CNY" />
                     <el-option label="USD" value="USD" />
                   </el-select>
                 </el-col>
                 
-                <el-col :span="2">
+                <el-col :span="isMobile ? 12 : 2">
                   <el-button
                     type="danger"
-                    size="small"
+                    :size="isMobile ? 'small' : 'default'"
                     :disabled="transactionForm.postings.length <= 2"
                     @click="removePosting(index)"
+                    style="width: 100%"
                   >
                     删除
                   </el-button>
@@ -165,7 +200,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, nextTick } from 'vue'
+import { ref, reactive, nextTick, onMounted, onUnmounted } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import AccountSelector from '@/components/AccountSelector.vue'
@@ -177,6 +212,7 @@ const tagInputRef = ref()
 const submitting = ref(false)
 const tagInputVisible = ref(false)
 const tagInputValue = ref('')
+const isMobile = ref(false)
 
 interface Posting {
   account: string
@@ -454,6 +490,20 @@ const onAmountInput = (posting: Posting, value: string | number) => {
     posting.computedAmount = isNaN(numValue) ? undefined : numValue
   }
 }
+
+// 检测屏幕尺寸
+const checkScreenSize = () => {
+  isMobile.value = window.innerWidth < 768
+}
+
+onMounted(() => {
+  checkScreenSize()
+  window.addEventListener('resize', checkScreenSize)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkScreenSize)
+})
 </script>
 
 <style scoped>
@@ -557,5 +607,89 @@ const onAmountInput = (posting: Posting, value: string | number) => {
   border-radius: 3px;
   font-size: 11px;
   color: #666;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .el-form {
+    padding: 0;
+  }
+  
+  .el-form-item {
+    margin-bottom: 16px;
+  }
+  
+  .el-form-item__label {
+    padding-right: 8px;
+    font-size: 14px;
+  }
+  
+  .posting-tips {
+    margin-bottom: 12px;
+  }
+  
+  .posting-tips .el-alert {
+    font-size: 12px;
+    padding: 8px 12px;
+  }
+  
+  .postings-container {
+    padding: 12px;
+    border-radius: 8px;
+  }
+  
+  .posting-row {
+    background: #fff;
+    padding: 12px;
+    border-radius: 8px;
+    border: 1px solid #e4e7ed;
+    margin-bottom: 12px;
+  }
+  
+  .posting-row:last-child {
+    margin-bottom: 8px;
+  }
+  
+  .posting-row .el-form-item {
+    margin-bottom: 8px;
+  }
+  
+  .posting-row .el-form-item:last-child {
+    margin-bottom: 0;
+  }
+  
+  .computed-result {
+    font-size: 11px;
+  }
+  
+  /* 移动端按钮优化 */
+  .el-button {
+    min-height: 40px;
+  }
+  
+  .el-button--small {
+    min-height: 32px;
+    font-size: 12px;
+  }
+  
+  /* 移动端输入框优化 */
+  .el-input__inner {
+    font-size: 16px;
+  }
+  
+  .el-select .el-input__inner {
+    font-size: 16px;
+  }
+  
+  /* 移动端日期选择器优化 */
+  .el-date-editor .el-input__inner {
+    font-size: 16px;
+  }
+  
+  /* 标签区域优化 */
+  .el-tag {
+    margin-right: 8px;
+    margin-bottom: 8px;
+  }
 }
 </style> 

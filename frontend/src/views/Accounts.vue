@@ -61,7 +61,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { Search } from '@element-plus/icons-vue'
 import { getAccountsByType } from '@/api/accounts'
 
@@ -69,6 +69,7 @@ const loading = ref(false)
 const searchText = ref('')
 const activeType = ref('Assets')
 const accountGroups = ref<Record<string, string[]>>({})
+const isMobile = ref(false)
 
 const treeProps = {
   children: 'children',
@@ -172,8 +173,19 @@ const loadAccounts = async () => {
   }
 }
 
+// 检测屏幕尺寸
+const checkScreenSize = () => {
+  isMobile.value = window.innerWidth < 768
+}
+
 onMounted(() => {
+  checkScreenSize()
+  window.addEventListener('resize', checkScreenSize)
   loadAccounts()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkScreenSize)
 })
 </script>
 
@@ -223,5 +235,65 @@ onMounted(() => {
 .node-path {
   font-size: 12px;
   color: #909399;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .el-row {
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+  
+  .el-col {
+    padding-left: 6px !important;
+    padding-right: 6px !important;
+    margin-bottom: 12px;
+  }
+  
+  .stat-card .stat-content {
+    padding: 12px;
+  }
+  
+  .stat-value {
+    font-size: 20px;
+  }
+  
+  .stat-label {
+    font-size: 12px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+  
+  .card-header .el-input {
+    width: 100% !important;
+  }
+  
+  .el-tabs__item {
+    font-size: 12px;
+    padding: 0 8px;
+  }
+  
+  .account-tree {
+    margin-top: 8px;
+  }
+  
+  .tree-node {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+  
+  .node-label {
+    font-size: 14px;
+  }
+  
+  .node-path {
+    font-size: 11px;
+    word-break: break-all;
+  }
 }
 </style> 

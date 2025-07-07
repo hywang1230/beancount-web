@@ -3,8 +3,8 @@
     <h1 class="page-title">仪表盘</h1>
     
     <!-- 统计卡片 -->
-    <el-row :gutter="20" class="mb-4">
-      <el-col :xs="24" :sm="12" :lg="8" :xl="6">
+    <el-row :gutter="isMobile ? 12 : 20" class="mb-4">
+      <el-col :xs="12" :sm="12" :lg="8" :xl="6">
         <el-card class="stat-card">
           <div class="stat-content">
             <div class="stat-icon assets">
@@ -18,7 +18,7 @@
         </el-card>
       </el-col>
       
-      <el-col :xs="24" :sm="12" :lg="8" :xl="6">
+      <el-col :xs="12" :sm="12" :lg="8" :xl="6">
         <el-card class="stat-card">
           <div class="stat-content">
             <div class="stat-icon liabilities">
@@ -32,7 +32,7 @@
         </el-card>
       </el-col>
 
-      <el-col :xs="24" :sm="12" :lg="8" :xl="6">
+      <el-col :xs="12" :sm="12" :lg="8" :xl="6">
         <el-card class="stat-card">
           <div class="stat-content">
             <div class="stat-icon net-worth">
@@ -46,7 +46,7 @@
         </el-card>
       </el-col>
       
-      <el-col :xs="24" :sm="12" :lg="8" :xl="6">
+      <el-col :xs="12" :sm="12" :lg="8" :xl="6">
         <el-card class="stat-card">
           <div class="stat-content">
             <div class="stat-icon income">
@@ -60,7 +60,7 @@
         </el-card>
       </el-col>
       
-      <el-col :xs="24" :sm="12" :lg="8" :xl="6">
+      <el-col :xs="12" :sm="12" :lg="8" :xl="6">
         <el-card class="stat-card">
           <div class="stat-content">
             <div class="stat-icon expenses">
@@ -76,7 +76,7 @@
     </el-row>
     
     <!-- 图表区域 -->
-    <el-row :gutter="20" class="mb-4">
+    <el-row :gutter="isMobile ? 12 : 20" class="mb-4">
       <el-col :xs="24" :lg="12">
         <el-card>
           <template #header>
@@ -88,7 +88,7 @@
             <v-chart 
               v-if="trendsOption" 
               :option="trendsOption" 
-              style="height: 300px"
+              :style="{ height: isMobile ? '240px' : '300px' }"
             />
             <div v-else class="loading-container">
               <el-icon class="is-loading"><Loading /></el-icon>
@@ -111,7 +111,7 @@
             <v-chart 
               v-if="expensesPieOption" 
               :option="expensesPieOption" 
-              style="height: 300px"
+              :style="{ height: isMobile ? '240px' : '300px' }"
               @click="onPieChartClick"
             />
             <div v-else class="loading-container">
@@ -148,12 +148,13 @@
         <el-empty description="点击上方支出分类饼图查看对应的交易明细" />
       </div>
       
-      <el-table 
-        v-else
-        :data="categoryTransactions" 
-        v-loading="transactionLoading"
-        max-height="400"
-      >
+      <div v-else :class="{ 'mobile-table-container': isMobile }">
+        <el-table 
+          :data="categoryTransactions" 
+          v-loading="transactionLoading"
+          :max-height="isMobile ? '300' : '400'"
+          :size="isMobile ? 'small' : 'default'"
+        >
         <el-table-column prop="date" label="日期" width="120" />
         <el-table-column prop="payee" label="收付方" width="140">
           <template #default="{ row }">
@@ -185,13 +186,14 @@
             </div>
           </template>
         </el-table-column>
-      </el-table>
+        </el-table>
+      </div>
     </el-card>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart, PieChart } from 'echarts/charts'
@@ -233,6 +235,7 @@ const trendsData = ref<any>(null)
 const selectedCategory = ref<string>('')
 const selectedAccountName = ref<string>('')
 const categoryTransactions = ref<any[]>([])
+const isMobile = ref(false)
 
 const trendsOption = ref<any>(null)
 const expensesPieOption = ref<any>(null)
@@ -424,8 +427,19 @@ const generateChartOptions = () => {
   }
 }
 
+// 检测屏幕尺寸
+const checkScreenSize = () => {
+  isMobile.value = window.innerWidth < 768
+}
+
 onMounted(() => {
+  checkScreenSize()
+  window.addEventListener('resize', checkScreenSize)
   loadData()
+})
+
+onUnmounted(() => {
+  window.removeEventListener('resize', checkScreenSize)
 })
 </script>
 
@@ -546,5 +560,68 @@ onMounted(() => {
 .no-payee {
   color: #c0c4cc;
   font-style: italic;
+}
+
+/* 移动端优化 */
+@media (max-width: 768px) {
+  .stat-card .el-card__body {
+    padding: 12px;
+  }
+  
+  .stat-content {
+    gap: 12px;
+  }
+  
+  .stat-icon {
+    width: 40px;
+    height: 40px;
+    font-size: 18px;
+  }
+  
+  .stat-value {
+    font-size: 16px;
+    margin-bottom: 2px;
+  }
+  
+  .stat-label {
+    font-size: 12px;
+  }
+  
+  .chart-container {
+    min-height: 240px;
+  }
+  
+  .selected-category {
+    font-size: 11px;
+    padding: 1px 6px;
+    margin-left: 4px;
+    display: block;
+    margin-top: 4px;
+  }
+  
+  .card-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .header-actions .el-button {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  
+  .mobile-table-container {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .mobile-table-container .el-table {
+    min-width: 600px;
+  }
+  
+  .mobile-table-container .el-table .cell {
+    padding: 6px 4px;
+    font-size: 12px;
+  }
 }
 </style> 
