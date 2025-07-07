@@ -42,107 +42,13 @@ beancount-web/
 
 ## 快速开始
 
-### 1. 安装后端依赖
-
-```bash
-cd backend
-pip install -r requirements.txt
+### 1.启动
+``` shell
+./start.sh
 ```
-
-### 2. 启动后端服务
-
-```bash
-cd backend
-python main.py
-```
-
-### 3. 安装前端依赖
-
-```bash
-cd frontend
-npm install
-```
-
-### 4. 启动前端开发服务器
-
-```bash
-cd frontend
-npm run dev
-```
-
-### 5. 访问应用
-
-打开浏览器访问 `http://localhost:5173`
-
-## 开发说明
-
-- 账本文件统一存放在 `data/` 目录下
-- 后端API运行在 `http://localhost:8000`
-- 前端开发服务器运行在 `http://localhost:5173`
+### 2.访问
+http://localhost:5173
 
 ## 许可证
 
 MIT License
-
-## Recent Updates
-
-### 2024年12月 - Beancount 文件格式支持扩展
-- **多扩展名支持** - 现在同时支持 `.beancount` 和 `.bean` 两种文件扩展名
-- **文件发现增强** - 文件管理器可以自动发现和显示两种格式的文件
-- **上传功能扩展** - 文件上传支持两种格式，错误提示更友好
-- **工具模块重构** - 新增 `file_utils.py` 模块，统一文件格式处理逻辑
-- **自动备份优化** - 备份文件保持原始扩展名格式
-- **全面兼容** - 所有文件操作（读取、编辑、验证、删除）均支持两种格式
-
-### 2024年 - 单用户系统优化
-- **移除用户认证** - 项目简化为单用户系统，移除了登录界面和用户管理功能
-- **界面优化** - 移除了顶部用户下拉菜单，简化了导航栏布局
-- **新增Favicon** - 添加了专用的记账系统图标（绿色圆形，带有人民币符号）
-- **用户体验** - 专为个人记账使用场景优化，启动即可使用
-
-### 账户列表修复和优化
-- 修复了 `get_all_accounts()` 方法，现在正确返回所有类型的账户
-- 使用 Beancount 的 `getters.get_accounts()` 方法获取完整账户列表
-- 包含：Assets（资产）、Liabilities（负债）、Expenses（支出）、Income（收入）、Equity（所有者权益）
-- 移除了前端20个账户的显示限制，现在显示所有70+个账户
-- 优化了账户搜索算法，支持智能匹配和按相关度排序
-- 改进了下拉列表UI，显示账户类型标签，提升用户体验
-- 提高了后端搜索建议的返回数量限制（10→50个）
-
-### 分录金额输入功能增强
-
-AddTransaction.vue 中的分录现在支持以下新功能：
-
-#### 1. 公式计算支持
-- 金额字段支持数学公式输入，如：`1+2+3`、`100*0.15`、`(200+300)*0.1`
-- 实时显示计算结果
-- 按 Enter 键可以将公式结果替换为计算值
-- 公式输入时字段会显示蓝色边框以示区别
-
-#### 2. 灵活的金额填写规则
-- 金额字段变为非必填
-- 最多只能有一个分录不填金额（空金额将自动平衡）
-- 至少需要两个包含账户的分录
-- 当所有分录都有金额时，系统会验证借贷平衡
-
-#### 3. 视觉指示
-- 空金额分录：浅蓝色背景
-- 公式输入：蓝色边框和占位符
-- 负数金额：红色显示
-- 无效输入：红色边框和背景
-- 公式计算结果显示在输入框右侧
-
-#### 4. 用户体验优化
-- 添加了功能提示说明
-- 智能验证和错误提示
-- 平滑的视觉过渡效果
-
-## Setup
-
-1. Install dependencies for backend and frontend
-2. Run the development servers
-3. Access the web interface
-
-## Usage
-
-The application provides a modern web interface for Beancount file management and transaction entry with enhanced formula calculation capabilities. 
