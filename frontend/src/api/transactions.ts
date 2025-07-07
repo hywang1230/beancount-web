@@ -53,4 +53,9 @@ export const getRecentTransactions = (days: number = 30) => {
 // 获取账户列表
 export const getAccounts = () => {
   return api.get('/transactions/accounts')
+}
+
+// 获取收付方列表
+export const getPayees = () => {
+  return api.get('/transactions/payees')
 } 

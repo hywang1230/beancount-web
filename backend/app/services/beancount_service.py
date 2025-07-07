@@ -423,6 +423,17 @@ class BeancountService:
         all_accounts = getters.get_accounts(entries)
         
         return sorted(list(all_accounts))
+    
+    def get_all_payees(self) -> List[str]:
+        """获取所有收付方列表"""
+        entries, _, _ = self._load_entries()
+        
+        payees = set()
+        for entry in entries:
+            if isinstance(entry, Transaction) and entry.payee:
+                payees.add(entry.payee)
+        
+        return sorted(list(payees))
 
 # 创建全局服务实例
 beancount_service = BeancountService() 

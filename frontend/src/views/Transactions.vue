@@ -36,10 +36,9 @@
         </el-form-item>
         
         <el-form-item label="收付方">
-          <el-input
+          <PayeeSelector
             v-model="filterForm.payee"
             placeholder="搜索收付方"
-            clearable
             style="width: 200px"
           />
         </el-form-item>
@@ -186,6 +185,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { Search, Refresh, Plus } from '@element-plus/icons-vue'
 import { getTransactions, getAccounts } from '@/api/transactions'
+import PayeeSelector from '@/components/PayeeSelector.vue'
 
 const loading = ref(false)
 const transactions = ref<any[]>([])

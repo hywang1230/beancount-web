@@ -1,3 +1,68 @@
+# 组件说明
+
+## PayeeSelector
+
+通用的收付方选择组件，支持从历史记录中选择收付方或自由输入新的收付方。
+
+### 功能特点
+
+- 支持下拉选择历史收付方
+- 支持自由输入新的收付方
+- 支持搜索过滤
+- 可配置占位符文本
+- 完整的双向数据绑定
+
+### 使用方式
+
+```vue
+<template>
+  <PayeeSelector 
+    v-model="payee"
+    placeholder="选择或输入收付方"
+    @change="handlePayeeChange"
+  />
+</template>
+
+<script setup>
+import PayeeSelector from '@/components/PayeeSelector.vue'
+
+const payee = ref('')
+
+const handlePayeeChange = (value) => {
+  console.log('收付方已选择:', value)
+}
+</script>
+```
+
+### Props
+
+- `modelValue`: 当前值 (string, 可选)
+- `placeholder`: 占位符文本 (string, 可选, 默认: "选择或输入收付方")
+
+### Events
+
+- `update:modelValue`: 值变化时触发
+- `change`: 选择变化时触发
+
+### 使用场景
+
+- 新增交易页面的收付方选择
+- 周期记账设置中的收付方选择
+- 其他需要收付方输入的表单
+
+## AccountSelector
+
+账户选择组件，用于选择记账账户。
+
+### 使用方式
+
+```vue
+<AccountSelector 
+  v-model="account" 
+  placeholder="选择账户"
+/>
+```
+
 # 账户选择组件 (AccountSelector)
 
 `AccountSelector` 是一个可复用的账户选择组件，提供智能的账户搜索和选择功能。

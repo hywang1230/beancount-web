@@ -165,7 +165,7 @@
         </el-form-item>
         
         <el-form-item label="收付方">
-          <el-input v-model="form.payee" placeholder="可选的收付方" />
+          <PayeeSelector v-model="form.payee" placeholder="可选的收付方" />
         </el-form-item>
         
         <el-form-item label="摘要">
@@ -283,6 +283,7 @@ import { ref, reactive, onMounted } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus, VideoPlay, Timer } from '@element-plus/icons-vue'
 import AccountSelector from '@/components/AccountSelector.vue'
+import PayeeSelector from '@/components/PayeeSelector.vue'
 import {
   recurringApi,
   type RecurringTransaction,

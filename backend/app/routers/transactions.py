@@ -87,6 +87,15 @@ async def get_accounts():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取账户列表失败: {str(e)}")
 
+@router.get("/payees", response_model=List[str])
+async def get_payees():
+    """获取所有收付方列表"""
+    try:
+        payees = beancount_service.get_all_payees()
+        return payees
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取收付方列表失败: {str(e)}")
+
 @router.get("/recent", response_model=List[TransactionResponse])
 async def get_recent_transactions(days: int = Query(30, description="最近天数", ge=1, le=365)):
     """获取最近的交易"""

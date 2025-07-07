@@ -37,7 +37,7 @@
         <el-row :gutter="20">
           <el-col :span="12">
             <el-form-item label="收付方">
-              <el-input v-model="transactionForm.payee" placeholder="收付方名称" />
+              <PayeeSelector v-model="transactionForm.payee" placeholder="选择或输入收付方" />
             </el-form-item>
           </el-col>
           
@@ -169,6 +169,7 @@ import { ref, reactive, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import AccountSelector from '@/components/AccountSelector.vue'
+import PayeeSelector from '@/components/PayeeSelector.vue'
 import { createTransaction } from '@/api/transactions'
 
 const formRef = ref()
