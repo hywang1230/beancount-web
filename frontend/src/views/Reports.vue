@@ -113,13 +113,13 @@
         <!-- 收入 -->
         <el-col :span="12">
           <h3>收入</h3>
-          <el-table :data="incomeStatement.income_accounts" size="small">
+          <el-table :data="sortedIncomeAccounts" size="small">
             <el-table-column prop="name" label="账户">
               <template #default="{ row }">
                 {{ row.name.replace('Income:', '') }}
               </template>
             </el-table-column>
-            <el-table-column prop="balance" label="金额" align="right">
+            <el-table-column prop="balance" label="金额" align="right" sortable>
               <template #default="{ row }">
                 <span class="amount-positive">{{ formatCurrency(Math.abs(row.balance)) }}</span>
               </template>
@@ -133,13 +133,13 @@
         <!-- 支出 -->
         <el-col :span="12">
           <h3>支出</h3>
-          <el-table :data="incomeStatement.expense_accounts" size="small">
+          <el-table :data="sortedExpenseAccounts" size="small">
             <el-table-column prop="name" label="账户">
               <template #default="{ row }">
                 {{ row.name.replace('Expenses:', '') }}
               </template>
             </el-table-column>
-            <el-table-column prop="balance" label="金额" align="right">
+            <el-table-column prop="balance" label="金额" align="right" sortable>
               <template #default="{ row }">
                 <span class="amount-negative">{{ formatCurrency(Math.abs(row.balance)) }}</span>
               </template>
@@ -289,13 +289,13 @@
                 <span>{{ selectedMonth }}月收入明细</span>
               </template>
               
-              <el-table :data="monthlySummary.income_statement.income_accounts" size="small" max-height="300">
+              <el-table :data="sortedMonthlyIncomeAccounts" size="small" max-height="300">
                 <el-table-column prop="name" label="账户">
                   <template #default="{ row }">
                     {{ row.name.replace('Income:', '') }}
                   </template>
                 </el-table-column>
-                <el-table-column prop="balance" label="金额" align="right">
+                <el-table-column prop="balance" label="金额" align="right" sortable>
                   <template #default="{ row }">
                     <span class="amount-positive">{{ formatCurrency(-row.balance) }}</span>
                   </template>
@@ -310,13 +310,13 @@
                 <span>{{ selectedMonth }}月支出明细</span>
               </template>
               
-              <el-table :data="monthlySummary.income_statement.expense_accounts" size="small" max-height="300">
+              <el-table :data="sortedMonthlyExpenseAccounts" size="small" max-height="300">
                 <el-table-column prop="name" label="账户">
                   <template #default="{ row }">
                     {{ row.name.replace('Expenses:', '') }}
                   </template>
                 </el-table-column>
-                <el-table-column prop="balance" label="金额" align="right">
+                <el-table-column prop="balance" label="金额" align="right" sortable>
                   <template #default="{ row }">
                     <span class="amount-negative">{{ formatCurrency(Math.abs(row.balance)) }}</span>
                   </template>
@@ -391,6 +391,30 @@ const liabilityAccounts = computed(() =>
 const equityAccounts = computed(() => 
   balanceSheet.value?.accounts.filter((acc: any) => acc.account_type === 'Equity') || []
 )
+
+// 按金额倒序排序的收入账户
+const sortedIncomeAccounts = computed(() => {
+  if (!incomeStatement.value?.income_accounts) return []
+  return [...incomeStatement.value.income_accounts].sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
+})
+
+// 按金额倒序排序的支出账户
+const sortedExpenseAccounts = computed(() => {
+  if (!incomeStatement.value?.expense_accounts) return []
+  return [...incomeStatement.value.expense_accounts].sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
+})
+
+// 按金额倒序排序的月度收入账户
+const sortedMonthlyIncomeAccounts = computed(() => {
+  if (!monthlySummary.value?.income_statement?.income_accounts) return []
+  return [...monthlySummary.value.income_statement.income_accounts].sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
+})
+
+// 按金额倒序排序的月度支出账户
+const sortedMonthlyExpenseAccounts = computed(() => {
+  if (!monthlySummary.value?.income_statement?.expense_accounts) return []
+  return [...monthlySummary.value.income_statement.expense_accounts].sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
+})
 
 // 格式化货币
 const formatCurrency = (amount: number) => {
