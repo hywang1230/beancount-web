@@ -170,29 +170,63 @@ class BeancountService:
             )
             equity.append(earnings_account)
         
-        # 计算总计（包含汇率转换）
-        total_assets = self._calculate_total_with_currency_conversion(
-            assets, default_currency, exchange_rates)
+        # 处理资产账户：汇率转换和货币统一
+        processed_assets = []
+        merged_asset_accounts = {}
         
-        # 负债在beancount中是负数，取绝对值用于显示
-        total_liabilities_raw = self._calculate_total_with_currency_conversion(
-            liabilities, default_currency, exchange_rates)
-        total_liabilities = abs(total_liabilities_raw)  # 显示为正数
+        for acc in assets:
+            # 创建新的账户对象避免修改原始数据
+            display_acc = AccountInfo(
+                name=acc.name,
+                balance=acc.balance,
+                currency=acc.currency,
+                account_type=acc.account_type
+            )
+            
+            # 转换到基础货币
+            if display_acc.currency != default_currency and display_acc.currency in exchange_rates:
+                display_acc.balance = display_acc.balance * exchange_rates[display_acc.currency]
+                display_acc.currency = default_currency
+            
+            # 合并相同名称的账户（不同币种的同一账户）
+            if display_acc.name in merged_asset_accounts:
+                merged_asset_accounts[display_acc.name].balance += display_acc.balance
+            else:
+                merged_asset_accounts[display_acc.name] = display_acc
         
-        # 权益处理：计算包含当期收益的总权益
-        # 重新计算权益总计，避免重复计算
-        total_equity_before_conversion = Decimal('0')
+        for account in merged_asset_accounts.values():
+            processed_assets.append(account)
         
-        for acc in equity:
-            if acc.currency == default_currency:
-                total_equity_before_conversion += acc.balance
-            elif acc.currency in exchange_rates:
-                converted_amount = acc.balance * exchange_rates[acc.currency]
-                total_equity_before_conversion += converted_amount
+        # 处理负债账户：汇率转换和货币统一
+        processed_liabilities = []
+        merged_liability_accounts = {}
         
-        # 调整权益账户显示，确保汇率转换正确
-        processed_accounts = []
-        merged_accounts = {}  # 用于合并相同名称的账户
+        for acc in liabilities:
+            # 创建新的账户对象避免修改原始数据
+            display_acc = AccountInfo(
+                name=acc.name,
+                balance=acc.balance,
+                currency=acc.currency,
+                account_type=acc.account_type
+            )
+            
+            # 转换到基础货币
+            if display_acc.currency != default_currency and display_acc.currency in exchange_rates:
+                display_acc.balance = display_acc.balance * exchange_rates[display_acc.currency]
+                display_acc.currency = default_currency
+            
+            # 合并相同名称的账户（不同币种的同一账户）
+            if display_acc.name in merged_liability_accounts:
+                merged_liability_accounts[display_acc.name].balance += display_acc.balance
+            else:
+                merged_liability_accounts[display_acc.name] = display_acc
+        
+        for account in merged_liability_accounts.values():
+            processed_liabilities.append(account)
+        
+        # 处理权益账户：汇率转换和货币统一（保持原有逻辑）
+        processed_equity = []
+        merged_equity_accounts = {}
         
         for acc in equity:
             # 创建新的账户对象避免修改原始数据
@@ -209,13 +243,13 @@ class BeancountService:
                 display_acc.currency = default_currency
             
             # 合并相同名称的账户
-            if display_acc.name in merged_accounts:
-                merged_accounts[display_acc.name].balance += display_acc.balance
+            if display_acc.name in merged_equity_accounts:
+                merged_equity_accounts[display_acc.name].balance += display_acc.balance
             else:
-                merged_accounts[display_acc.name] = display_acc
+                merged_equity_accounts[display_acc.name] = display_acc
         
-        # 处理合并后的账户显示
-        for account_name, account in merged_accounts.items():
+        # 处理合并后的权益账户显示
+        for account_name, account in merged_equity_accounts.items():
             # 权益账户显示逻辑：
             # 1. Equity:Earnings:Current 显示为正数（亏损显示为正数）
             # 2. 其他权益账户保持符合会计惯例的显示
@@ -226,10 +260,15 @@ class BeancountService:
                 # 其他权益账户：负数显示为正数（符合资产负债表惯例）
                 account.balance = abs(account.balance)
                 
-            processed_accounts.append(account)
+            processed_equity.append(account)
+        
+        # 计算总计（使用转换后的账户数据）
+        total_assets = sum(acc.balance for acc in processed_assets)
+        total_liabilities_raw = sum(acc.balance for acc in processed_liabilities)
+        total_liabilities = abs(total_liabilities_raw)  # 显示为正数
         
         # 使用转换后的账户计算正确的权益总计
-        total_equity_calculated = sum(acc.balance for acc in processed_accounts)
+        total_equity_calculated = sum(acc.balance for acc in processed_equity)
         
         # 在资产负债表中，如果权益总和为负数，显示为正数（会计惯例）
         total_equity = abs(total_equity_calculated) if total_equity_calculated < 0 else total_equity_calculated
@@ -238,7 +277,7 @@ class BeancountService:
         net_worth = total_assets - total_liabilities
         
         return BalanceResponse(
-            accounts=assets + liabilities + processed_accounts,
+            accounts=processed_assets + processed_liabilities + processed_equity,
             total_assets=total_assets,
             total_liabilities=total_liabilities,
             total_equity=total_equity,

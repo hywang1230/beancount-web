@@ -28,6 +28,7 @@
         </div>
       </template>
       
+      
       <el-row :gutter="20" v-if="balanceSheet">
         <!-- 资产 -->
         <el-col :span="8">
@@ -332,6 +333,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { InfoFilled } from '@element-plus/icons-vue'
 import { use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 import { LineChart } from 'echarts/charts'
@@ -716,6 +718,23 @@ onUnmounted(() => {
 
 .ytd-value.negative {
   color: #f56c6c;
+}
+
+.currency-notice {
+  margin-bottom: 16px;
+  padding: 8px 12px;
+  background-color: #f0f9ff;
+  border: 1px solid #b3d9ff;
+  border-radius: 4px;
+  color: #409eff;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.currency-notice .info-icon {
+  font-size: 16px;
 }
 
 /* 移动端优化 */
