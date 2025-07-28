@@ -147,3 +147,21 @@ async def get_trends(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取趋势分析失败: {str(e)}") 
+
+@router.get("/account-configuration")
+async def get_account_configuration():
+    """获取Beancount账户配置信息"""
+    try:
+        config = beancount_service.get_account_configuration()
+        return config
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取配置信息失败: {str(e)}")
+
+@router.get("/conversion-account-info")
+async def get_conversion_account_info():
+    """获取转换账户的说明信息"""
+    try:
+        info = beancount_service.get_conversion_account_info()
+        return info
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取转换账户信息失败: {str(e)}") 
