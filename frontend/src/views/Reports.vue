@@ -52,7 +52,6 @@
                         {{ row.name }}
                       </span>
                       <span class="account-amount">
-                        <span v-if="row.type === 'item'" class="currency-label">CNY</span>
                         {{ row.amount }}
                       </span>
                     </div>
@@ -84,7 +83,6 @@
                         {{ row.name }}
                       </span>
                       <span class="account-amount">
-                        <span v-if="row.type === 'item'" class="currency-label">CNY</span>
                         {{ row.amount }}
                       </span>
                     </div>
@@ -113,7 +111,6 @@
                         {{ row.name }}
                       </span>
                       <span class="account-amount">
-                        <span v-if="row.type === 'item'" class="currency-label">CNY</span>
                         {{ row.amount }}
                       </span>
                     </div>
@@ -168,7 +165,6 @@
                     {{ row.name }}
                   </span>
                   <span class="account-amount">
-                    <span v-if="row.type === 'item'" class="currency-label">CNY</span>
                     {{ formatCurrency(row.balance) }}
                   </span>
                 </div>
@@ -200,7 +196,6 @@
                     {{ row.name }}
                   </span>
                   <span class="account-amount">
-                    <span v-if="row.type === 'item'" class="currency-label">CNY</span>
                     {{ formatCurrency(row.balance) }}
                   </span>
                 </div>
