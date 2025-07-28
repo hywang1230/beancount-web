@@ -151,15 +151,27 @@
         <!-- 收入 -->
         <el-col :span="12">
           <h3>收入</h3>
-          <el-table :data="sortedIncomeAccounts" size="small">
-            <el-table-column prop="name" label="账户">
+          <el-table 
+            :data="sortedIncomeAccounts" 
+            :show-header="false"
+            size="default"
+            :border="false"
+            class="balance-table"
+          >
+            <el-table-column>
               <template #default="{ row }">
-                {{ row.name.replace('Income:', '') }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="balance" label="金额" align="right" sortable>
-              <template #default="{ row }">
-                <span class="amount-positive">{{ formatCurrency(Math.abs(row.balance)) }}</span>
+                <div :class="['account-row', row.type]">
+                  <span 
+                    class="account-name" 
+                    :style="{ paddingLeft: (12 + row.level * 20) + 'px' }"
+                  >
+                    {{ row.name }}
+                  </span>
+                  <span class="account-amount">
+                    <span v-if="row.type === 'item'" class="currency-label">CNY</span>
+                    {{ formatCurrency(row.balance) }}
+                  </span>
+                </div>
               </template>
             </el-table-column>
           </el-table>
@@ -171,15 +183,27 @@
         <!-- 支出 -->
         <el-col :span="12">
           <h3>支出</h3>
-          <el-table :data="sortedExpenseAccounts" size="small">
-            <el-table-column prop="name" label="账户">
+          <el-table 
+            :data="sortedExpenseAccounts" 
+            :show-header="false"
+            size="default"
+            :border="false"
+            class="balance-table"
+          >
+            <el-table-column>
               <template #default="{ row }">
-                {{ row.name.replace('Expenses:', '') }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="balance" label="金额" align="right" sortable>
-              <template #default="{ row }">
-                <span class="amount-negative">{{ formatCurrency(Math.abs(row.balance)) }}</span>
+                <div :class="['account-row', row.type]">
+                  <span 
+                    class="account-name" 
+                    :style="{ paddingLeft: (12 + row.level * 20) + 'px' }"
+                  >
+                    {{ row.name }}
+                  </span>
+                  <span class="account-amount">
+                    <span v-if="row.type === 'item'" class="currency-label">CNY</span>
+                    {{ formatCurrency(row.balance) }}
+                  </span>
+                </div>
               </template>
             </el-table-column>
           </el-table>
@@ -718,13 +742,175 @@ const groupedEquityAccounts = computed(() => {
 // 按金额倒序排序的收入账户
 const sortedIncomeAccounts = computed(() => {
   if (!incomeStatement.value?.income_accounts) return []
-  return [...incomeStatement.value.income_accounts].sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
+  
+  const accounts = incomeStatement.value.income_accounts
+  const grouped: any[] = []
+  
+  // 构建层级树结构
+  const buildTree = (accounts: any[]) => {
+    const tree: any = {}
+    
+    accounts.forEach(acc => {
+      const parts = acc.name.split(':').slice(1) // 去掉 Income 前缀
+      let current = tree
+      
+      // 构建路径
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i]
+        if (!current[part]) {
+          current[part] = {
+            name: part,
+            fullPath: 'Income:' + parts.slice(0, i + 1).join(':'),
+            children: {},
+            balance: 0,
+            isLeaf: false
+          }
+        }
+        current[part].balance += Number(Math.abs(acc.balance)) || 0
+        
+        // 如果是最后一级，标记为叶子节点
+        if (i === parts.length - 1) {
+          current[part].isLeaf = true
+          current[part].originalAccount = acc
+        }
+        
+        current = current[part].children
+      }
+    })
+    
+    return tree
+  }
+  
+  // 渲染树结构
+  const renderTree = (node: any, level = 0) => {
+    const result: any[] = []
+    
+    // 按余额排序（从大到小）
+    const sortedKeys = Object.keys(node).sort((a, b) => node[b].balance - node[a].balance)
+    
+    sortedKeys.forEach(key => {
+      const item = node[key]
+      
+      // 如果有子节点，显示为分类
+      if (Object.keys(item.children).length > 0) {
+        result.push({
+          name: item.name,
+          balance: item.balance,
+          type: level === 0 ? 'category' : 'subcategory',
+          level: level,
+          fullPath: item.fullPath,
+          isExpandable: true
+        })
+        
+        // 递归添加子节点
+        result.push(...renderTree(item.children, level + 1))
+      } else {
+        // 叶子节点，显示为具体账户
+        result.push({
+          name: item.name,
+          balance: item.balance,
+          type: 'item',
+          level: level,
+          fullPath: item.fullPath,
+          isExpandable: false
+        })
+      }
+    })
+    
+    return result
+  }
+  
+  const tree = buildTree(accounts)
+  grouped.push(...renderTree(tree))
+  
+  return grouped
 })
 
 // 按金额倒序排序的支出账户
 const sortedExpenseAccounts = computed(() => {
   if (!incomeStatement.value?.expense_accounts) return []
-  return [...incomeStatement.value.expense_accounts].sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
+  
+  const accounts = incomeStatement.value.expense_accounts
+  const grouped: any[] = []
+  
+  // 构建层级树结构
+  const buildTree = (accounts: any[]) => {
+    const tree: any = {}
+    
+    accounts.forEach(acc => {
+      const parts = acc.name.split(':').slice(1) // 去掉 Expenses 前缀
+      let current = tree
+      
+      // 构建路径
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i]
+        if (!current[part]) {
+          current[part] = {
+            name: part,
+            fullPath: 'Expenses:' + parts.slice(0, i + 1).join(':'),
+            children: {},
+            balance: 0,
+            isLeaf: false
+          }
+        }
+        current[part].balance += Number(Math.abs(acc.balance)) || 0
+        
+        // 如果是最后一级，标记为叶子节点
+        if (i === parts.length - 1) {
+          current[part].isLeaf = true
+          current[part].originalAccount = acc
+        }
+        
+        current = current[part].children
+      }
+    })
+    
+    return tree
+  }
+  
+  // 渲染树结构
+  const renderTree = (node: any, level = 0) => {
+    const result: any[] = []
+    
+    // 按余额排序（从大到小）
+    const sortedKeys = Object.keys(node).sort((a, b) => node[b].balance - node[a].balance)
+    
+    sortedKeys.forEach(key => {
+      const item = node[key]
+      
+      // 如果有子节点，显示为分类
+      if (Object.keys(item.children).length > 0) {
+        result.push({
+          name: item.name,
+          balance: item.balance,
+          type: level === 0 ? 'category' : 'subcategory',
+          level: level,
+          fullPath: item.fullPath,
+          isExpandable: true
+        })
+        
+        // 递归添加子节点
+        result.push(...renderTree(item.children, level + 1))
+      } else {
+        // 叶子节点，显示为具体账户
+        result.push({
+          name: item.name,
+          balance: item.balance,
+          type: 'item',
+          level: level,
+          fullPath: item.fullPath,
+          isExpandable: false
+        })
+      }
+    })
+    
+    return result
+  }
+  
+  const tree = buildTree(accounts)
+  grouped.push(...renderTree(tree))
+  
+  return grouped
 })
 
 // 按金额倒序排序的月度收入账户
