@@ -145,4 +145,26 @@ class RecurringExecutionResult(BaseModel):
     message: str
     executed_count: int
     failed_count: int
-    details: List[Dict[str, Any]] 
+    details: List[Dict[str, Any]]
+
+class AccountCreate(BaseModel):
+    """创建账户请求"""
+    name: str = Field(..., description="账户名称，需要符合beancount规范")
+    open_date: date = Field(..., description="账户开启日期")
+    currencies: Optional[List[str]] = Field(None, description="约束货币列表")
+    booking_method: Optional[str] = Field(None, description="记账方法")
+
+class AccountClose(BaseModel):
+    """归档账户请求"""
+    name: str = Field(..., description="账户名称")
+    close_date: date = Field(..., description="账户关闭日期")
+
+class AccountRestore(BaseModel):
+    """恢复账户请求"""
+    name: str = Field(..., description="账户名称")
+
+class AccountActionResponse(BaseModel):
+    """账户操作响应"""
+    success: bool
+    message: str
+    account_name: str 

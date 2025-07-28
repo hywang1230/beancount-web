@@ -80,9 +80,9 @@ async def create_transaction(transaction: TransactionCreate):
 
 @router.get("/accounts", response_model=List[str])
 async def get_accounts():
-    """获取所有账户列表"""
+    """获取活跃账户列表（排除已归档账户）"""
     try:
-        accounts = beancount_service.get_all_accounts()
+        accounts = beancount_service.get_active_accounts()
         return accounts
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取账户列表失败: {str(e)}")

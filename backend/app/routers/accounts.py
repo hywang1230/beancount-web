@@ -2,23 +2,33 @@ from fastapi import APIRouter, HTTPException
 from typing import List
 
 from app.services.beancount_service import beancount_service
+from app.models.schemas import AccountCreate, AccountClose, AccountRestore, AccountActionResponse
 
 router = APIRouter()
 
 @router.get("/", response_model=List[str])
 async def get_all_accounts():
-    """获取所有账户列表"""
+    """获取活跃账户列表（排除已归档账户）"""
     try:
-        accounts = beancount_service.get_all_accounts()
+        accounts = beancount_service.get_active_accounts()
         return accounts
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取账户列表失败: {str(e)}")
 
+@router.get("/archived", response_model=List[str])
+async def get_archived_accounts():
+    """获取已归档账户列表"""
+    try:
+        accounts = beancount_service.get_archived_accounts()
+        return accounts
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取已归档账户列表失败: {str(e)}")
+
 @router.get("/structure")
 async def get_account_structure():
-    """获取账户结构树"""
+    """获取活跃账户结构树（排除已归档账户）"""
     try:
-        accounts = beancount_service.get_all_accounts()
+        accounts = beancount_service.get_active_accounts()
         
         # 构建账户树
         tree = {}
@@ -56,9 +66,9 @@ async def get_account_structure():
 
 @router.get("/types")
 async def get_accounts_by_type():
-    """按类型分组获取账户"""
+    """按类型分组获取活跃账户（排除已归档账户）"""
     try:
-        accounts = beancount_service.get_all_accounts()
+        accounts = beancount_service.get_active_accounts()
         
         grouped = {
             "Assets": [],
@@ -91,9 +101,9 @@ async def get_accounts_by_type():
 
 @router.get("/suggest/{partial_name}")
 async def suggest_accounts(partial_name: str):
-    """根据部分名称建议账户"""
+    """根据部分名称建议活跃账户（排除已归档账户）"""
     try:
-        accounts = beancount_service.get_all_accounts()
+        accounts = beancount_service.get_active_accounts()
         
         # 模糊匹配
         suggestions = []
@@ -115,4 +125,66 @@ async def suggest_accounts(partial_name: str):
         }
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取账户建议失败: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"获取账户建议失败: {str(e)}")
+
+@router.post("/create", response_model=AccountActionResponse)
+async def create_account(account_data: AccountCreate):
+    """创建新账户"""
+    try:
+        beancount_service.create_account(
+            account_name=account_data.name,
+            open_date=account_data.open_date,
+            currencies=account_data.currencies,
+            booking_method=account_data.booking_method
+        )
+        
+        return AccountActionResponse(
+            success=True,
+            message="账户创建成功",
+            account_name=account_data.name
+        )
+            
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"创建账户失败: {str(e)}")
+
+@router.post("/close", response_model=AccountActionResponse)
+async def close_account(account_data: AccountClose):
+    """归档账户"""
+    try:
+        success = beancount_service.close_account(
+            account_name=account_data.name,
+            close_date=account_data.close_date
+        )
+        
+        if success:
+            return AccountActionResponse(
+                success=True,
+                message="账户归档成功",
+                account_name=account_data.name
+            )
+        else:
+            raise HTTPException(status_code=400, detail="账户归档失败")
+            
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"归档账户失败: {str(e)}")
+
+@router.post("/restore", response_model=AccountActionResponse)
+async def restore_account(account_data: AccountRestore):
+    """恢复账户（删除close指令）"""
+    try:
+        beancount_service.restore_account(account_data.name)
+        
+        return AccountActionResponse(
+            success=True,
+            message="账户恢复成功",
+            account_name=account_data.name
+        )
+            
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"恢复账户失败: {str(e)}") 
