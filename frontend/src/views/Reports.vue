@@ -28,68 +28,105 @@
         </div>
       </template>
       
-      
-      <el-row :gutter="20" v-if="balanceSheet">
-        <!-- 资产 -->
-        <el-col :span="8">
-          <h3>资产</h3>
-          <el-table :data="assetAccounts" size="small">
-            <el-table-column prop="name" label="账户">
-              <template #default="{ row }">
-                {{ row.name.replace('Assets:', '') }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="balance" label="余额" align="right">
-              <template #default="{ row }">
-                <span class="amount-positive">{{ formatCurrency(row.balance) }}</span>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div class="total-row">
-            <strong>资产总计: {{ formatCurrency(balanceSheet.total_assets) }}</strong>
-          </div>
-        </el-col>
-        
-        <!-- 负债 -->
-        <el-col :span="8">
-          <h3>负债</h3>
-          <el-table :data="liabilityAccounts" size="small">
-            <el-table-column prop="name" label="账户">
-              <template #default="{ row }">
-                {{ row.name.replace('Liabilities:', '') }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="balance" label="余额" align="right">
-              <template #default="{ row }">
-                <span class="amount-negative">{{ formatCurrency(Math.abs(row.balance)) }}</span>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div class="total-row">
-            <strong>负债总计: {{ formatCurrency(Math.abs(balanceSheet.total_liabilities)) }}</strong>
-          </div>
-        </el-col>
-        
-        <!-- 权益 -->
-        <el-col :span="8">
-          <h3>所有者权益</h3>
-          <el-table :data="equityAccounts" size="small">
-            <el-table-column prop="name" label="账户">
-              <template #default="{ row }">
-                {{ row.name.replace('Equity:', '') }}
-              </template>
-            </el-table-column>
-            <el-table-column prop="balance" label="余额" align="right">
-              <template #default="{ row }">
-                <span>{{ formatCurrency(row.balance) }}</span>
-              </template>
-            </el-table-column>
-          </el-table>
-          <div class="total-row">
-            <strong>权益总计: {{ formatCurrency(balanceSheet.total_equity) }}</strong>
-          </div>
-        </el-col>
-      </el-row>
+      <div class="balance-sheet-container" v-if="balanceSheet">
+        <el-row :gutter="40">
+          <!-- 左侧：资产 -->
+          <el-col :span="12">
+            <div class="balance-section">
+              <h2 class="section-title">资产</h2>
+              
+              <el-table 
+                :data="groupedAssetAccounts" 
+                :show-header="false"
+                size="default"
+                :border="false"
+                class="balance-table"
+              >
+                <el-table-column>
+                  <template #default="{ row }">
+                    <div :class="['account-row', row.type]">
+                      <span 
+                        class="account-name" 
+                        :style="{ paddingLeft: (12 + row.level * 20) + 'px' }"
+                      >
+                        {{ row.name }}
+                      </span>
+                      <span class="account-amount">
+                        <span v-if="row.type === 'item'" class="currency-label">CNY</span>
+                        {{ row.amount }}
+                      </span>
+                    </div>
+                  </template>
+                </el-table-column>
+              </el-table>
+            </div>
+          </el-col>
+          
+          <!-- 右侧：负债和所有者权益 -->
+          <el-col :span="12">
+            <div class="balance-section">
+              <h2 class="section-title">负债</h2>
+              
+              <el-table 
+                :data="groupedLiabilityAccounts" 
+                :show-header="false"
+                size="default"
+                :border="false"
+                class="balance-table"
+              >
+                <el-table-column>
+                  <template #default="{ row }">
+                    <div :class="['account-row', row.type]">
+                      <span 
+                        class="account-name" 
+                        :style="{ paddingLeft: (12 + row.level * 20) + 'px' }"
+                      >
+                        {{ row.name }}
+                      </span>
+                      <span class="account-amount">
+                        <span v-if="row.type === 'item'" class="currency-label">CNY</span>
+                        {{ row.amount }}
+                      </span>
+                    </div>
+                  </template>
+                </el-table-column>
+              </el-table>
+              
+              <div class="section-divider"></div>
+              
+              <h2 class="section-title">所有者权益</h2>
+              
+              <el-table 
+                :data="groupedEquityAccounts" 
+                :show-header="false"
+                size="default"
+                :border="false"
+                class="balance-table"
+              >
+                <el-table-column>
+                  <template #default="{ row }">
+                    <div :class="['account-row', row.type]">
+                      <span 
+                        class="account-name" 
+                        :style="{ paddingLeft: (12 + row.level * 20) + 'px' }"
+                      >
+                        {{ row.name }}
+                      </span>
+                      <span class="account-amount">
+                        <span v-if="row.type === 'item'" class="currency-label">CNY</span>
+                        {{ row.amount }}
+                      </span>
+                    </div>
+                  </template>
+                </el-table-column>
+              </el-table>
+              
+              <div class="section-divider"></div>
+              
+            </div>
+          </el-col>
+        </el-row>
+      </div>
     </el-card>
     
     <!-- 损益表 -->
@@ -392,6 +429,291 @@ const liabilityAccounts = computed(() =>
 const equityAccounts = computed(() => 
   balanceSheet.value?.accounts.filter((acc: any) => acc.account_type === 'Equity') || []
 )
+
+// 分组后的资产账户
+const groupedAssetAccounts = computed(() => {
+  const accounts = assetAccounts.value
+  const grouped: any[] = []
+  
+  // 构建层级树结构
+  const buildTree = (accounts: any[]) => {
+    const tree: any = {}
+    
+    accounts.forEach(acc => {
+      const parts = acc.name.split(':').slice(1) // 去掉 Assets 前缀
+      let current = tree
+      
+      // 构建路径
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i]
+        if (!current[part]) {
+          current[part] = {
+            name: part,
+            fullPath: 'Assets:' + parts.slice(0, i + 1).join(':'),
+            children: {},
+            balance: 0,
+            isLeaf: false
+          }
+        }
+        current[part].balance += Number(acc.balance) || 0
+        
+        // 如果是最后一级，标记为叶子节点
+        if (i === parts.length - 1) {
+          current[part].isLeaf = true
+          current[part].originalAccount = acc
+        }
+        
+        current = current[part].children
+      }
+    })
+    
+    return tree
+  }
+  
+  // 渲染树结构
+  const renderTree = (node: any, level = 0) => {
+    const result: any[] = []
+    
+    // 按名称排序
+    const sortedKeys = Object.keys(node).sort()
+    
+    sortedKeys.forEach(key => {
+      const item = node[key]
+      
+      // 如果有子节点，显示为分类
+      if (Object.keys(item.children).length > 0) {
+        result.push({
+          name: item.name,
+          amount: formatCurrency(item.balance),
+          type: level === 0 ? 'category' : 'subcategory',
+          level: level,
+          fullPath: item.fullPath,
+          isExpandable: true
+        })
+        
+        // 递归添加子节点
+        result.push(...renderTree(item.children, level + 1))
+      } else {
+        // 叶子节点，显示为具体账户
+        result.push({
+          name: item.name,
+          amount: formatCurrency(item.balance),
+          type: 'item',
+          level: level,
+          fullPath: item.fullPath,
+          isExpandable: false
+        })
+      }
+    })
+    
+    return result
+  }
+  
+  const tree = buildTree(accounts)
+  grouped.push(...renderTree(tree))
+  
+  // 添加总计行
+  if (balanceSheet.value) {
+    grouped.push({
+      name: '资产总计',
+      amount: formatCurrency(balanceSheet.value.total_assets),
+      type: 'total',
+      level: 0
+    })
+  }
+  
+  return grouped
+})
+
+// 分组后的负债账户
+const groupedLiabilityAccounts = computed(() => {
+  const accounts = liabilityAccounts.value
+  const grouped: any[] = []
+  
+  // 构建层级树结构
+  const buildTree = (accounts: any[]) => {
+    const tree: any = {}
+    
+    accounts.forEach(acc => {
+      const parts = acc.name.split(':').slice(1) // 去掉 Liabilities 前缀
+      let current = tree
+      
+      // 构建路径
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i]
+        if (!current[part]) {
+          current[part] = {
+            name: part,
+            fullPath: 'Liabilities:' + parts.slice(0, i + 1).join(':'),
+            children: {},
+            balance: 0,
+            isLeaf: false
+          }
+        }
+        current[part].balance += Number(Math.abs(acc.balance)) || 0
+        
+        // 如果是最后一级，标记为叶子节点
+        if (i === parts.length - 1) {
+          current[part].isLeaf = true
+          current[part].originalAccount = acc
+        }
+        
+        current = current[part].children
+      }
+    })
+    
+    return tree
+  }
+  
+  // 渲染树结构
+  const renderTree = (node: any, level = 0) => {
+    const result: any[] = []
+    
+    // 按名称排序
+    const sortedKeys = Object.keys(node).sort()
+    
+    sortedKeys.forEach(key => {
+      const item = node[key]
+      
+      // 如果有子节点，显示为分类
+      if (Object.keys(item.children).length > 0) {
+        result.push({
+          name: item.name,
+          amount: formatCurrency(item.balance),
+          type: level === 0 ? 'category' : 'subcategory',
+          level: level,
+          fullPath: item.fullPath,
+          isExpandable: true
+        })
+        
+        // 递归添加子节点
+        result.push(...renderTree(item.children, level + 1))
+      } else {
+        // 叶子节点，显示为具体账户
+        result.push({
+          name: item.name,
+          amount: formatCurrency(item.balance),
+          type: 'item',
+          level: level,
+          fullPath: item.fullPath,
+          isExpandable: false
+        })
+      }
+    })
+    
+    return result
+  }
+  
+  const tree = buildTree(accounts)
+  grouped.push(...renderTree(tree))
+  
+  // 添加总计行
+  if (balanceSheet.value) {
+    grouped.push({
+      name: '负债总计',
+      amount: formatCurrency(Math.abs(balanceSheet.value.total_liabilities)),
+      type: 'total',
+      level: 0
+    })
+  }
+  
+  return grouped
+})
+
+// 分组后的权益账户
+const groupedEquityAccounts = computed(() => {
+  const accounts = equityAccounts.value
+  const grouped: any[] = []
+  
+  // 构建层级树结构
+  const buildTree = (accounts: any[]) => {
+    const tree: any = {}
+    
+    accounts.forEach(acc => {
+      const parts = acc.name.split(':')
+      let current = tree
+      
+      // 构建路径
+      for (let i = 0; i < parts.length; i++) {
+        const part = parts[i]
+        if (!current[part]) {
+          current[part] = {
+            name: part,
+            fullPath: parts.slice(0, i + 1).join(':'),
+            children: {},
+            balance: 0,
+            isLeaf: false
+          }
+        }
+        current[part].balance += Number(acc.balance) || 0
+        
+        // 如果是最后一级，标记为叶子节点
+        if (i === parts.length - 1) {
+          current[part].isLeaf = true
+          current[part].originalAccount = acc
+        }
+        
+        current = current[part].children
+      }
+    })
+    
+    return tree
+  }
+  
+  // 渲染树结构
+  const renderTree = (node: any, level = 0) => {
+    const result: any[] = []
+    
+    // 按名称排序
+    const sortedKeys = Object.keys(node).sort()
+    
+    sortedKeys.forEach(key => {
+      const item = node[key]
+      
+      // 如果有子节点，显示为分类
+      if (Object.keys(item.children).length > 0) {
+        result.push({
+          name: item.name,
+          amount: formatCurrency(item.balance),
+          type: level === 0 ? 'category' : 'subcategory',
+          level: level,
+          fullPath: item.fullPath,
+          isExpandable: true
+        })
+        
+        // 递归添加子节点
+        result.push(...renderTree(item.children, level + 1))
+      } else {
+        // 叶子节点，显示为具体账户
+        result.push({
+          name: item.name,
+          amount: formatCurrency(item.balance),
+          type: 'item',
+          level: level,
+          fullPath: item.fullPath,
+          isExpandable: false
+        })
+      }
+    })
+    
+    return result
+  }
+  
+  const tree = buildTree(accounts)
+  grouped.push(...renderTree(tree))
+  
+  // 添加总计行
+  if (balanceSheet.value) {
+    grouped.push({
+      name: '所有者权益总计',
+      amount: formatCurrency(balanceSheet.value.total_equity),
+      type: 'total',
+      level: 0
+    })
+  }
+  
+  return grouped
+})
 
 // 按金额倒序排序的收入账户
 const sortedIncomeAccounts = computed(() => {
@@ -736,6 +1058,174 @@ onUnmounted(() => {
   font-size: 16px;
 }
 
+/* 资产负债表样式 */
+.balance-sheet-container {
+  margin-top: 16px;
+}
+
+.balance-section {
+  height: 100%;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin-bottom: 16px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid #e4e7ed;
+}
+
+.balance-table {
+  border: none !important;
+}
+
+.balance-table .el-table__body-wrapper {
+  border: none !important;
+}
+
+.balance-table .el-table__row {
+  border: none !important;
+}
+
+.balance-table .el-table__cell {
+  border: none !important;
+  padding: 6px 0;
+}
+
+.account-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 0;
+  width: 100%;
+}
+
+.account-row.subcategory {
+  background-color: #f5f7fa;
+  border-bottom: 1px solid #e4e7ed;
+  padding: 6px 0;
+  margin: 2px 0;
+}
+
+.account-row.subcategory .account-name {
+  color: #606266;
+  font-weight: 500;
+  font-size: 13px;
+  padding-left: 8px;
+}
+
+.account-row.subcategory .account-amount {
+  font-weight: 500;
+  color: #606266;
+}
+
+.account-row.category {
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #e4e7ed;
+  padding: 8px 0;
+  margin: 4px 0;
+}
+
+.account-row.category .account-name {
+  color: #409eff;
+  font-weight: 600;
+  font-size: 14px;
+  padding-left: 8px;
+}
+
+.account-row.category .account-amount {
+  font-weight: 600;
+  color: #409eff;
+}
+
+.account-row.item {
+  border-bottom: 1px dotted #e4e7ed;
+}
+
+.account-row.item .account-name {
+  color: #606266;
+  font-size: 14px;
+  padding-left: 12px;
+}
+
+.account-row.total {
+  border-top: 1px solid #303133;
+  border-bottom: 3px double #303133;
+  padding: 8px 0;
+  margin-top: 8px;
+}
+
+.account-row.total .account-name {
+  color: #303133;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.account-amount {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 14px;
+  color: #303133;
+  min-width: 120px;
+}
+
+.account-row.total .account-amount {
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.currency-label {
+  font-size: 11px;
+  color: #909399;
+  margin-right: 4px;
+  font-family: inherit;
+}
+
+.section-divider {
+  margin: 24px 0;
+  border-bottom: 1px solid #e4e7ed;
+}
+
+.total-section {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 2px solid #303133;
+}
+
+.total-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  background-color: #f8f9fa;
+  padding: 12px 16px;
+  border-radius: 4px;
+}
+
+.total-label {
+  font-weight: 600;
+  font-size: 16px;
+  color: #303133;
+}
+
+.total-amount {
+  font-weight: 600;
+  font-size: 16px;
+  color: #303133;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.total-amount .currency-label {
+  font-size: 12px;
+  margin-right: 4px;
+}
+
 /* 移动端优化 */
 @media (max-width: 768px) {
   .el-row {
@@ -812,6 +1302,55 @@ onUnmounted(() => {
   
   .ytd-label {
     font-size: 12px;
+  }
+  
+  /* 资产负债表移动端优化 */
+  .balance-sheet-container .el-row {
+    flex-direction: column;
+  }
+  
+  .balance-sheet-container .el-col {
+    width: 100% !important;
+    margin-bottom: 24px;
+  }
+  
+  .section-title {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+  
+  .account-row {
+    padding: 6px 0;
+  }
+  
+  .account-row.item .account-name {
+    font-size: 13px;
+    padding-left: 8px;
+  }
+  
+  .account-amount {
+    font-size: 13px;
+    min-width: 100px;
+  }
+  
+  .currency-label {
+    font-size: 10px;
+  }
+  
+  .total-row {
+    padding: 8px 12px;
+  }
+  
+  .total-label {
+    font-size: 14px;
+  }
+  
+  .total-amount {
+    font-size: 14px;
+  }
+  
+  .section-divider {
+    margin: 16px 0;
   }
 }
 </style> 
