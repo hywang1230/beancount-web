@@ -109,6 +109,8 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showConfirmDialog, showToast } from 'vant'
+import { getTransactions } from '@/api/transactions'
+import { getAllAccounts } from '@/api/accounts'
 
 const router = useRouter()
 
@@ -131,12 +133,9 @@ const typeOptions = [
   { text: '转账', value: 'transfer' }
 ]
 
-const accountOptions = [
-  { text: '全部账户', value: 'all' },
-  { text: '招商银行', value: 'cmb' },
-  { text: '支付宝', value: 'alipay' },
-  { text: '微信', value: 'wechat' }
-]
+const accountOptions = ref([
+  { text: '全部账户', value: 'all' }
+])
 
 const sortOptions = [
   { text: '按日期降序', value: 'date_desc' },
@@ -246,56 +245,49 @@ const loadTransactions = async (isRefresh = false) => {
   try {
     loading.value = true
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 构建筛选参数
+    const params: any = {
+      page: isRefresh ? 1 : Math.floor(transactions.value.length / 20) + 1,
+      page_size: 20
+    }
     
-    const mockData = [
-      {
-        id: 1,
-        payee: '星巴克',
-        account: '招商银行',
-        date: '2024-01-15',
-        amount: -45.00,
-        type: 'expense'
-      },
-      {
-        id: 2,
-        payee: '工资收入',
-        account: '招商银行',
-        date: '2024-01-15',
-        amount: 8000.00,
-        type: 'income'
-      },
-      {
-        id: 3,
-        payee: '超市购物',
-        account: '支付宝',
-        date: '2024-01-14',
-        amount: -128.50,
-        type: 'expense'
-      },
-      {
-        id: 4,
-        payee: '地铁费用',
-        account: '微信',
-        date: '2024-01-14',
-        amount: -6.00,
-        type: 'expense'
-      },
-      {
-        id: 5,
-        payee: '午餐',
-        account: '支付宝',
-        date: '2024-01-13',
-        amount: -25.00,
-        type: 'expense'
+    if (filterAccount.value !== 'all') {
+      params.account = filterAccount.value
+    }
+    
+    // 根据排序设置日期范围
+    if (sortBy.value.includes('date')) {
+      const endDate = new Date()
+      const startDate = new Date()
+      startDate.setMonth(startDate.getMonth() - 3) // 获取最近3个月数据
+      params.start_date = startDate.toISOString().split('T')[0]
+      params.end_date = endDate.toISOString().split('T')[0]
+    }
+
+    const response = await getTransactions(params)
+    const transactionData = response.data
+    
+    // 转换API数据格式
+    const convertedTransactions = (transactionData.data || []).map((trans: any, index: number) => {
+      // 获取第一个posting来确定金额和账户
+      const posting = trans.postings?.[0]
+      const amount = posting?.amount || 0
+      const parsedAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+      
+      return {
+        id: transactions.value.length + index + 1, // 生成唯一ID
+        payee: trans.payee || trans.narration || '未知',
+        account: posting?.account || '未知账户',
+        date: trans.date,
+        amount: parsedAmount,
+        type: parsedAmount > 0 ? 'income' : (parsedAmount < 0 ? 'expense' : 'transfer')
       }
-    ]
+    })
     
     if (isRefresh) {
-      transactions.value = mockData
+      transactions.value = convertedTransactions
     } else {
-      transactions.value.push(...mockData)
+      transactions.value.push(...convertedTransactions)
     }
     
     // 计算统计数据
@@ -305,16 +297,40 @@ const loadTransactions = async (isRefresh = false) => {
       balance: transactions.value.reduce((sum, t) => sum + t.amount, 0)
     }
     
-    finished.value = transactions.value.length >= 50 // 假设最多50条
+    // 判断是否还有更多数据
+    finished.value = transactionData.page >= transactionData.total_pages
+    
   } catch (error) {
     console.error('加载交易数据失败:', error)
-    showToast('加载失败')
+    showToast('加载交易数据失败')
   } finally {
     loading.value = false
   }
 }
 
+// 加载账户选项
+const loadAccountOptions = async () => {
+  try {
+    const response = await getAllAccounts()
+    const accounts = response.data || []
+    
+    // 添加账户选项
+    const options = [{ text: '全部账户', value: 'all' }]
+    accounts.forEach((account: any) => {
+      options.push({
+        text: account.name || account.full_path,
+        value: account.name || account.full_path
+      })
+    })
+    
+    accountOptions.value = options
+  } catch (error) {
+    console.error('加载账户选项失败:', error)
+  }
+}
+
 onMounted(() => {
+  loadAccountOptions()
   loadTransactions(true)
 })
 </script>

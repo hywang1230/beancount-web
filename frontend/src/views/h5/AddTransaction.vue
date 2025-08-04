@@ -41,6 +41,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { showToast, showLoadingToast, closeToast } from 'vant'
 import TransactionForm from './components/TransactionForm.vue'
 import TransferForm from './components/TransferForm.vue'
+import { createTransaction, getTransactions } from '@/api/transactions'
 
 const router = useRouter()
 const route = useRoute()
@@ -103,11 +104,24 @@ const onSubmit = async () => {
       forbidClick: true
     })
     
-    // 这里应该调用API保存交易
-    // await saveTransactionApi({ ...data, type: activeTab.value })
+    // 构建交易数据
+    const transactionData = {
+      date: formData.value.date.toISOString().split('T')[0],
+      flag: '*', // 默认标记
+      payee: formData.value.payee,
+      narration: formData.value.description || formData.value.payee,
+      postings: [
+        {
+          account: formData.value.account,
+          amount: activeTab.value === 'expense' ? -Math.abs(parseFloat(formData.value.amount)) : Math.abs(parseFloat(formData.value.amount)),
+          currency: 'CNY'
+        }
+        // 这里可能需要添加第二个posting，比如对应的费用分类账户
+      ]
+    }
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 调用API保存交易
+    await createTransaction(transactionData)
     
     closeToast()
     showToast('保存成功')
@@ -128,11 +142,28 @@ const onTransferSubmit = async () => {
       forbidClick: true
     })
     
-    // 这里应该调用API保存转账
-    // await saveTransferApi(data)
+    // 构建转账交易数据
+    const transferData = {
+      date: transferFormData.value.date.toISOString().split('T')[0],
+      flag: '*', // 默认标记
+      payee: '转账',
+      narration: transferFormData.value.description || '账户转账',
+      postings: [
+        {
+          account: transferFormData.value.fromAccount,
+          amount: -Math.abs(parseFloat(transferFormData.value.amount)),
+          currency: 'CNY'
+        },
+        {
+          account: transferFormData.value.toAccount,
+          amount: Math.abs(parseFloat(transferFormData.value.amount)),
+          currency: 'CNY'
+        }
+      ]
+    }
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 调用API保存转账
+    await createTransaction(transferData)
     
     closeToast()
     showToast('转账成功')
@@ -161,24 +192,37 @@ onMounted(() => {
 
 const loadTransactionData = async () => {
   try {
-    // 这里应该调用API获取交易数据
-    // const data = await getTransactionApi(id)
+    const id = route.query.id as string
+    if (!id) return
     
-    // 模拟数据
-    const mockData = {
-      amount: '45.00',
-      payee: '星巴克',
-      account: 'cmb',
-      category: 'food',
-      date: new Date('2024-01-15'),
-      description: '早餐咖啡',
-      type: 'expense'
+    // 调用API获取交易数据
+    // 注意：实际的API可能需要不同的参数来获取单个交易
+    const response = await getTransactions({ page: 1, page_size: 1000 })
+    const transactions = response.data.data || []
+    
+    // 查找对应的交易（这里简化处理，实际应该有专门的API获取单个交易）
+    const transaction = transactions.find((t: any, index: number) => (index + 1).toString() === id)
+    
+    if (transaction) {
+      const posting = transaction.postings?.[0]
+      const amount = posting?.amount || 0
+      const parsedAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+      
+      const transactionData = {
+        amount: Math.abs(parsedAmount).toString(),
+        payee: transaction.payee || '',
+        account: posting?.account || '',
+        category: '', // API中没有category，暂时留空
+        date: new Date(transaction.date),
+        description: transaction.narration || '',
+        type: parsedAmount > 0 ? 'income' : 'expense'
+      }
+      
+      activeTab.value = transactionData.type
+      formData.value = transactionData
     }
-    
-    activeTab.value = mockData.type
-    formData.value = mockData
   } catch (error) {
-    showToast('加载数据失败')
+    showToast('加载交易数据失败')
     console.error('加载交易数据失败:', error)
   }
 }

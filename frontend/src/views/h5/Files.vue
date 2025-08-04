@@ -49,7 +49,7 @@
                 square
                 type="danger"
                 text="删除"
-                @click="deleteFile(file)"
+                @click="deleteFileHandler(file)"
               />
             </template>
           </van-swipe-cell>
@@ -87,6 +87,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showConfirmDialog, showLoadingToast, closeToast } from 'vant'
+import { getFileList, uploadFile, deleteFile } from '@/api/files'
 
 const router = useRouter()
 
@@ -162,22 +163,32 @@ const downloadFile = async (file: FileItem) => {
   }
 }
 
-const deleteFile = async (file: any) => {
+const deleteFileHandler = async (file: any) => {
   try {
     await showConfirmDialog({
       title: '确认删除',
       message: '确定要删除这个文件吗？'
     })
     
-    // 这里应该调用API删除文件
+    showLoadingToast({
+      message: '删除中...',
+      forbidClick: true
+    })
+    
+    await deleteFile(file.name)
+    
+    // 从列表中移除
     const index = files.value.findIndex(f => f.id === file.id)
     if (index > -1) {
       files.value.splice(index, 1)
     }
     
+    closeToast()
     showToast('删除成功')
-  } catch {
-    // 用户取消删除
+  } catch (error) {
+    closeToast()
+    showToast('删除失败')
+    console.error('删除文件失败:', error)
   }
 }
 
@@ -212,8 +223,8 @@ const afterRead = async (file: any) => {
       forbidClick: true
     })
     
-    // 模拟上传
-    await new Promise(resolve => setTimeout(resolve, 2000))
+    // 调用真实上传API
+    await uploadFile(file.file)
     
     closeToast()
     showToast(`${file.file?.name || '文件'} 上传成功`)
@@ -234,50 +245,55 @@ const loadFiles = async (isRefresh = false) => {
   try {
     loading.value = true
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    const response = await getFileList()
+    const fileData = response.data
     
-    const mockData = [
-      {
-        id: 1,
-        name: 'accounts.beancount',
-        type: 'beancount',
-        size: 15420,
-        uploadDate: '2024-01-15'
-      },
-      {
-        id: 2,
-        name: 'transactions_2024_01.csv',
-        type: 'csv',
-        size: 8540,
-        uploadDate: '2024-01-14'
-      },
-      {
-        id: 3,
-        name: 'monthly_report.pdf',
-        type: 'pdf',
-        size: 245680,
-        uploadDate: '2024-01-10'
-      },
-      {
-        id: 4,
-        name: 'backup_2024_01.beancount',
-        type: 'beancount',
-        size: 45120,
-        uploadDate: '2024-01-08'
+    // 转换API数据格式
+    const convertedFiles = (fileData.files || []).map((file: any, index: number) => {
+      // 根据文件扩展名确定类型
+      let type = 'other'
+      const extension = file.name.split('.').pop()?.toLowerCase()
+      if (extension === 'beancount' || extension === 'bean') {
+        type = 'beancount'
+      } else if (extension === 'csv') {
+        type = 'csv'
+      } else if (extension === 'xlsx' || extension === 'xls') {
+        type = 'excel'
+      } else if (extension === 'pdf') {
+        type = 'pdf'
+      } else if (['jpg', 'jpeg', 'png', 'gif', 'svg'].includes(extension || '')) {
+        type = 'image'
       }
-    ]
+      
+      return {
+        id: index + 1,
+        name: file.name,
+        type,
+        size: file.size,
+        uploadDate: file.modified || new Date().toISOString().split('T')[0]
+      }
+    })
     
-    if (isRefresh) {
-      files.value = mockData
-    } else {
-      files.value.push(...mockData)
+    // 如果有搜索关键词，过滤结果
+    let filteredFiles = convertedFiles
+    if (searchKeyword.value.trim()) {
+      filteredFiles = convertedFiles.filter((file: any) => 
+        file.name.toLowerCase().includes(searchKeyword.value.toLowerCase())
+      )
     }
     
-    finished.value = files.value.length >= 20 // 假设最多20个文件
+    if (isRefresh) {
+      files.value = filteredFiles
+    } else {
+      files.value.push(...filteredFiles)
+    }
+    
+    // 所有文件一次性加载完成
+    finished.value = true
+    
   } catch (error) {
     console.error('加载文件列表失败:', error)
-    showToast('加载失败')
+    showToast('加载文件列表失败')
   } finally {
     loading.value = false
   }

@@ -55,6 +55,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
+import { getBalanceSheet } from '@/api/reports'
 
 const router = useRouter()
 
@@ -133,48 +134,42 @@ const onRefresh = async () => {
 
 const loadAccounts = async () => {
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
-    
-    accounts.value = [
-      {
-        id: 1,
-        name: '招商银行储蓄卡',
-        type: 'Assets',
-        subtype: 'bank',
-        balance: 15680.50,
-        description: '尾号1234'
-      },
-      {
-        id: 2,
-        name: '支付宝',
-        type: 'Assets',
-        subtype: 'alipay',
-        balance: 8500.00,
-        description: '余额'
-      },
-      {
-        id: 3,
-        name: '微信钱包',
-        type: 'Assets',
-        subtype: 'wechat',
-        balance: 1500.00,
-        description: '零钱'
-      },
-      {
-        id: 4,
-        name: '现金',
-        type: 'Assets',
-        subtype: 'cash',
-        balance: 500.00,
-        description: '现金'
+    const response = await getBalanceSheet()
+    const balanceData = response.data
+
+    // 转换API数据格式
+    accounts.value = (balanceData.accounts || []).map((acc: any, index: number) => {
+      // 根据账户名推断子类型
+      let subtype = 'other'
+      const name = acc.name.toLowerCase()
+      if (name.includes('银行') || name.includes('bank')) {
+        subtype = 'bank'
+      } else if (name.includes('支付宝') || name.includes('alipay')) {
+        subtype = 'alipay'
+      } else if (name.includes('微信') || name.includes('wechat')) {
+        subtype = 'wechat'
+      } else if (name.includes('现金') || name.includes('cash')) {
+        subtype = 'cash'
       }
-    ]
+
+      return {
+        id: index + 1,
+        name: acc.name,
+        type: acc.account_type,
+        subtype,
+        balance: acc.balance,
+        description: acc.currency || 'CNY'
+      }
+    })
     
-    totalAssets.value = accounts.value.reduce((total, account) => total + account.balance, 0)
+    // 计算总资产（只计算资产类账户的正余额）
+    totalAssets.value = accounts.value
+      .filter(acc => acc.type === 'Assets' && acc.balance > 0)
+      .reduce((total, account) => total + account.balance, 0)
+      
   } catch (error) {
     console.error('加载账户失败:', error)
-    showToast('加载失败')
+    showToast('加载账户数据失败')
   }
 }
 

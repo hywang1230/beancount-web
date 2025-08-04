@@ -89,6 +89,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
+import { recurringApi } from '@/api/recurring'
 
 const router = useRouter()
 
@@ -200,12 +201,18 @@ const toggleStatus = async (item: any) => {
       message: `确定要${actionText}这个周期记账吗？`
     })
     
-    // 这里应该调用API更新状态
+    // 调用API切换状态
+    await recurringApi.toggle(item.originalId)
+    
+    // 更新本地状态
     item.status = newStatus
     
     showToast(`${actionText}成功`)
-  } catch {
-    // 用户取消操作
+  } catch (error) {
+    if (error !== 'cancel') { // 不是用户取消
+      showToast(`${newStatus === 'active' ? '启用' : '暂停'}失败`)
+      console.error('切换状态失败:', error)
+    }
   }
 }
 
@@ -216,15 +223,21 @@ const deleteRecurring = async (item: any) => {
       message: '确定要删除这个周期记账吗？删除后无法恢复。'
     })
     
-    // 这里应该调用API删除
+    // 调用API删除
+    await recurringApi.delete(item.originalId)
+    
+    // 从列表中移除
     const index = recurringList.value.findIndex(r => r.id === item.id)
     if (index > -1) {
       recurringList.value.splice(index, 1)
     }
     
     showToast('删除成功')
-  } catch {
-    // 用户取消删除
+  } catch (error) {
+    if (error !== 'cancel') { // 不是用户取消
+      showToast('删除失败')
+      console.error('删除周期记账失败:', error)
+    }
   }
 }
 
@@ -245,66 +258,67 @@ const loadRecurringList = async (isRefresh = false) => {
   try {
     loading.value = true
     
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // 根据筛选条件调用API
+    const activeOnly = filterStatus.value === 'active'
+    const response = await recurringApi.list(activeOnly)
+    const recurringData = response.data || []
     
-    const mockData = [
-      {
-        id: 1,
-        description: '房租',
-        type: 'expense',
-        amount: -3000.00,
-        frequency: 'monthly',
-        status: 'active',
-        nextExecuteDate: '2024-02-01',
-        account: '招商银行',
-        category: '住房'
-      },
-      {
-        id: 2,
-        description: '工资收入',
-        type: 'income',
-        amount: 8000.00,
-        frequency: 'monthly',
-        status: 'active',
-        nextExecuteDate: '2024-02-05',
-        account: '招商银行',
-        category: '工资'
-      },
-      {
-        id: 3,
-        description: '手机话费',
-        type: 'expense',
-        amount: -89.00,
-        frequency: 'monthly',
-        status: 'active',
-        nextExecuteDate: '2024-02-10',
-        account: '支付宝',
-        category: '通讯'
-      },
-      {
-        id: 4,
-        description: '健身房会员费',
-        type: 'expense',
-        amount: -200.00,
-        frequency: 'monthly',
-        status: 'paused',
-        nextExecuteDate: '2024-02-15',
-        account: '微信',
-        category: '健康'
+    // 转换API数据格式
+    let convertedList = recurringData.map((item: any, index: number) => {
+      // 获取第一个posting来确定金额和账户
+      const posting = item.postings?.[0]
+      const amount = posting?.amount || 0
+      const parsedAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+      
+      // 转换状态
+      let status = 'stopped'
+      if (item.is_active) {
+        status = 'active'
       }
-    ]
+      
+      return {
+        id: index + 1,
+        originalId: item.id, // 保存原始ID用于API调用
+        description: item.name || item.narration || '未知',
+        type: parsedAmount > 0 ? 'income' : 'expense',
+        amount: parsedAmount,
+        frequency: item.recurrence_type,
+        status,
+        nextExecuteDate: item.next_execution || new Date().toISOString().split('T')[0],
+        account: posting?.account || '未知账户',
+        category: '' // API中没有category字段，暂时留空
+      }
+    })
     
-    if (isRefresh) {
-      recurringList.value = mockData
-    } else {
-      recurringList.value.push(...mockData)
+    // 根据状态筛选
+    if (filterStatus.value !== 'all') {
+      convertedList = convertedList.filter((item: any) => item.status === filterStatus.value)
     }
     
-    finished.value = recurringList.value.length >= 20
+    // 根据频率筛选
+    if (filterFrequency.value !== 'all') {
+      convertedList = convertedList.filter((item: any) => item.frequency === filterFrequency.value)
+    }
+    
+    // 根据搜索关键词筛选
+    if (searchKeyword.value.trim()) {
+      convertedList = convertedList.filter((item: any) => 
+        item.description.toLowerCase().includes(searchKeyword.value.toLowerCase())
+      )
+    }
+    
+    if (isRefresh) {
+      recurringList.value = convertedList
+    } else {
+      recurringList.value.push(...convertedList)
+    }
+    
+    // 所有数据一次性加载完成
+    finished.value = true
+    
   } catch (error) {
     console.error('加载周期记账列表失败:', error)
-    showToast('加载失败')
+    showToast('加载周期记账数据失败')
   } finally {
     loading.value = false
   }

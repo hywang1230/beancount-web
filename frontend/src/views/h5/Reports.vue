@@ -77,6 +77,7 @@
 <script setup lang="ts">
 import { ref, watch, onMounted } from 'vue'
 import { showToast } from 'vant'
+import { getIncomeStatement, getMonthlySummary, getYearToDateSummary } from '@/api/reports'
 
 const selectedPeriod = ref('thisMonth')
 const overview = ref({
@@ -109,50 +110,98 @@ const formatAmount = (amount: number) => {
 
 const loadReportData = async () => {
   try {
-    // 模拟API调用
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    let apiCall
     
-    overview.value = {
-      income: 12000.00,
-      expense: -8500.00,
-      balance: 3500.00
+    // 根据选择的时期调用不同的API
+    switch (selectedPeriod.value) {
+      case 'thisMonth':
+        const currentDate = new Date()
+        apiCall = getMonthlySummary(currentDate.getFullYear(), currentDate.getMonth() + 1)
+        break
+      case 'lastMonth':
+        const lastMonth = new Date()
+        lastMonth.setMonth(lastMonth.getMonth() - 1)
+        apiCall = getMonthlySummary(lastMonth.getFullYear(), lastMonth.getMonth() + 1)
+        break
+      case 'thisYear':
+        apiCall = getYearToDateSummary(new Date().getFullYear())
+        break
+      default:
+        // 默认使用本月数据
+        apiCall = getMonthlySummary()
     }
     
-    categoryStats.value = [
-      {
-        name: '餐饮美食',
-        amount: -2500.00,
-        percent: 29.4,
-        icon: 'restaurant-o'
-      },
-      {
-        name: '交通出行',
-        amount: -1200.00,
-        percent: 14.1,
-        icon: 'location-o'
-      },
-      {
-        name: '购物消费',
-        amount: -2800.00,
-        percent: 32.9,
-        icon: 'shopping-cart-o'
-      },
-      {
-        name: '生活缴费',
-        amount: -800.00,
-        percent: 9.4,
-        icon: 'bill-o'
-      },
-      {
-        name: '工资收入',
-        amount: 12000.00,
-        percent: 100.0,
-        icon: 'gold-coin-o'
-      }
-    ]
+    const response = await apiCall
+    const reportData = response.data
+    
+    // 处理概览数据
+    overview.value = {
+      income: reportData.total_income || 0,
+      expense: reportData.total_expenses || 0,
+      balance: reportData.net_income || 0
+    }
+    
+    // 处理分类统计数据
+    const stats: CategoryStat[] = []
+    
+    // 处理支出账户
+    if (reportData.expense_accounts) {
+      const totalExpense = Math.abs(reportData.total_expenses || 0)
+      reportData.expense_accounts.forEach((account: any) => {
+        const amount = Math.abs(account.balance || 0)
+        if (amount > 0) {
+          stats.push({
+            name: account.name.split(':').pop() || account.name, // 取账户名的最后部分
+            amount: -amount,
+            percent: totalExpense > 0 ? Number(((amount / totalExpense) * 100).toFixed(1)) : 0,
+            icon: getCategoryIcon(account.name)
+          })
+        }
+      })
+    }
+    
+    // 处理收入账户
+    if (reportData.income_accounts) {
+      const totalIncome = reportData.total_income || 0
+      reportData.income_accounts.forEach((account: any) => {
+        const amount = account.balance || 0
+        if (amount > 0) {
+          stats.push({
+            name: account.name.split(':').pop() || account.name,
+            amount: amount,
+            percent: totalIncome > 0 ? Number(((amount / totalIncome) * 100).toFixed(1)) : 0,
+            icon: getCategoryIcon(account.name)
+          })
+        }
+      })
+    }
+    
+    // 按金额绝对值排序
+    categoryStats.value = stats.sort((a, b) => Math.abs(b.amount) - Math.abs(a.amount))
+    
   } catch (error) {
     console.error('加载报表数据失败:', error)
-    showToast('加载失败')
+    showToast('加载报表数据失败')
+  }
+}
+
+// 根据账户名称获取合适的图标
+const getCategoryIcon = (accountName: string): string => {
+  const name = accountName.toLowerCase()
+  if (name.includes('餐') || name.includes('food') || name.includes('restaurant')) {
+    return 'restaurant-o'
+  } else if (name.includes('交通') || name.includes('transport') || name.includes('travel')) {
+    return 'location-o'
+  } else if (name.includes('购物') || name.includes('shopping')) {
+    return 'shopping-cart-o'
+  } else if (name.includes('缴费') || name.includes('bill') || name.includes('utility')) {
+    return 'bill-o'
+  } else if (name.includes('工资') || name.includes('salary') || name.includes('income')) {
+    return 'gold-coin-o'
+  } else if (name.includes('房租') || name.includes('rent')) {
+    return 'home-o'
+  } else {
+    return 'bill-o'
   }
 }
 
