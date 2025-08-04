@@ -7,6 +7,9 @@ import App from './App.vue'
 import 'element-plus/dist/index.css'
 import 'element-plus/theme-chalk/dark/css-vars.css'
 
+// Vant 样式
+import 'vant/lib/index.css'
+
 // 全局样式
 import './style/global.css'
 
