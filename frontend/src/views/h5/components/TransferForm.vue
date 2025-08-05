@@ -54,11 +54,11 @@
       <!-- 使用标准的van-cell-group样式 -->
       <van-cell-group inset>
         <!-- 日期 -->
-        <van-field
-          v-model="dateValue"
-          type="date"
-          label="日期"
-          placeholder="请选择日期"
+        <van-cell
+          title="日期"
+          :value="formatDateDisplay(localFormData.date)"
+          is-link
+          @click="showDateCalendar = true"
         />
 
         <!-- 备注 -->
@@ -99,6 +99,19 @@
         @confirm="onCurrencyConfirm"
       />
     </van-popup>
+
+    <!-- 日历组件 -->
+    <van-calendar
+      v-model:show="showDateCalendar"
+      title="选择日期"
+      :default-date="localFormData.date"
+      :min-date="new Date(2025, 5, 1)"
+      :max-date="new Date()"
+      switch-mode="year-month"
+      :show-confirm="false"
+      @confirm="onDateConfirm"
+      @close="showDateCalendar = false"
+    />
   </div>
 </template>
 
@@ -135,6 +148,7 @@ const localFormData = ref({
 const showFromAccountSelector = ref(false)
 const showToAccountSelector = ref(false)
 const showCurrencySelector = ref(false)
+const showDateCalendar = ref(false)
 
 interface Option {
   text: string
@@ -193,18 +207,7 @@ const toAccountOptions = computed(() => {
   return accountOptions.value.filter(item => item.value !== localFormData.value.fromAccount)
 })
 
-// 日期值计算属性（用于type="date"的field）
-const dateValue = computed({
-  get: () => {
-    const date = localFormData.value.date
-    return date.toLocaleDateString('en-CA') // 格式: YYYY-MM-DD
-  },
-  set: (value: string) => {
-    if (value) {
-      localFormData.value.date = new Date(value)
-    }
-  }
-})
+
 
 const isFormValid = computed(() => {
   return localFormData.value.amount && 
@@ -276,6 +279,21 @@ const getCurrencySymbol = (currency: string) => {
 const onCurrencyConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
   localFormData.value.currency = selectedValues[0]
   showCurrencySelector.value = false
+}
+
+// 日期处理
+const formatDateDisplay = (date: Date) => {
+  if (!date) return '选择日期'
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
+const onDateConfirm = (date: Date) => {
+  localFormData.value.date = date
+  showDateCalendar.value = false
 }
 
 // 方法

@@ -52,11 +52,11 @@
       <!-- 使用标准的van-cell-group样式 -->
       <van-cell-group inset>
         <!-- 日期 -->
-        <van-field
-          v-model="dateValue"
-          type="date"
-          label="日期"
-          placeholder="请选择日期"
+        <van-cell
+          title="日期"
+          :value="formatDateDisplay(localFormData.date)"
+          is-link
+          @click="showDateCalendar = true"
         />
 
         <!-- 交易对象 -->
@@ -262,6 +262,19 @@
         </div>
       </div>
     </van-popup>
+
+    <!-- 日历组件 -->
+    <van-calendar
+      v-model:show="showDateCalendar"
+      title="选择日期"
+      :default-date="localFormData.date"
+      :min-date="new Date(2025, 5, 1)"
+      :max-date="new Date()"
+      switch-mode="year-month"
+      :show-confirm="false"
+      @confirm="onDateConfirm"
+      @close="showDateCalendar = false"
+    />
   </div>
 </template>
 
@@ -314,6 +327,7 @@ const showAccountSelector = ref(false)
 const showCategorySelector = ref(false)
 const showCurrencySelector = ref(false)
 const showMultiCategorySheet = ref(false)
+const showDateCalendar = ref(false)
 
 // 多类别编辑的临时数据
 const tempCategories = ref<CategoryItem[]>([])
@@ -391,18 +405,7 @@ const categoryDisplayText = computed(() => {
   return categories.map(cat => cat.categoryDisplayName).join(', ')
 })
 
-// 日期值计算属性（用于type="date"的field）
-const dateValue = computed({
-  get: () => {
-    const date = localFormData.value.date
-    return date.toLocaleDateString('en-CA') // 格式: YYYY-MM-DD
-  },
-  set: (value: string) => {
-    if (value) {
-      localFormData.value.date = new Date(value)
-    }
-  }
-})
+
 
 // 分配金额计算
 const allocatedAmount = computed(() => {
@@ -617,6 +620,21 @@ const selectPayeeFromHistory = (payee: string) => {
 const onAccountConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
   localFormData.value.account = selectedValues[0]
   showAccountSelector.value = false
+}
+
+// 日期处理
+const formatDateDisplay = (date: Date) => {
+  if (!date) return '选择日期'
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
+const onDateConfirm = (date: Date) => {
+  localFormData.value.date = date
+  showDateCalendar.value = false
 }
 
 // 分类管理

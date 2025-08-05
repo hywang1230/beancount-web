@@ -10,19 +10,19 @@
             <div class="date-filter-panel">
               <van-row gutter="8">
                 <van-col span="12">
-                  <van-field
-                    v-model="startDate"
-                    type="date"
-                    label="开始日期"
-                    placeholder="选择开始日期"
+                  <van-cell
+                    title="开始日期"
+                    :value="formatDateDisplay(startDate)"
+                    is-link
+                    @click="showStartDateCalendar = true"
                   />
                 </van-col>
                 <van-col span="12">
-                  <van-field
-                    v-model="endDate"
-                    type="date"
-                    label="结束日期"
-                    placeholder="选择结束日期"
+                  <van-cell
+                    title="结束日期"
+                    :value="formatDateDisplay(endDate)"
+                    is-link
+                    @click="showEndDateCalendar = true"
                   />
                 </van-col>
               </van-row>
@@ -113,6 +113,32 @@
       icon="plus"
       @click="$router.push('/h5/add-transaction')"
     />
+
+    <!-- 开始日期日历 -->
+    <van-calendar
+      v-model:show="showStartDateCalendar"
+      title="选择开始日期"
+      :default-date="startDate ? new Date(startDate) : new Date()"
+      :min-date="new Date(2025, 5, 1)"
+      :max-date="new Date()"
+      switch-mode="year-month"
+      :show-confirm="false"
+      @confirm="onStartDateConfirm"
+      @close="showStartDateCalendar = false"
+    />
+
+    <!-- 结束日期日历 -->
+    <van-calendar
+      v-model:show="showEndDateCalendar"
+      title="选择结束日期"
+      :default-date="endDate ? new Date(endDate) : new Date()"
+      :min-date="new Date(2025, 5, 1)"
+      :max-date="new Date()"
+      switch-mode="year-month"
+      :show-confirm="false"
+      @confirm="onEndDateConfirm"
+      @close="showEndDateCalendar = false"
+    />
   </div>
 </template>
 
@@ -149,6 +175,8 @@ const sortBy = ref('date_desc')
 // 日期筛选相关
 const startDate = ref('')
 const endDate = ref('')
+const showStartDateCalendar = ref(false)
+const showEndDateCalendar = ref(false)
 
 // 选项数据
 const typeOptions = [
@@ -765,6 +793,27 @@ const setQuickDateRange = (range: string) => {
 const clearDateRange = () => {
   startDate.value = ''
   endDate.value = ''
+}
+
+// 日期处理
+const formatDateDisplay = (dateStr: string) => {
+  if (!dateStr) return '选择日期'
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
+const onStartDateConfirm = (date: Date) => {
+  startDate.value = formatDate(date)
+  showStartDateCalendar.value = false
+}
+
+const onEndDateConfirm = (date: Date) => {
+  endDate.value = formatDate(date)
+  showEndDateCalendar.value = false
 }
 
 // 组件是否已初始化完成
