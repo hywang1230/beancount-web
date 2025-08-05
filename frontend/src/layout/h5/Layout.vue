@@ -75,7 +75,7 @@ const tabbarItems = [
 ]
 
 const allMenuItems = [
-  { path: '/h5/dashboard', title: '仪表盘', icon: 'home-o' },
+  { path: '/h5/dashboard', title: '首页', icon: 'home-o' },
   { path: '/h5/transactions', title: '交易流水', icon: 'bill-o' },
   { path: '/h5/add-transaction', title: '新增交易', icon: 'plus' },
   { path: '/h5/recurring', title: '周期记账', icon: 'replay' },

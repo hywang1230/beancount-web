@@ -28,24 +28,18 @@
       </van-grid>
     </div>
 
-    <!-- 最近交易 -->
-    <van-cell-group title="最近交易">
-      <van-cell
-        v-for="transaction in recentTransactions"
-        :key="transaction.id"
-        :title="transaction.account"
-        :label="transaction.date"
-        :value="formatAmount(transaction.amount)"
-        :value-class="transaction.type === 'income' ? 'positive' : 'negative'"
-        is-link
-        @click="viewTransaction(transaction)"
-      />
-      
-      <van-cell
-        title="查看更多"
-        is-link
-        @click="$router.push('/h5/transactions')"
-      />
+    <!-- 收支趋势 -->
+    <van-cell-group title="收支趋势">
+      <div class="trend-chart-container">
+        <div 
+          v-if="trendsOption" 
+          ref="chartContainer"
+          class="chart-wrapper"
+        />
+        <div v-else class="loading-wrapper">
+          <van-loading>加载中...</van-loading>
+        </div>
+      </div>
     </van-cell-group>
 
     <!-- 月度统计 -->
@@ -76,25 +70,34 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { getBalanceSheet, getMonthlySummary } from '@/api/reports'
-import { getRecentTransactions } from '@/api/transactions'
+import { getBalanceSheet, getMonthlySummary, getTrends } from '@/api/reports'
 import { showToast } from 'vant'
+import * as echarts from 'echarts/core'
+import { LineChart } from 'echarts/charts'
+import { CanvasRenderer } from 'echarts/renderers'
+import {
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent
+} from 'echarts/components'
+
+// 注册 ECharts 组件
+echarts.use([
+  CanvasRenderer,
+  LineChart,
+  TitleComponent,
+  TooltipComponent,
+  LegendComponent,
+  GridComponent
+])
 
 const router = useRouter()
 
 const showBalance = ref(true)
 const totalBalance = ref(0)
-interface Transaction {
-  id: string  // 改为string类型，支持transaction_id
-  transaction_id?: string  // 添加transaction_id字段
-  payee: string
-  account: string
-  date: string
-  amount: number
-  type: string
-}
 
 interface Account {
   id: number
@@ -102,13 +105,18 @@ interface Account {
   balance: number
 }
 
-const recentTransactions = ref<Transaction[]>([])
 const monthlyStats = ref({
   income: 0,
   expense: 0,
   balance: 0
 })
 const mainAccounts = ref<Account[]>([])
+
+// 趋势图表相关
+const chartContainer = ref<HTMLElement>()
+const trendsOption = ref<any>(null)
+const trendsData = ref<any>(null)
+let chartInstance: echarts.ECharts | null = null
 
 const quickActions = [
   {
@@ -170,65 +178,109 @@ const formatAccountName = (accountName: string) => {
   return accountName
 }
 
-// 通用的交易数据转换函数（和Transactions.vue保持一致）
-const convertTransactionData = (trans: any, fallbackId: string | number) => {
-  // 根据账户类型分组分录
-  const incomePostings = trans.postings?.filter((p: any) => p.account.startsWith('Income:')) || []
-  const expensePostings = trans.postings?.filter((p: any) => p.account.startsWith('Expenses:')) || []
+// 初始化图表
+const initChart = async () => {
+  await nextTick()
+  if (!chartContainer.value) return
   
-  let mainAccountName = ''
-  let mainAmount = 0
-  let transactionType = 'transfer'
+  if (chartInstance) {
+    chartInstance.dispose()
+  }
   
-  if (expensePostings.length > 0) {
-    // 支出类：汇总所有支出分录的账户名和金额
-    const accountNames = expensePostings.map((p: any) => formatAccountName(p.account)).join(',')
-    const totalAmount = expensePostings.reduce((sum: number, p: any) => {
-      const amount = typeof p.amount === 'string' ? parseFloat(p.amount) : (p.amount || 0)
-      return sum + Math.abs(amount) // 取绝对值确保显示正数
-    }, 0)
-    
-    mainAccountName = accountNames
-    mainAmount = totalAmount
-    transactionType = 'expense'
-  } else if (incomePostings.length > 0) {
-    // 收入类：汇总所有收入分录的账户名和金额
-    const accountNames = incomePostings.map((p: any) => formatAccountName(p.account)).join(',')
-    const totalAmount = incomePostings.reduce((sum: number, p: any) => {
-      const amount = typeof p.amount === 'string' ? parseFloat(p.amount) : (p.amount || 0)
-      return sum + Math.abs(amount) // 取绝对值确保显示正数
-    }, 0)
-    
-    mainAccountName = accountNames
-    mainAmount = totalAmount
-    transactionType = 'income'
-  } else {
-    // 转账：使用第一个分录
-    const firstPosting = trans.postings?.[0]
-    if (firstPosting) {
-      mainAccountName = formatAccountName(firstPosting.account)
-      const amount = typeof firstPosting.amount === 'string' ? parseFloat(firstPosting.amount) : (firstPosting.amount || 0)
-      mainAmount = amount
-      transactionType = 'transfer'
+  chartInstance = echarts.init(chartContainer.value)
+  
+  if (trendsOption.value) {
+    chartInstance.setOption(trendsOption.value)
+  }
+  
+  // 监听窗口大小变化
+  const resizeHandler = () => {
+    if (chartInstance) {
+      chartInstance.resize()
     }
   }
-  
-  return {
-    id: trans.transaction_id || `dashboard-transaction-${fallbackId}`, // 使用唯一ID
-    transaction_id: trans.transaction_id, // 文件名+行号组成的唯一标识
-    payee: trans.payee || trans.narration || '',
-    account: mainAccountName,
-    date: trans.date,
-    amount: mainAmount,
-    type: transactionType
-  }
+  window.addEventListener('resize', resizeHandler)
 }
 
-
-
-const viewTransaction = (transaction: any) => {
-  // 跳转到交易详情页面
-  router.push(`/h5/transactions/${transaction.transaction_id}`)
+// 生成趋势图表配置
+const generateTrendsOption = () => {
+  if (!trendsData.value?.trends) return
+  
+  const periods = trendsData.value.trends.map((item: any) => item.period)
+  const incomes = trendsData.value.trends.map((item: any) => item.total_income)
+  const expenses = trendsData.value.trends.map((item: any) => Math.abs(item.total_expenses))
+  
+  trendsOption.value = {
+    tooltip: {
+      trigger: 'axis',
+      formatter: (params: any) => {
+        let result = `${params[0].axisValue}<br/>`
+        params.forEach((param: any) => {
+          result += `${param.seriesName}: ${formatAmount(param.value)}<br/>`
+        })
+        return result
+      }
+    },
+    legend: {
+      data: ['收入', '支出'],
+      bottom: 0,
+      textStyle: {
+        fontSize: 12
+      }
+    },
+    grid: {
+      top: 20,
+      left: 10,
+      right: 10,
+      bottom: 40,
+      containLabel: true
+    },
+    xAxis: {
+      type: 'category',
+      data: periods,
+      axisLabel: {
+        fontSize: 10,
+        rotate: 45
+      }
+    },
+    yAxis: {
+      type: 'value',
+      axisLabel: {
+        fontSize: 10,
+        formatter: (value: number) => {
+          if (value >= 10000) {
+            return (value / 10000).toFixed(1) + 'w'
+          }
+          return value.toString()
+        }
+      }
+    },
+    series: [
+      {
+        name: '收入',
+        type: 'line',
+        data: incomes,
+        itemStyle: { color: '#07c160' },
+        lineStyle: { width: 2 },
+        symbol: 'circle',
+        symbolSize: 4
+      },
+      {
+        name: '支出',
+        type: 'line',
+        data: expenses,
+        itemStyle: { color: '#ee0a24' },
+        lineStyle: { width: 2 },
+        symbol: 'circle',
+        symbolSize: 4
+      }
+    ]
+  }
+  
+  // 如果图表已初始化，更新配置
+  if (chartInstance) {
+    chartInstance.setOption(trendsOption.value)
+  }
 }
 
 
@@ -240,10 +292,10 @@ const viewAccount = (account: any) => {
 const loadDashboardData = async () => {
   try {
     // 并行加载各种数据
-    const [balanceSheetRes, monthlySummaryRes, recentTransactionsRes] = await Promise.allSettled([
+    const [balanceSheetRes, monthlySummaryRes, trendsRes] = await Promise.allSettled([
       getBalanceSheet(),
       getMonthlySummary(),
-      getRecentTransactions(7) // 获取最近7天的交易
+      getTrends(6) // 获取最近6个月的趋势数据
     ])
 
     // 处理资产负债表数据
@@ -277,28 +329,15 @@ const loadDashboardData = async () => {
       console.error('获取月度统计失败:', monthlySummaryRes.reason)
     }
 
-    // 处理最近交易数据
-    if (recentTransactionsRes.status === 'fulfilled') {
-      const transactionsData = recentTransactionsRes.value as unknown as any[]
-      const convertedTransactions: Transaction[] = []
-      let count = 0
-      
-      for (const trans of transactionsData || []) {
-        if (count >= 3) break
-        
-        // 使用和交易流水相同的汇总逻辑
-        const convertedTransaction = convertTransactionData(trans, count)
-        
-        // 只显示支出和收入类交易
-        if (convertedTransaction.type === 'expense' || convertedTransaction.type === 'income') {
-          convertedTransactions.push(convertedTransaction)
-          count++
-        }
-      }
-      
-      recentTransactions.value = convertedTransactions
+    // 处理趋势数据
+    if (trendsRes.status === 'fulfilled') {
+      trendsData.value = trendsRes.value
+      generateTrendsOption()
+      // 在下次tick时初始化图表
+      await nextTick()
+      initChart()
     } else {
-      console.error('获取最近交易失败:', recentTransactionsRes.reason)
+      console.error('获取趋势数据失败:', trendsRes.reason)
     }
 
   } catch (error: any) {
@@ -407,5 +446,23 @@ onMounted(() => {
 :deep(.van-cell__left-icon) {
   margin-right: 12px;
   color: #969799;
+}
+
+/* 趋势图表样式 */
+.trend-chart-container {
+  padding: 16px;
+  background-color: white;
+}
+
+.chart-wrapper {
+  width: 100%;
+  height: 200px;
+}
+
+.loading-wrapper {
+  height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 </style>
