@@ -380,11 +380,12 @@ const onLoad = async () => {
     transactionsCount: transactions.value.length
   })
   
-  // 检查是否已经完成加载，避免重复请求
-  if (finished.value || loading.value) {
-    console.log('⛔ onLoad early return: finished or loading')
+  // 检查是否已经完成加载
+  if (finished.value) {
+    console.log('⛔ onLoad early return: finished')
     return
   }
+  
   
   // 检查是否还有更多页面
   if (currentPage.value >= totalPages.value && totalPages.value > 0) {
@@ -393,10 +394,18 @@ const onLoad = async () => {
     return
   }
   
-  // 加载下一页数据
-  const nextPage = currentPage.value + 1
-  console.log('📄 onLoad: loading page', nextPage)
-  await loadTransactions(false, nextPage)
+  // 立即设置 loading 状态，让 van-list 知道开始加载
+  loading.value = true
+  console.log('📄 onLoad: set loading=true, loading page', currentPage.value + 1)
+  
+  try {
+    // 加载下一页数据
+    const nextPage = currentPage.value + 1
+    await loadTransactions(false, nextPage)
+  } catch (error) {
+    console.error('onLoad failed:', error)
+    loading.value = false
+  }
 }
 
 const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
@@ -408,14 +417,17 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
     finished: finished.value
   })
   
-  // 防止重复加载
-  if (loading.value) {
-    console.log('⛔ loadTransactions: already loading, skipping')
-    return
+  // 如果不是刷新，且还没有设置 loading 状态，则设置它
+  if (!isRefresh && !loading.value) {
+    loading.value = true
+  }
+  
+  // 如果是刷新，总是设置 loading 状态
+  if (isRefresh) {
+    loading.value = true
   }
   
   try {
-    loading.value = true
     
     // 确定要加载的页码
     const targetPage = pageToLoad || currentPage.value
@@ -640,7 +652,7 @@ const loadAccountOptions = async () => {
     })
     
     // 构建分层选项
-    const options = [{ text: '全部账户', value: 'all' }]
+    const options: AccountOption[] = [{ text: '全部账户', value: 'all' }]
     
     // 按类型添加账户，并在每个类型前添加分隔符
     const typeOrder = ['assets', 'liabilities', 'income', 'expenses', 'equity', 'other']
