@@ -63,8 +63,8 @@
               <van-cell
                 :title="formatAccountName(transaction.account)"
                 :label="transaction.payee || transaction.date"
-                :value="formatAmount(transaction.amount)"
-                :value-class="transaction.amount > 0 ? 'positive' : 'negative'"
+                :value="formatTransactionAmount(transaction)"
+                :value-class="getTransactionAmountClass(transaction)"
                 :class="{ 'highlighted-transaction': transaction.transaction_id === highlightTransactionId }"
                 is-link
                 @click="viewTransaction(transaction)"
@@ -170,13 +170,12 @@ const transactions = ref<Transaction[]>([])
 const filteredTransactions = computed(() => {
   let filtered = transactions.value
 
-  // 按类型筛选（前端额外过滤，主要用于类型切换时的即时反馈）
-  if (filterType.value !== 'all') {
+  // 按类型筛选（前端额外过滤，主要用于转账类型）
+  // 注意：收入和支出类型的大部分筛选已在后端完成，这里主要处理转账类型
+  if (filterType.value === 'transfer') {
     filtered = filtered.filter(transaction => {
-      if (filterType.value === 'income') return transaction.amount > 0
-      if (filterType.value === 'expense') return transaction.amount < 0
-      if (filterType.value === 'transfer') return transaction.amount === 0
-      return true
+      // 转账：交易涉及Assets或Liabilities账户
+      return transaction.account.startsWith('Assets:') || transaction.account.startsWith('Liabilities:')
     })
   }
 
@@ -186,12 +185,40 @@ const filteredTransactions = computed(() => {
 // 计算属性 - 统计数据（基于筛选后的数据）
 const stats = computed(() => {
   const filtered = filteredTransactions.value
+  
+  let totalIncome = 0
+  let totalExpense = 0
+  
+  filtered.forEach(transaction => {
+    if (transaction.type === 'income') {
+      // 收入账户：负数是盈利，正数是亏损
+      totalIncome += -transaction.amount  // 取负值：负数变正数(收入)，正数变负数(损失)
+    } else if (transaction.type === 'expense') {
+      // 支出账户：正数是支出，负数是退款
+      totalExpense += transaction.amount  // 保持原值：正数(支出)，负数(退款)
+    }
+  })
+  
   return {
-    income: filtered.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0),
-    expense: filtered.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0),
-    balance: filtered.reduce((sum, t) => sum + t.amount, 0)
+    income: totalIncome,   // 显示为正数表示总收入
+    expense: totalExpense, // 正数表示总支出，可能包含负数退款
+    balance: totalIncome - totalExpense  // 净收入 = 收入 - 支出
   }
 })
+
+// 计算交易的显示金额（用于合计计算）
+const getTransactionDisplayAmount = (transaction: any) => {
+  if (transaction.type === 'income') {
+    // 收入账户：负数是盈利，转换为正数；正数是亏损，转换为负数
+    return -transaction.amount
+  } else if (transaction.type === 'expense') {
+    // 支出账户：保持原值
+    return transaction.amount
+  } else {
+    // 转账：保持原值
+    return transaction.amount
+  }
+}
 
 // 计算属性 - 分组交易
 const groupedTransactions = computed(() => {
@@ -207,7 +234,8 @@ const groupedTransactions = computed(() => {
       }
     }
     groups[date].transactions.push(transaction)
-    groups[date].totalAmount += transaction.amount
+    // 使用显示金额计算每日合计
+    groups[date].totalAmount += getTransactionDisplayAmount(transaction)
   })
   
   return Object.values(groups).sort((a, b) => 
@@ -221,6 +249,35 @@ const formatAmount = (amount: number) => {
     style: 'currency',
     currency: 'CNY'
   }).format(amount)
+}
+
+// 格式化交易显示金额（转换为用户友好的显示方式）
+const formatTransactionAmount = (transaction: any) => {
+  let displayAmount = transaction.amount
+  
+  if (transaction.type === 'income') {
+    // 收入账户：负数是盈利，转换为正数显示；正数是亏损，转换为负数显示
+    displayAmount = -transaction.amount
+  } else if (transaction.type === 'expense') {
+    // 支出账户：正数是支出，保持正数；负数是退款，保持负数
+    displayAmount = transaction.amount
+  }
+  
+  return formatAmount(displayAmount)
+}
+
+// 获取交易显示金额的正负性（用于颜色显示）
+const getTransactionAmountClass = (transaction: any) => {
+  if (transaction.type === 'income') {
+    // 收入：负数是盈利(显示绿色)，正数是亏损(显示红色)
+    return transaction.amount < 0 ? 'positive' : 'negative'
+  } else if (transaction.type === 'expense') {
+    // 支出：正数是支出(显示红色)，负数是退款(显示绿色)
+    return transaction.amount > 0 ? 'negative' : 'positive'
+  } else {
+    // 转账：根据金额正负显示
+    return transaction.amount > 0 ? 'positive' : 'negative'
+  }
 }
 
 const formatAccountName = (accountName: string) => {
@@ -383,19 +440,27 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
       targetPage
     })
     
-    // 账户筛选
-    if (filterAccount.value !== 'all') {
-      params.account = filterAccount.value
-    }
-    
-    // 类型筛选（通过金额范围实现）
+    // 类型筛选和账户筛选（优先类型筛选）
     if (filterType.value !== 'all') {
       if (filterType.value === 'income') {
-        params.amount_min = 0.01  // 收入：正数
+        // 如果同时选择了具体账户，则组合筛选
+        if (filterAccount.value !== 'all') {
+          params.account = filterAccount.value.includes('Income:') ? filterAccount.value : 'Income:'
+        } else {
+          params.account = 'Income:'  // 收入：Income账户
+        }
       } else if (filterType.value === 'expense') {
-        params.amount_max = -0.01  // 支出：负数
+        // 如果同时选择了具体账户，则组合筛选
+        if (filterAccount.value !== 'all') {
+          params.account = filterAccount.value.includes('Expenses:') ? filterAccount.value : 'Expenses:'
+        } else {
+          params.account = 'Expenses:'  // 支出：Expenses账户
+        }
       }
       // transfer类型暂不通过API筛选，前端处理
+    } else if (filterAccount.value !== 'all') {
+      // 只有账户筛选，没有类型筛选
+      params.account = filterAccount.value
     }
     
     // 根据排序设置日期范围
@@ -430,10 +495,23 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
     
     // 转换API数据格式
     const convertedTransactions = (response.data || []).map((trans: any, index: number) => {
-      // 获取第一个posting来确定金额和账户
-      const posting = trans.postings?.[0]
-      const amount = posting?.amount || 0
-      const parsedAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+      // 智能选择主要账户和金额：优先使用Income/Expenses账户
+      let mainPosting = trans.postings?.[0]
+      let mainAmount = mainPosting?.amount || 0
+      
+      // 查找收入或支出账户作为主要显示账户
+      const incomePosting = trans.postings?.find((p: any) => p.account.startsWith('Income:'))
+      const expensePosting = trans.postings?.find((p: any) => p.account.startsWith('Expenses:'))
+      
+      if (incomePosting) {
+        mainPosting = incomePosting
+        mainAmount = incomePosting.amount || 0
+      } else if (expensePosting) {
+        mainPosting = expensePosting
+        mainAmount = expensePosting.amount || 0
+      }
+      
+      const parsedAmount = typeof mainAmount === 'string' ? parseFloat(mainAmount) : mainAmount
       
       return {
         id: trans.transaction_id || `transaction-${currentPage.value}-${index + 1}`, // 使用唯一ID
@@ -441,10 +519,11 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
         filename: trans.filename,
         lineno: trans.lineno,
         payee: trans.payee || trans.narration || '',
-        account: posting?.account || '',
+        account: mainPosting?.account || '',
         date: trans.date,
         amount: parsedAmount,
-        type: parsedAmount > 0 ? 'income' : (parsedAmount < 0 ? 'expense' : 'transfer')
+        type: mainPosting?.account.startsWith('Income:') ? 'income' : 
+              (mainPosting?.account.startsWith('Expenses:') ? 'expense' : 'transfer')
       }
     })
     
