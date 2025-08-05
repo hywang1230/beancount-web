@@ -512,34 +512,53 @@ class BeancountService:
         
         default_currency = options_map.get('operating_currency', ['CNY'])[0]
         
+        # 获取汇率信息用于转换
+        exchange_rates = self._get_latest_exchange_rates(entries, end_date, default_currency)
+        
+        # 用于合并同名账户的字典
+        merged_income_accounts = {}
+        merged_expense_accounts = {}
+        
         for (account, currency), balance in account_balances.items():
             if balance == 0:
                 continue
                 
+            # 转换到基础货币
+            converted_balance = balance
+            if currency != default_currency and currency in exchange_rates:
+                converted_balance = balance * exchange_rates[currency]
+            
             account_info = AccountInfo(
                 name=account,
-                balance=balance,
-                currency=currency,
+                balance=converted_balance,
+                currency=default_currency,  # 统一转换为基础货币
                 account_type=self._get_account_type(account)
             )
             
             if account.startswith('Income:'):
-                income_accounts.append(account_info)
+                # 合并同名收入账户
+                if account in merged_income_accounts:
+                    merged_income_accounts[account].balance += converted_balance
+                else:
+                    merged_income_accounts[account] = account_info
             elif account.startswith('Expenses:'):
-                expense_accounts.append(account_info)
+                # 合并同名支出账户
+                if account in merged_expense_accounts:
+                    merged_expense_accounts[account].balance += converted_balance
+                else:
+                    merged_expense_accounts[account] = account_info
         
-        # 获取汇率信息用于收入计算
-        exchange_rates = self._get_latest_exchange_rates(entries, end_date, default_currency)
+        # 转换字典为列表
+        income_accounts = list(merged_income_accounts.values())
+        expense_accounts = list(merged_expense_accounts.values())
         
         # 收入账户：在beancount中负数表示收入，正数表示损失
         # 需要将负数转为正数表示收入金额
-        total_income_raw = self._calculate_total_with_currency_conversion(
-            income_accounts, default_currency, exchange_rates)
+        total_income_raw = sum(acc.balance for acc in income_accounts)
         total_income = -total_income_raw  # 取负值：负数变正数(收入)，正数变负数(损失)
         
         # 支出账户：正数表示支出
-        total_expenses = self._calculate_total_with_currency_conversion(
-            expense_accounts, default_currency, exchange_rates)
+        total_expenses = sum(acc.balance for acc in expense_accounts)
         
         return IncomeStatement(
             income_accounts=income_accounts,
