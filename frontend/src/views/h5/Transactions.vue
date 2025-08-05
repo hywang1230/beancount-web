@@ -61,10 +61,11 @@
               :key="transaction.id"
             >
               <van-cell
-                :title="transaction.payee"
-                :label="transaction.account"
+                :title="formatAccountName(transaction.account)"
+                :label="transaction.payee || transaction.date"
                 :value="formatAmount(transaction.amount)"
                 :value-class="transaction.amount > 0 ? 'positive' : 'negative'"
+                :class="{ 'highlighted-transaction': transaction.transaction_id === highlightTransactionId }"
                 is-link
                 @click="viewTransaction(transaction)"
               >
@@ -106,19 +107,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import { showConfirmDialog, showToast } from 'vant'
-import { getTransactions } from '@/api/transactions'
+import { getTransactions, deleteTransaction as deleteTransactionApi } from '@/api/transactions'
 import { getAllAccounts } from '@/api/accounts'
 
 const router = useRouter()
+const route = useRoute()
+
+// 高亮显示的交易ID（从URL参数获取）
+const highlightTransactionId = ref(route.query.highlight as string || '')
 
 // 响应式数据
 const refreshing = ref(false)
 const loading = ref(false)
 const finished = ref(false)
 const fabOffset = ref({ x: -24, y: -100 })
+
+// 分页状态
+const currentPage = ref(1)
+const totalPages = ref(1)
 
 // 筛选条件
 const filterType = ref('all')
@@ -145,7 +154,8 @@ const sortOptions = [
 ]
 
 interface Transaction {
-  id: number
+  id: string  // 改为string类型支持transaction_id
+  transaction_id?: string  // 添加transaction_id字段
   payee: string
   account: string
   date: string
@@ -155,17 +165,39 @@ interface Transaction {
 
 // 数据
 const transactions = ref<Transaction[]>([])
-const stats = ref({
-  income: 0,
-  expense: 0,
-  balance: 0
+
+// 计算属性 - 过滤后的交易（用于前端显示，服务端已过滤大部分）
+const filteredTransactions = computed(() => {
+  let filtered = transactions.value
+
+  // 按类型筛选（前端额外过滤，主要用于类型切换时的即时反馈）
+  if (filterType.value !== 'all') {
+    filtered = filtered.filter(transaction => {
+      if (filterType.value === 'income') return transaction.amount > 0
+      if (filterType.value === 'expense') return transaction.amount < 0
+      if (filterType.value === 'transfer') return transaction.amount === 0
+      return true
+    })
+  }
+
+  return filtered
+})
+
+// 计算属性 - 统计数据（基于筛选后的数据）
+const stats = computed(() => {
+  const filtered = filteredTransactions.value
+  return {
+    income: filtered.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0),
+    expense: filtered.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0),
+    balance: filtered.reduce((sum, t) => sum + t.amount, 0)
+  }
 })
 
 // 计算属性 - 分组交易
 const groupedTransactions = computed(() => {
   const groups: Record<string, { date: string; transactions: Transaction[]; totalAmount: number }> = {}
   
-  transactions.value.forEach(transaction => {
+  filteredTransactions.value.forEach(transaction => {
     const date = transaction.date
     if (!groups[date]) {
       groups[date] = {
@@ -191,6 +223,28 @@ const formatAmount = (amount: number) => {
   }).format(amount)
 }
 
+const formatAccountName = (accountName: string) => {
+  if (!accountName) return '未知账户'
+  // 去掉第一级账户名称（通常是Assets、Liabilities、Income、Expenses等）
+  const parts = accountName.split(':')
+  if (parts.length > 1) {
+    let formattedName = parts.slice(1).join(':')
+    
+    // 进一步处理：去掉第一个"-"以及前面的字母部分
+    // 例如：JT-交通:过路费 -> 交通:过路费，然后替换":"为"-"变成：交通-过路费
+    const dashIndex = formattedName.indexOf('-')
+    if (dashIndex > 0) {
+      formattedName = formattedName.substring(dashIndex + 1)
+    }
+    
+    // 将":"替换为"-"以提高可读性
+    formattedName = formattedName.replace(/:/g, '-')
+    
+    return formattedName
+  }
+  return accountName
+}
+
 const getTransactionIcon = (type: string) => {
   const iconMap: Record<string, string> = {
     'income': 'arrow-up',
@@ -201,58 +255,147 @@ const getTransactionIcon = (type: string) => {
 }
 
 const viewTransaction = (transaction: any) => {
-  router.push(`/h5/transactions/${transaction.id}`)
+  const transactionId = transaction.transaction_id || transaction.id
+  router.push(`/h5/transactions/${transactionId}`)
 }
 
 const editTransaction = (transaction: any) => {
-  router.push(`/h5/add-transaction?id=${transaction.id}`)
+  const transactionId = transaction.transaction_id || transaction.id
+  router.push(`/h5/add-transaction?id=${transactionId}`)
 }
 
 const deleteTransaction = async (transaction: any) => {
   try {
     await showConfirmDialog({
       title: '确认删除',
-      message: '确定要删除这条交易记录吗？'
+      message: '确定要删除这条交易记录吗？删除后无法恢复。'
     })
     
-    // 这里应该调用API删除交易
-    // await deleteTransactionApi(transaction.id)
+    // 调用API删除交易
+    const transactionId = transaction.transaction_id || transaction.id
+    await deleteTransactionApi(transactionId)
     
     // 从列表中移除
-    const index = transactions.value.findIndex(t => t.id === transaction.id)
+    const index = transactions.value.findIndex(t => 
+      (t.transaction_id && t.transaction_id === transactionId) || 
+      t.id === transaction.id
+    )
     if (index > -1) {
       transactions.value.splice(index, 1)
     }
     
     showToast('删除成功')
-  } catch {
-    // 用户取消删除
+  } catch (error) {
+    if (error !== 'cancel') {
+      console.error('删除交易失败:', error)
+      showToast('删除交易失败')
+    }
   }
 }
 
 const onRefresh = async () => {
-  // 重新加载数据
-  await loadTransactions(true)
-  refreshing.value = false
+  console.log('🔄 onRefresh called: resetting state and loading page 1')
+  
+  // 重置到初始状态
+  currentPage.value = 1  // 重置为第一页
+  finished.value = false
+  loading.value = false  // 确保loading状态正确
+  totalPages.value = 1
+  transactions.value = []  // 清空现有数据
+  
+  console.log('🚀 onRefresh: state reset, loading page 1')
+  // 直接加载第一页
+  try {
+    await loadTransactions(true)
+  } catch (error) {
+    console.error('刷新失败:', error)
+  } finally {
+    refreshing.value = false
+  }
 }
 
 const onLoad = async () => {
-  // 加载更多数据
-  await loadTransactions(false)
+  console.log('🔄 onLoad called:', {
+    finished: finished.value,
+    loading: loading.value,
+    currentPage: currentPage.value,
+    totalPages: totalPages.value,
+    transactionsCount: transactions.value.length
+  })
+  
+  // 检查是否已经完成加载，避免重复请求
+  if (finished.value || loading.value) {
+    console.log('⛔ onLoad early return: finished or loading')
+    return
+  }
+  
+  // 检查是否还有更多页面
+  if (currentPage.value >= totalPages.value && totalPages.value > 0) {
+    console.log('⛔ onLoad: no more pages to load, currentPage:', currentPage.value, 'totalPages:', totalPages.value)
+    finished.value = true
+    return
+  }
+  
+  // 加载下一页数据
+  const nextPage = currentPage.value + 1
+  console.log('📄 onLoad: loading page', nextPage)
+  await loadTransactions(false, nextPage)
 }
 
-const loadTransactions = async (isRefresh = false) => {
+const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
+  console.log('📥 loadTransactions called:', {
+    isRefresh,
+    pageToLoad,
+    currentLoading: loading.value,
+    currentPage: currentPage.value,
+    finished: finished.value
+  })
+  
+  // 防止重复加载
+  if (loading.value) {
+    console.log('⛔ loadTransactions: already loading, skipping')
+    return
+  }
+  
   try {
     loading.value = true
     
+    // 确定要加载的页码
+    const targetPage = pageToLoad || currentPage.value
+    
+    // 如果是刷新，重置状态
+    if (isRefresh) {
+      finished.value = false
+    }
+    
     // 构建筛选参数
     const params: any = {
-      page: isRefresh ? 1 : Math.floor(transactions.value.length / 20) + 1,
+      page: targetPage,
       page_size: 20
     }
     
+    console.log('🚀 About to call API with params:', params)
+    console.log('🔍 Current filter state:', {
+      filterType: filterType.value,
+      filterAccount: filterAccount.value,
+      sortBy: sortBy.value,
+      isRefresh,
+      targetPage
+    })
+    
+    // 账户筛选
     if (filterAccount.value !== 'all') {
       params.account = filterAccount.value
+    }
+    
+    // 类型筛选（通过金额范围实现）
+    if (filterType.value !== 'all') {
+      if (filterType.value === 'income') {
+        params.amount_min = 0.01  // 收入：正数
+      } else if (filterType.value === 'expense') {
+        params.amount_max = -0.01  // 支出：负数
+      }
+      // transfer类型暂不通过API筛选，前端处理
     }
     
     // 根据排序设置日期范围
@@ -264,20 +407,41 @@ const loadTransactions = async (isRefresh = false) => {
       params.end_date = endDate.toISOString().split('T')[0]
     }
 
+    console.log('🌐 Making API call to getTransactions with final params:', params)
     const response = await getTransactions(params)
-    const transactionData = response.data
+    console.log('🎯 API call completed successfully')
+    console.log('📡 API response received:', {
+      requested_page: targetPage,
+      current_page: currentPage.value,
+      total_pages: response.total_pages,
+      total: response.total,
+      data_length: response.data?.length,
+      response_keys: Object.keys(response),
+      params
+    })
+    
+    // 更新分页信息
+    totalPages.value = response.total_pages
+    
+    // 只有API调用成功后才更新当前页码
+    if (pageToLoad) {
+      currentPage.value = pageToLoad
+    }
     
     // 转换API数据格式
-    const convertedTransactions = (transactionData.data || []).map((trans: any, index: number) => {
+    const convertedTransactions = (response.data || []).map((trans: any, index: number) => {
       // 获取第一个posting来确定金额和账户
       const posting = trans.postings?.[0]
       const amount = posting?.amount || 0
       const parsedAmount = typeof amount === 'string' ? parseFloat(amount) : amount
       
       return {
-        id: transactions.value.length + index + 1, // 生成唯一ID
-        payee: trans.payee || trans.narration || '未知',
-        account: posting?.account || '未知账户',
+        id: trans.transaction_id || `transaction-${currentPage.value}-${index + 1}`, // 使用唯一ID
+        transaction_id: trans.transaction_id, // 文件名+行号组成的唯一标识
+        filename: trans.filename,
+        lineno: trans.lineno,
+        payee: trans.payee || trans.narration || '',
+        account: posting?.account || '',
         date: trans.date,
         amount: parsedAmount,
         type: parsedAmount > 0 ? 'income' : (parsedAmount < 0 ? 'expense' : 'transfer')
@@ -290,19 +454,43 @@ const loadTransactions = async (isRefresh = false) => {
       transactions.value.push(...convertedTransactions)
     }
     
-    // 计算统计数据
-    stats.value = {
-      income: transactions.value.filter(t => t.amount > 0).reduce((sum, t) => sum + t.amount, 0),
-      expense: transactions.value.filter(t => t.amount < 0).reduce((sum, t) => sum + t.amount, 0),
-      balance: transactions.value.reduce((sum, t) => sum + t.amount, 0)
-    }
+    // 统计数据现在通过计算属性自动更新
     
     // 判断是否还有更多数据
-    finished.value = transactionData.page >= transactionData.total_pages
+    const hasMoreData = currentPage.value < response.total_pages && response.total_pages > 1
+    
+    // 特殊情况处理
+    if (currentPage.value === 1 && convertedTransactions.length === 0) {
+      // 第一页没有数据，可能是筛选条件太严格或网络问题
+      finished.value = false
+      console.log('⚠️ First page with no data, keeping finished as false')
+    } else if (convertedTransactions.length === 0 && currentPage.value > 1) {
+      // 后续页面没有数据，说明已经到底了
+      finished.value = true
+      console.log('📄 No data in subsequent page, marking as finished')
+    } else {
+      finished.value = !hasMoreData
+    }
+    
+    console.log('📊 Pagination check:', {
+      currentPage: currentPage.value,
+      totalPages: response.total_pages,
+      convertedTransactions: convertedTransactions.length,
+      hasMoreData,
+      finished: finished.value,
+      totalTransactions: transactions.value.length,
+      isRefresh
+    })
+    
+    // 移除临时测试代码
     
   } catch (error) {
     console.error('加载交易数据失败:', error)
     showToast('加载交易数据失败')
+    // 发生错误时，如果是加载新页面失败，则设置finished为true停止继续加载
+    if (!isRefresh && pageToLoad && pageToLoad > currentPage.value) {
+      finished.value = true
+    }
   } finally {
     loading.value = false
   }
@@ -329,9 +517,63 @@ const loadAccountOptions = async () => {
   }
 }
 
-onMounted(() => {
+// 组件是否已初始化完成
+const isInitialized = ref(false)
+// 是否正在处理筛选变化
+const isHandlingFilterChange = ref(false)
+
+// 监听筛选条件变化
+watch([filterType, filterAccount, sortBy], async () => {
+  // 只有在组件初始化完成后才响应筛选条件变化
+  if (isInitialized.value && !isHandlingFilterChange.value) {
+    isHandlingFilterChange.value = true
+    console.log('🔄 Filter changed, refreshing data:', {
+      filterType: filterType.value,
+      filterAccount: filterAccount.value,
+      sortBy: sortBy.value
+    })
+    try {
+      await onRefresh()
+    } finally {
+      isHandlingFilterChange.value = false
+    }
+  }
+}, { deep: true })
+
+onMounted(async () => {
+  console.log('🚀 Component mounting, initializing state')
+  
+  // 确保初始状态正确
+  finished.value = false
+  loading.value = false
+  currentPage.value = 1  // 直接从1开始
+  totalPages.value = 1
+  transactions.value = []
+  
+  console.log('📊 Initial state set:', {
+    finished: finished.value,
+    loading: loading.value,
+    currentPage: currentPage.value,
+    totalPages: totalPages.value,
+    transactionsLength: transactions.value.length
+  })
+  
+  console.log('🚀 Loading account options and initial data')
+  
   loadAccountOptions()
-  loadTransactions(true)
+  
+  // 初始加载第一页
+  await loadTransactions(true)  // 直接调用loadTransactions作为初始加载
+  
+  // 标记组件已初始化完成，现在可以响应筛选条件变化
+  isInitialized.value = true
+  console.log('✅ Component initialization completed:', {
+    finished: finished.value,
+    loading: loading.value,
+    currentPage: currentPage.value,
+    totalPages: totalPages.value,
+    transactionsLength: transactions.value.length
+  })
 })
 </script>
 
@@ -432,5 +674,11 @@ onMounted(() => {
 
 :deep(.negative) {
   color: #ee0a24;
+}
+
+/* 高亮显示的交易 */
+.highlighted-transaction {
+  background-color: #fff7e6 !important;
+  border-left: 4px solid #ff9500 !important;
 }
 </style>

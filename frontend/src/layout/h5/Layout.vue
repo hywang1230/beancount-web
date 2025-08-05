@@ -57,13 +57,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 const route = useRoute()
 const router = useRouter()
 
 const showMenuPopup = ref(false)
+const activeTab = ref('dashboard')
 
 const tabbarItems = [
   { name: 'dashboard', title: '首页', icon: 'home-o', path: '/h5/dashboard' },
@@ -83,11 +84,13 @@ const allMenuItems = [
   { path: '/h5/files', title: '文件管理', icon: 'folder-o' }
 ]
 
-const activeTab = computed(() => {
-  const currentPath = route.path
-  const currentItem = tabbarItems.find(item => item.path === currentPath)
-  return currentItem?.name || 'dashboard'
-})
+// 监听路由变化，更新当前激活的标签
+watch(() => route.path, (newPath) => {
+  const currentItem = tabbarItems.find(item => item.path === newPath)
+  if (currentItem) {
+    activeTab.value = currentItem.name
+  }
+}, { immediate: true })
 
 const currentPageTitle = computed(() => {
   const currentItem = allMenuItems.find(item => item.path === route.path)

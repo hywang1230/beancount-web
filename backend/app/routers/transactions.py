@@ -14,6 +14,8 @@ async def get_transactions(
     account: Optional[str] = Query(None, description="账户筛选"),
     payee: Optional[str] = Query(None, description="收付方筛选"),
     narration: Optional[str] = Query(None, description="摘要筛选"),
+    amount_min: Optional[float] = Query(None, description="最小金额筛选"),
+    amount_max: Optional[float] = Query(None, description="最大金额筛选"),
     page: int = Query(1, description="页码", ge=1),
     page_size: int = Query(50, description="每页条数", ge=1, le=200)
 ):
@@ -24,7 +26,9 @@ async def get_transactions(
             end_date=end_date,
             account=account,
             payee=payee,
-            narration=narration
+            narration=narration,
+            min_amount=amount_min,
+            max_amount=amount_max
         )
         
         # 获取所有符合条件的交易
@@ -114,4 +118,114 @@ async def get_recent_transactions(days: int = Query(30, description="最近天�
         return transactions[:50]  # 最多返回50条
         
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取最近交易失败: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"获取最近交易失败: {str(e)}")
+
+@router.get("/{transaction_id}")
+async def get_transaction_by_id(transaction_id: str):
+    """根据transaction_id获取单个交易（格式：filename:lineno）"""
+    try:
+        if ':' not in transaction_id:
+            raise HTTPException(status_code=400, detail="无效的transaction_id格式，应为 filename:lineno")
+        
+        # 解析transaction_id
+        parts = transaction_id.split(':')
+        if len(parts) != 2:
+            raise HTTPException(status_code=400, detail="无效的transaction_id格式，应为 filename:lineno")
+        
+        filename = parts[0]
+        try:
+            lineno = int(parts[1])
+        except ValueError:
+            raise HTTPException(status_code=400, detail="行号必须是数字")
+        
+        # 获取交易
+        transaction = beancount_service.get_transaction_by_location(filename, lineno)
+        if not transaction:
+            raise HTTPException(status_code=404, detail="未找到指定的交易")
+        
+        return transaction
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取交易失败: {str(e)}")
+
+@router.put("/{transaction_id}")
+async def update_transaction(transaction_id: str, transaction: TransactionCreate):
+    """根据transaction_id更新交易"""
+    try:
+        if ':' not in transaction_id:
+            raise HTTPException(status_code=400, detail="无效的transaction_id格式，应为 filename:lineno")
+        
+        # 解析transaction_id
+        parts = transaction_id.split(':')
+        if len(parts) != 2:
+            raise HTTPException(status_code=400, detail="无效的transaction_id格式，应为 filename:lineno")
+        
+        filename = parts[0]
+        try:
+            lineno = int(parts[1])
+        except ValueError:
+            raise HTTPException(status_code=400, detail="行号必须是数字")
+        
+        # 转换为字典格式
+        transaction_data = {
+            "date": transaction.date.isoformat(),
+            "flag": transaction.flag,
+            "payee": transaction.payee,
+            "narration": transaction.narration,
+            "tags": transaction.tags,
+            "links": transaction.links,
+            "postings": [
+                {
+                    "account": p.account,
+                    "amount": float(p.amount) if p.amount else None,
+                    "currency": p.currency
+                }
+                for p in transaction.postings
+            ]
+        }
+        
+        # 更新交易
+        success = beancount_service.update_transaction_by_location(filename, lineno, transaction_data)
+        
+        if success:
+            return {"message": "交易更新成功", "success": True}
+        else:
+            raise HTTPException(status_code=400, detail="交易更新失败")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"更新交易失败: {str(e)}")
+
+@router.delete("/{transaction_id}")
+async def delete_transaction(transaction_id: str):
+    """根据transaction_id删除交易"""
+    try:
+        if ':' not in transaction_id:
+            raise HTTPException(status_code=400, detail="无效的transaction_id格式，应为 filename:lineno")
+        
+        # 解析transaction_id
+        parts = transaction_id.split(':')
+        if len(parts) != 2:
+            raise HTTPException(status_code=400, detail="无效的transaction_id格式，应为 filename:lineno")
+        
+        filename = parts[0]
+        try:
+            lineno = int(parts[1])
+        except ValueError:
+            raise HTTPException(status_code=400, detail="行号必须是数字")
+        
+        # 删除交易
+        success = beancount_service.delete_transaction_by_location(filename, lineno)
+        
+        if success:
+            return {"message": "交易删除成功", "success": True}
+        else:
+            raise HTTPException(status_code=400, detail="交易删除失败")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"删除交易失败: {str(e)}") 

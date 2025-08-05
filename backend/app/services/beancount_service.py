@@ -168,6 +168,24 @@ class BeancountService:
                     )
                     postings.append(posting_data)
                 
+                # 提取文件名和行号元数据
+                filename = getattr(entry.meta, 'filename', None) if hasattr(entry, 'meta') else None
+                lineno = getattr(entry.meta, 'lineno', None) if hasattr(entry, 'meta') else None
+                
+                # 如果没有从meta中获取到，尝试直接从entry属性获取
+                if filename is None and hasattr(entry, 'meta') and entry.meta:
+                    filename = entry.meta.get('filename')
+                if lineno is None and hasattr(entry, 'meta') and entry.meta:
+                    lineno = entry.meta.get('lineno')
+                
+                # 生成唯一的交易ID
+                transaction_id = None
+                if filename and lineno:
+                    # 使用相对路径和行号组成唯一ID
+                    import os
+                    relative_filename = os.path.basename(filename) if filename else 'unknown'
+                    transaction_id = f"{relative_filename}:{lineno}"
+                
                 transaction = TransactionResponse(
                     date=entry.date,
                     flag=entry.flag,
@@ -175,7 +193,10 @@ class BeancountService:
                     narration=entry.narration,
                     tags=list(entry.tags) if entry.tags else [],
                     links=list(entry.links) if entry.links else [],
-                    postings=postings
+                    postings=postings,
+                    filename=filename,
+                    lineno=lineno,
+                    transaction_id=transaction_id
                 )
                 transactions.append(transaction)
         
@@ -859,6 +880,173 @@ class BeancountService:
         """构建close指令字符串"""
         date_str = close_date.strftime('%Y-%m-%d')
         return f"{date_str} close {account_name}"
+
+    def get_transaction_by_location(self, filename: str, lineno: int) -> Optional[TransactionResponse]:
+        """根据文件名和行号获取特定交易"""
+        try:
+            entries, _, _ = self._load_entries()
+            
+            for entry in entries:
+                if isinstance(entry, Transaction):
+                    # 检查元数据中的文件名和行号
+                    entry_filename = entry.meta.get('filename') if entry.meta else None
+                    entry_lineno = entry.meta.get('lineno') if entry.meta else None
+                    
+                    if entry_filename and entry_lineno:
+                        import os
+                        entry_basename = os.path.basename(entry_filename)
+                        if entry_basename == filename and entry_lineno == lineno:
+                            # 找到匹配的交易，转换为响应格式
+                            return self._convert_entry_to_response(entry)
+            
+            return None
+            
+        except Exception as e:
+            print(f"获取交易失败: {e}")
+            return None
+
+    def update_transaction_by_location(self, filename: str, lineno: int, transaction_data: Dict) -> bool:
+        """根据文件名和行号更新交易"""
+        try:
+            # 首先找到要更新的交易
+            entries, _, _ = self._load_entries()
+            target_entry = None
+            
+            for entry in entries:
+                if isinstance(entry, Transaction):
+                    entry_filename = entry.meta.get('filename') if entry.meta else None
+                    entry_lineno = entry.meta.get('lineno') if entry.meta else None
+                    
+                    if entry_filename and entry_lineno:
+                        import os
+                        entry_basename = os.path.basename(entry_filename)
+                        if entry_basename == filename and entry_lineno == lineno:
+                            target_entry = entry
+                            break
+            
+            if not target_entry:
+                print(f"未找到要更新的交易: {filename}:{lineno}")
+                return False
+            
+            # 读取原始文件内容
+            target_filename = target_entry.meta.get('filename')
+            if not target_filename:
+                print("无法获取交易所在的文件名")
+                return False
+            
+            with open(target_filename, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            # 构建新的交易字符串
+            new_transaction_str = self._build_transaction_string(transaction_data)
+            
+            # 替换指定行的交易（这里简化处理，假设交易占一行）
+            # 实际上可能需要更复杂的解析来处理多行交易
+            if lineno <= len(lines):
+                lines[lineno - 1] = new_transaction_str + '\n'
+                
+                # 写回文件
+                with open(target_filename, 'w', encoding='utf-8') as f:
+                    f.writelines(lines)
+                
+                # 重新加载条目
+                self._load_entries(force_reload=True)
+                return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"更新交易失败: {e}")
+            return False
+
+    def delete_transaction_by_location(self, filename: str, lineno: int) -> bool:
+        """根据文件名和行号删除交易"""
+        try:
+            # 首先找到要删除的交易
+            entries, _, _ = self._load_entries()
+            target_entry = None
+            
+            for entry in entries:
+                if isinstance(entry, Transaction):
+                    entry_filename = entry.meta.get('filename') if entry.meta else None
+                    entry_lineno = entry.meta.get('lineno') if entry.meta else None
+                    
+                    if entry_filename and entry_lineno:
+                        import os
+                        entry_basename = os.path.basename(entry_filename)
+                        if entry_basename == filename and entry_lineno == lineno:
+                            target_entry = entry
+                            break
+            
+            if not target_entry:
+                print(f"未找到要删除的交易: {filename}:{lineno}")
+                return False
+            
+            # 读取原始文件内容
+            target_filename = target_entry.meta.get('filename')
+            if not target_filename:
+                print("无法获取交易所在的文件名")
+                return False
+            
+            with open(target_filename, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            # 删除指定行的交易（这里简化处理，假设交易占一行）
+            # 实际上可能需要更复杂的解析来处理多行交易
+            if lineno <= len(lines):
+                # 注释掉该行而不是直接删除，以保持行号的一致性
+                original_line = lines[lineno - 1]
+                lines[lineno - 1] = f"; DELETED: {original_line}"
+                
+                # 写回文件
+                with open(target_filename, 'w', encoding='utf-8') as f:
+                    f.writelines(lines)
+                
+                # 重新加载条目
+                self._load_entries(force_reload=True)
+                return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"删除交易失败: {e}")
+            return False
+
+    def _convert_entry_to_response(self, entry: Transaction) -> TransactionResponse:
+        """将Beancount交易条目转换为响应格式"""
+        # 转换分录
+        postings = []
+        for posting in entry.postings:
+            posting_data = PostingBase(
+                account=posting.account,
+                amount=posting.units.number if posting.units else None,
+                currency=posting.units.currency if posting.units else None
+            )
+            postings.append(posting_data)
+        
+        # 提取元数据
+        filename = entry.meta.get('filename') if entry.meta else None
+        lineno = entry.meta.get('lineno') if entry.meta else None
+        
+        # 生成唯一ID
+        transaction_id = None
+        if filename and lineno:
+            import os
+            relative_filename = os.path.basename(filename) if filename else 'unknown'
+            transaction_id = f"{relative_filename}:{lineno}"
+        
+        return TransactionResponse(
+            date=entry.date,
+            flag=entry.flag,
+            payee=entry.payee,
+            narration=entry.narration,
+            tags=list(entry.tags) if entry.tags else [],
+            links=list(entry.links) if entry.links else [],
+            postings=postings,
+            filename=filename,
+            lineno=lineno,
+            transaction_id=transaction_id
+        )
 
 # 创建全局服务实例
 beancount_service = BeancountService() 

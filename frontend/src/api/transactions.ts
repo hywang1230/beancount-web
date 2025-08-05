@@ -8,6 +8,10 @@ export interface Transaction {
   tags?: string[]
   links?: string[]
   postings: Posting[]
+  // 添加唯一标识字段
+  filename?: string
+  lineno?: number
+  transaction_id?: string  // 由filename+lineno组成的唯一标识
 }
 
 export interface Posting {
@@ -58,4 +62,19 @@ export const getAccounts = () => {
 // 获取收付方列表
 export const getPayees = () => {
   return api.get('/transactions/payees')
+}
+
+// 根据transaction_id获取单个交易
+export const getTransactionById = (transactionId: string) => {
+  return api.get(`/transactions/${transactionId}`)
+}
+
+// 根据transaction_id更新交易
+export const updateTransaction = (transactionId: string, data: Transaction) => {
+  return api.put(`/transactions/${transactionId}`, data)
+}
+
+// 根据transaction_id删除交易
+export const deleteTransaction = (transactionId: string) => {
+  return api.delete(`/transactions/${transactionId}`)
 } 

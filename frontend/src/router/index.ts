@@ -83,6 +83,12 @@ const routes: RouteRecordRaw[] = [
         meta: { title: '交易流水', platform: 'h5' }
       },
       {
+        path: 'transactions/:id',
+        name: 'H5TransactionDetail',
+        component: () => import('@/views/h5/TransactionDetail.vue'),
+        meta: { title: '交易详情', platform: 'h5' }
+      },
+      {
         path: 'add-transaction',
         name: 'H5AddTransaction',
         component: () => import('@/views/h5/AddTransaction.vue'),

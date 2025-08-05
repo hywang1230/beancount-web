@@ -56,6 +56,7 @@ declare module 'vue' {
     VanDatetimePicker: typeof import('vant/es')['DatetimePicker']
     VanDropdownItem: typeof import('vant/es')['DropdownItem']
     VanDropdownMenu: typeof import('vant/es')['DropdownMenu']
+    VanEmpty: typeof import('vant/es')['Empty']
     VanField: typeof import('vant/es')['Field']
     VanFloatingBubble: typeof import('vant/es')['FloatingBubble']
     VanForm: typeof import('vant/es')['Form']
@@ -63,6 +64,7 @@ declare module 'vue' {
     VanGridItem: typeof import('vant/es')['GridItem']
     VanIcon: typeof import('vant/es')['Icon']
     VanList: typeof import('vant/es')['List']
+    VanLoading: typeof import('vant/es')['Loading']
     VanNavBar: typeof import('vant/es')['NavBar']
     VanPicker: typeof import('vant/es')['Picker']
     VanPopup: typeof import('vant/es')['Popup']
@@ -74,6 +76,7 @@ declare module 'vue' {
     VanTabbar: typeof import('vant/es')['Tabbar']
     VanTabbarItem: typeof import('vant/es')['TabbarItem']
     VanTabs: typeof import('vant/es')['Tabs']
+    VanTag: typeof import('vant/es')['Tag']
   }
   export interface ComponentCustomProperties {
     vLoading: typeof import('element-plus/es')['ElLoadingDirective']

@@ -87,7 +87,8 @@ const router = useRouter()
 const showBalance = ref(true)
 const totalBalance = ref(0)
 interface Transaction {
-  id: number
+  id: string  // 改为string类型，支持transaction_id
+  transaction_id?: string  // 添加transaction_id字段
   payee: string
   account: string
   date: string
@@ -172,8 +173,16 @@ const formatAccountName = (accountName: string) => {
 
 
 const viewTransaction = (transaction: any) => {
-  // 跳转到交易详情
-  router.push(`/h5/transactions/${transaction.id}`)
+  // 跳转到交易列表页面，目前没有单独的交易详情页面
+  // 可以考虑在URL中传递transaction_id参数，用于在列表页面中高亮显示
+  if (transaction.transaction_id) {
+    router.push({
+      path: '/h5/transactions',
+      query: { highlight: transaction.transaction_id }
+    })
+  } else {
+    router.push('/h5/transactions')
+  }
 }
 
 const viewAccount = (account: any) => {
@@ -243,7 +252,8 @@ const loadDashboardData = async () => {
           const parsedAmount = typeof amount === 'string' ? parseFloat(amount) : amount
           
           expenseTransactions.push({
-            id: count + 1,
+            id: trans.transaction_id || `transaction-${count + 1}`,  // 使用transaction_id作为id
+            transaction_id: trans.transaction_id,  // 保存原始的transaction_id
             payee: trans.payee || trans.narration || '未知',
             account: expensePosting.account,
             date: trans.date,
