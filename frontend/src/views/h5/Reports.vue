@@ -864,15 +864,47 @@ const onTabChange = (tabName: string) => {
 
 
 // 损益表日期变化处理
-const onStartDateChange = (value: string) => {
-  startDate.value = value
+const onStartDateChange = (value: string | Date | any) => {
+  // 确保日期格式为 yyyy-MM-dd 字符串
+  if (value instanceof Date) {
+    startDate.value = value.toLocaleDateString('en-CA')
+  } else if (typeof value === 'string') {
+    startDate.value = value
+  } else if (value && typeof value === 'object') {
+    // 处理可能的日期对象
+    try {
+      const dateObj = new Date(value.toString())
+      if (!isNaN(dateObj.getTime())) {
+        startDate.value = dateObj.toLocaleDateString('en-CA')
+      }
+    } catch (error) {
+      console.warn('日期格式转换失败:', value)
+    }
+  }
+  
   if (startDate.value && endDate.value) {
     loadIncomeStatement()
   }
 }
 
-const onEndDateChange = (value: string) => {
-  endDate.value = value
+const onEndDateChange = (value: string | Date | any) => {
+  // 确保日期格式为 yyyy-MM-dd 字符串
+  if (value instanceof Date) {
+    endDate.value = value.toLocaleDateString('en-CA')
+  } else if (typeof value === 'string') {
+    endDate.value = value
+  } else if (value && typeof value === 'object') {
+    // 处理可能的日期对象
+    try {
+      const dateObj = new Date(value.toString())
+      if (!isNaN(dateObj.getTime())) {
+        endDate.value = dateObj.toLocaleDateString('en-CA')
+      }
+    } catch (error) {
+      console.warn('日期格式转换失败:', value)
+    }
+  }
+  
   if (startDate.value && endDate.value) {
     loadIncomeStatement()
   }
