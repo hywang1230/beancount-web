@@ -420,7 +420,7 @@ use([
 
 const loading = ref(false)
 const activeTab = ref('balance-sheet')
-const asOfDate = ref(new Date().toISOString().split('T')[0])
+const asOfDate = ref(new Date().toLocaleDateString('en-CA'))
 const periodRange = ref<[string, string] | null>(null)
 const trendsMonths = ref(12)
 const isMobile = ref(false)

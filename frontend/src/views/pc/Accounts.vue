@@ -457,7 +457,7 @@ const handleCreateAccount = async () => {
 // 处理归档账户
 const handleCloseAccount = (accountName: string) => {
   closeAccountName.value = accountName
-  closeForm.value.date = new Date().toISOString().split('T')[0] // 默认今天
+  closeForm.value.date = new Date().toLocaleDateString('en-CA') // 默认今天
   showCloseDialog.value = true
 }
 

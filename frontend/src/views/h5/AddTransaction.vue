@@ -238,7 +238,7 @@ const onSubmit = async () => {
     }
     
     const transactionData = {
-      date: formData.value.date.toISOString().split('T')[0],
+      date: formData.value.date.toLocaleDateString('en-CA'),
       flag: '*', // 默认标记
       payee: formData.value.payee,
       narration: formData.value.description || formData.value.payee,
@@ -281,7 +281,7 @@ const onTransferSubmit = async () => {
     
     // 构建转账交易数据
     const transferData = {
-      date: transferFormData.value.date.toISOString().split('T')[0],
+      date: transferFormData.value.date.toLocaleDateString('en-CA'),
       flag: '*', // 默认标记
       payee: '转账',
       narration: transferFormData.value.description || '账户转账',

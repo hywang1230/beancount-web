@@ -395,7 +395,7 @@ const categoryDisplayText = computed(() => {
 const dateValue = computed({
   get: () => {
     const date = localFormData.value.date
-    return date.toISOString().split('T')[0] // 格式: YYYY-MM-DD
+    return date.toLocaleDateString('en-CA') // 格式: YYYY-MM-DD
   },
   set: (value: string) => {
     if (value) {

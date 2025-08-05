@@ -284,7 +284,7 @@ const loadRecurringList = async (isRefresh = false) => {
         amount: parsedAmount,
         frequency: item.recurrence_type,
         status,
-        nextExecuteDate: item.next_execution || new Date().toISOString().split('T')[0],
+        nextExecuteDate: item.next_execution || new Date().toLocaleDateString('en-CA'),
         account: posting?.account || '未知账户',
         category: '' // API中没有category字段，暂时留空
       }

@@ -738,7 +738,7 @@ const loadAccountOptions = async () => {
 
 // 日期筛选相关方法
 const formatDate = (date: Date) => {
-  return date.toISOString().split('T')[0]
+  return date.toLocaleDateString('en-CA')
 }
 
 const setQuickDateRange = (range: string) => {

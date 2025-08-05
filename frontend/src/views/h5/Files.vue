@@ -270,7 +270,7 @@ const loadFiles = async (isRefresh = false) => {
         name: file.name,
         type,
         size: file.size,
-        uploadDate: file.modified || new Date().toISOString().split('T')[0]
+        uploadDate: file.modified || new Date().toLocaleDateString('en-CA')
       }
     })
     
