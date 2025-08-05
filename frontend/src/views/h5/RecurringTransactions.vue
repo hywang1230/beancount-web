@@ -553,4 +553,11 @@ onMounted(() => {
   font-weight: 500;
   color: #323233;
 }
+
+/* 浮动按钮样式修复 */
+:deep(.van-floating-bubble) {
+  z-index: 1000 !important;
+  position: fixed !important;
+  bottom: 80px !important; /* 避免被底部导航栏遮挡 */
+}
 </style>

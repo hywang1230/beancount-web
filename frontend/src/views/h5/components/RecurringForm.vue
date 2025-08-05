@@ -282,8 +282,8 @@ const accountSelectorRef = ref()
 
 // 选择器数据
 const recurrenceTypeValue = ref(['daily'])
-const startDateValue = ref(new Date())
-const endDateValue = ref(new Date())
+const startDateValue = ref([new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()])
+const endDateValue = ref([new Date().getFullYear(), new Date().getMonth() + 1, new Date().getDate()])
 
 const recurrenceTypeColumns = [
   { text: '每日', value: 'daily' },
@@ -325,13 +325,17 @@ const onRecurrenceTypeConfirm = (option: any) => {
   showRecurrenceTypePicker.value = false
 }
 
-const onStartDateConfirm = (date: Date) => {
-  form.value.start_date = date.toISOString().split('T')[0]
+const onStartDateConfirm = (values: number[]) => {
+  const [year, month, day] = values
+  form.value.start_date = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+  startDateValue.value = values
   showStartDatePicker.value = false
 }
 
-const onEndDateConfirm = (date: Date) => {
-  form.value.end_date = date.toISOString().split('T')[0]
+const onEndDateConfirm = (values: number[]) => {
+  const [year, month, day] = values
+  form.value.end_date = `${year}-${month.toString().padStart(2, '0')}-${day.toString().padStart(2, '0')}`
+  endDateValue.value = values
   showEndDatePicker.value = false
 }
 
