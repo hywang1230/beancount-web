@@ -231,9 +231,25 @@ class BeancountService:
         
         entries = conversions(entries, current_conversions_account, conversion_currency, date_filter)
         
+        # 获取默认货币
+        default_currency = options_map.get('operating_currency', ['CNY'])[0]
+        
         # 获取所有账户余额
         account_balances = {}
         
+        # 首先获取所有已定义的账户（通过Open指令）
+        all_opened_accounts = {}
+        for entry in entries:
+            if hasattr(entry, 'account') and hasattr(entry, 'currencies'):
+                # 这是一个Open指令
+                account = entry.account
+                currencies = entry.currencies or [default_currency]
+                for currency in currencies:
+                    key = (account, currency)
+                    if key not in all_opened_accounts:
+                        all_opened_accounts[key] = Decimal('0')
+        
+        # 然后计算账户余额
         for entry in entries:
             if entry.date > date_filter:
                 continue
@@ -250,6 +266,11 @@ class BeancountService:
                             account_balances[key] = Decimal('0')
                         account_balances[key] += amount_val
         
+        # 确保所有已定义的账户都在余额字典中（即使余额为0）
+        for key in all_opened_accounts:
+            if key not in account_balances:
+                account_balances[key] = Decimal('0')
+        
         # 分类账户和计算收支
         assets = []
         liabilities = []
@@ -257,15 +278,11 @@ class BeancountService:
         income_total = Decimal('0')
         expense_total = Decimal('0')
         
-        default_currency = options_map.get('operating_currency', ['CNY'])[0]
-        
         # 获取汇率信息
         exchange_rates = self._get_latest_exchange_rates(entries, date_filter, default_currency)
         
         for (account, currency), balance in account_balances.items():
-            if balance == 0:
-                continue
-                
+            # 不过滤零金额账户，让资产负债表显示所有账户
             account_info = AccountInfo(
                 name=account,
                 balance=balance,
@@ -520,8 +537,7 @@ class BeancountService:
         merged_expense_accounts = {}
         
         for (account, currency), balance in account_balances.items():
-            if balance == 0:
-                continue
+            # 不过滤零金额账户，让损益表也显示所有账户
                 
             # 转换到基础货币
             converted_balance = balance
