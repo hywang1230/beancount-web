@@ -163,7 +163,7 @@
               <span :class="['balance-amount', isBalanced ? 'balanced' : 'unbalanced']">
                 {{ totalAmount.toFixed(2) }}
               </span>
-              <van-tag :type="isBalanced ? 'success' : 'danger'" size="small">
+              <van-tag :type="isBalanced ? 'success' : 'danger'" >
                 {{ isBalanced ? '平衡' : '不平衡' }}
               </van-tag>
             </div>
@@ -197,7 +197,7 @@
     <!-- 开始日期选择器 -->
     <van-popup v-model:show="showStartDatePicker" position="bottom">
       <van-date-picker
-        v-model="startDateValue"
+        :v-model="startDateValue"
         @confirm="onStartDateConfirm"
         @cancel="showStartDatePicker = false"
       />
@@ -206,7 +206,7 @@
     <!-- 结束日期选择器 -->
     <van-popup v-model:show="showEndDatePicker" position="bottom">
       <van-date-picker
-        v-model="endDateValue"
+        :v-model="endDateValue"
         @confirm="onEndDateConfirm"
         @cancel="showEndDatePicker = false"
       />
@@ -230,8 +230,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { showToast } from 'vant'
 import { recurringApi, type RecurringTransactionCreate } from '@/api/recurring'
 import H5AccountSelector from './H5AccountSelector.vue'
@@ -247,7 +247,6 @@ const props = withDefaults(defineProps<Props>(), {
 })
 
 const router = useRouter()
-const route = useRoute()
 
 // 表单数据
 const form = ref<RecurringTransactionCreate>({
