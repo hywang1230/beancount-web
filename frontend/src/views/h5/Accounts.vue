@@ -304,13 +304,41 @@
     <!-- 恢复确认对话框 -->
     <van-dialog
       v-model:show="showRestoreDialog"
-      title="恢复账户"
-      show-cancel-button
-      @confirm="confirmRestoreAccount"
+      title=""
+      :show-cancel-button="false"
+      :show-confirm-button="false"
+      class-name="restore-dialog"
+      close-on-click-overlay
     >
       <div class="restore-content">
-        <p>确定要恢复账户 <strong>{{ restoreAccountName }}</strong> 吗？</p>
-        <p class="info-text">恢复后该账户将重新可用。</p>
+        <!-- 自定义标题 -->
+        <div class="dialog-header">
+          <van-icon name="replay" class="restore-icon" />
+          <h3 class="dialog-title">恢复账户</h3>
+        </div>
+        
+        <!-- 账户信息 -->
+        <div class="account-info">
+          <p class="account-name">{{ restoreAccountName }}</p>
+          <p class="success-message">恢复后该账户将重新可用</p>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="dialog-actions">
+          <van-button
+            class="cancel-btn"
+            @click="showRestoreDialog = false"
+          >
+            取消
+          </van-button>
+          <van-button
+            type="success"
+            class="restore-confirm-btn"
+            @click="confirmRestoreAccount"
+          >
+            确认恢复
+          </van-button>
+        </div>
       </div>
     </van-dialog>
   </div>
@@ -1149,20 +1177,40 @@ onMounted(() => {
   color: white;
 }
 
-/* 恢复对话框样式保持简单 */
+/* 恢复对话框样式 */
+:deep(.restore-dialog) {
+  border-radius: 16px;
+  overflow: hidden;
+}
+
 .restore-content {
-  padding: 16px 20px;
+  padding: 0;
 }
 
-.restore-content p {
-  margin: 0 0 12px 0;
-  line-height: 1.5;
-  color: #303133;
+.restore-icon {
+  font-size: 48px;
+  color: #52c41a;
+  margin-bottom: 12px;
 }
 
-.info-text {
-  font-size: 12px;
-  color: #909399;
+.success-message {
+  font-size: 13px;
+  color: #52c41a;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.restore-confirm-btn {
+  flex: 1;
+  height: 44px;
+  background: #52c41a;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.restore-confirm-btn:active {
+  background: #389e0d;
 }
 
 /* 标签页样式覆盖 */
