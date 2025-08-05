@@ -1,12 +1,5 @@
 <template>
   <div class="h5-transaction-detail">
-    <van-nav-bar
-      title="交易详情"
-      left-text="返回"
-      left-arrow
-      @click-left="$router.back()"
-    />
-
     <div v-if="loading" class="loading-container">
       <van-loading size="24px" vertical>加载中...</van-loading>
     </div>
@@ -17,7 +10,7 @@
         <van-cell title="日期" :value="transaction.date" />
         <van-cell title="收付方" :value="transaction.payee || '-'" />
         <van-cell title="摘要" :value="transaction.narration || '-'" />
-        <van-cell title="标志" :value="transaction.flag || '*'" />
+        <van-cell v-if="formatFlag(transaction.flag)" title="标志" :value="formatFlag(transaction.flag)" />
       </van-cell-group>
 
       <!-- 标签和链接 -->
@@ -43,18 +36,28 @@
         <van-cell
           v-for="(posting, index) in transaction.postings"
           :key="index"
-          :title="formatAccountName(posting.account)"
           :value="formatAmount(posting.amount, posting.currency)"
           :value-class="(posting.amount && parseFloat(posting.amount) > 0) ? 'positive' : 'negative'"
-        />
+        >
+          <template #title>
+            <div class="posting-title">
+              <div class="account-name">{{ formatAccountName(posting.account) }}</div>
+              <van-tag 
+                :type="getAccountType(posting.account) === '资产' ? 'primary' : 
+                       getAccountType(posting.account) === '负债' ? 'warning' :
+                       getAccountType(posting.account) === '收入' ? 'success' :
+                       getAccountType(posting.account) === '支出' ? 'danger' : 'default'"
+                size="small"
+                class="account-type-tag"
+              >
+                {{ getAccountType(posting.account) }}
+              </van-tag>
+            </div>
+          </template>
+        </van-cell>
       </van-cell-group>
 
-      <!-- 文件信息 -->
-      <van-cell-group v-if="transaction.filename || transaction.lineno" title="文件信息">
-        <van-cell title="文件名" :value="transaction.filename || '-'" />
-        <van-cell title="行号" :value="transaction.lineno?.toString() || '-'" />
-        <van-cell title="唯一标识" :value="transaction.transaction_id || '-'" />
-      </van-cell-group>
+      <!-- 文件信息已隐藏 -->
     </div>
 
     <div v-else class="error-container">
@@ -87,12 +90,14 @@ import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showConfirmDialog, showToast } from 'vant'
 import { getTransactionById, deleteTransaction as deleteTransactionApi } from '@/api/transactions'
+import { getAccountsByType } from '@/api/accounts'
 
 const router = useRouter()
 const route = useRoute()
 
 const loading = ref(true)
 const transaction = ref<any>(null)
+const accountTypes = ref<Record<string, string[]>>({})
 
 const formatAmount = (amount: string | number | undefined, currency?: string) => {
   if (amount === undefined || amount === null) return '0.00'
@@ -104,6 +109,52 @@ const formatAmount = (amount: string | number | undefined, currency?: string) =>
   }).format(numAmount)
   
   return formatted
+}
+
+const getAccountType = (accountName: string): string => {
+  if (!accountName) return '未知'
+  
+  for (const [type, accounts] of Object.entries(accountTypes.value)) {
+    if (accounts.includes(accountName)) {
+      const typeMap: Record<string, string> = {
+        'Assets': '资产',
+        'Liabilities': '负债',
+        'Equity': '权益',
+        'Income': '收入',
+        'Expenses': '支出'
+      }
+      return typeMap[type] || type
+    }
+  }
+  
+  // 如果没有在缓存中找到，根据前缀判断
+  if (accountName.startsWith('Assets:')) return '资产'
+  if (accountName.startsWith('Liabilities:')) return '负债'
+  if (accountName.startsWith('Equity:')) return '权益'
+  if (accountName.startsWith('Income:')) return '收入'
+  if (accountName.startsWith('Expenses:')) return '支出'
+  
+  return '未知'
+}
+
+const formatFlag = (flag: string): string => {
+  if (!flag) return ''
+  
+  // 根据beancount规则处理标志
+  switch (flag) {
+    case '*':
+      return '已确认'
+    case '!':
+      return '待确认'
+    case 'txn':
+      return '已确认'
+    default:
+      // 对于其他字符，如果是*或!则不显示，否则显示原值
+      if (flag === '*' || flag === '!') {
+        return ''
+      }
+      return flag
+  }
 }
 
 const formatAccountName = (accountName: string) => {
@@ -126,6 +177,16 @@ const formatAccountName = (accountName: string) => {
     return formattedName
   }
   return accountName
+}
+
+const loadAccountTypes = async () => {
+  try {
+    const response = await getAccountsByType()
+    accountTypes.value = response.data || response
+  } catch (error) {
+    console.error('加载账户类型失败:', error)
+    // 不显示错误提示，因为这不是核心功能
+  }
 }
 
 const loadTransaction = async () => {
@@ -170,15 +231,18 @@ const deleteTransaction = async () => {
   }
 }
 
-onMounted(() => {
-  loadTransaction()
+onMounted(async () => {
+  await Promise.all([
+    loadAccountTypes(),
+    loadTransaction()
+  ])
 })
 </script>
 
 <style scoped>
 .h5-transaction-detail {
   background-color: #f7f8fa;
-  min-height: 100vh;
+  min-height: 100%;
 }
 
 .loading-container {
@@ -189,7 +253,7 @@ onMounted(() => {
 }
 
 .transaction-content {
-  padding: 16px 0;
+  padding: 16px 0 140px 0; /* 增加底部padding，为固定按钮和底部导航留出空间 */
 }
 
 .error-container {
@@ -201,12 +265,13 @@ onMounted(() => {
 
 .action-buttons {
   position: fixed;
-  bottom: 0;
+  bottom: 50px; /* 为底部导航栏留出空间 */
   left: 0;
   right: 0;
   padding: 16px;
   background-color: white;
   border-top: 1px solid #ebedf0;
+  z-index: 999; /* 确保在内容之上，但在导航栏之下 */
 }
 
 :deep(.van-cell-group) {
@@ -224,5 +289,21 @@ onMounted(() => {
 :deep(.van-tag) {
   margin-right: 4px;
   margin-bottom: 4px;
+}
+
+.posting-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.account-name {
+  flex: 1;
+  margin-right: 8px;
+}
+
+.account-type-tag {
+  flex-shrink: 0;
 }
 </style>

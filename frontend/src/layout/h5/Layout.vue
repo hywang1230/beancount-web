@@ -94,11 +94,24 @@ watch(() => route.path, (newPath) => {
 
 const currentPageTitle = computed(() => {
   const currentItem = allMenuItems.find(item => item.path === route.path)
-  return currentItem?.title || '首页'
+  if (currentItem) {
+    return currentItem.title
+  }
+  
+  // 处理动态路由
+  if (route.path.startsWith('/h5/transactions/')) {
+    return '交易详情'
+  }
+  
+  return '首页'
 })
 
 const showMenu = computed(() => {
   // 在非主要标签页面显示菜单按钮
+  // 但排除交易详情页面
+  if (route.path.startsWith('/h5/transactions/')) {
+    return false
+  }
   return !tabbarItems.some(item => item.path === route.path)
 })
 

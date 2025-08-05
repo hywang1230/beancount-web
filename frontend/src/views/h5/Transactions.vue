@@ -61,14 +61,17 @@
           :key="group.date"
           class="transaction-group"
         >
-          <!-- 日期分组头 -->
-          <div class="group-header">
-            <span class="group-date">{{ group.date }}</span>
-            <span class="group-amount">{{ formatAmount(group.totalAmount) }}</span>
+          <!-- 日期分组头 - 可点击折叠 -->
+          <div class="group-header" :class="{ collapsed: isGroupCollapsed(group.date) }" @click="toggleGroupCollapse(group.date)">
+            <div class="group-header-left">
+              <van-icon :name="getCollapseIcon()" class="collapse-icon" />
+              <span class="group-date">{{ group.date }}</span>
+            </div>
+            <span class="group-amount" :class="getGroupAmountClass(group.totalAmount)">{{ formatAmount(group.totalAmount) }}</span>
           </div>
 
-          <!-- 交易项 -->
-          <van-cell-group>
+          <!-- 交易项 - 支持折叠 -->
+          <van-cell-group v-show="!isGroupCollapsed(group.date)">
             <van-swipe-cell
               v-for="transaction in group.transactions"
               :key="transaction.id"
@@ -81,13 +84,7 @@
                 :class="{ 'highlighted-transaction': transaction.transaction_id === highlightTransactionId }"
                 is-link
                 @click="viewTransaction(transaction)"
-              >
-                <template #icon>
-                  <div class="transaction-icon">
-                    <van-icon :name="getTransactionIcon(transaction.type)" />
-                  </div>
-                </template>
-              </van-cell>
+              />
               
               <!-- 滑动操作 -->
               <template #right>
@@ -136,6 +133,9 @@ const refreshing = ref(false)
 const loading = ref(false)
 const finished = ref(false)
 const fabOffset = ref({ x: -24, y: -100 })
+
+// 折叠状态（记录折叠的日期）
+const collapsedGroups = ref<Set<string>>(new Set())
 
 // 分页状态
 const currentPage = ref(1)
@@ -194,17 +194,17 @@ const filteredTransactions = computed(() => {
 
 
 
-// 计算交易的显示金额（用于合计计算）
+// 计算交易的显示金额（用于合计计算）- 只统计收入和支出，排除转账
 const getTransactionDisplayAmount = (transaction: any) => {
   if (transaction.type === 'income') {
-    // 收入账户：负数是盈利，转换为正数；正数是亏损，转换为负数
+    // 收入账户：负数是盈利，转换为正数
     return -transaction.amount
   } else if (transaction.type === 'expense') {
-    // 支出账户：保持原值
-    return transaction.amount
+    // 支出账户：正数是支出，转换为负数
+    return -transaction.amount
   } else {
-    // 转账：保持原值
-    return transaction.amount
+    // 转账：不纳入统计
+    return 0
   }
 }
 
@@ -248,7 +248,29 @@ const formatAmount = (amount: number) => {
   return new Intl.NumberFormat('zh-CN', {
     style: 'currency',
     currency: 'CNY'
-  }).format(amount)
+  }).format(Math.abs(amount))
+}
+
+// 折叠相关方法
+const toggleGroupCollapse = (date: string) => {
+  if (collapsedGroups.value.has(date)) {
+    collapsedGroups.value.delete(date)
+  } else {
+    collapsedGroups.value.add(date)
+  }
+}
+
+const isGroupCollapsed = (date: string) => {
+  return collapsedGroups.value.has(date)
+}
+
+const getCollapseIcon = () => {
+  return 'arrow-down'
+}
+
+// 获取日金额样式类
+const getGroupAmountClass = (amount: number) => {
+  return amount >= 0 ? 'positive' : 'negative'
 }
 
 // 格式化交易显示金额（转换为用户友好的显示方式）
@@ -302,14 +324,7 @@ const formatAccountName = (accountName: string) => {
   return accountName
 }
 
-const getTransactionIcon = (type: string) => {
-  const iconMap: Record<string, string> = {
-    'income': 'arrow-up',
-    'expense': 'arrow-down',
-    'transfer': 'exchange'
-  }
-  return iconMap[type] || 'bill-o'
-}
+// 已移除交易图标函数，不再需要
 
 const viewTransaction = (transaction: any) => {
   const transactionId = transaction.transaction_id || transaction.id
@@ -827,6 +842,33 @@ onMounted(async () => {
   padding: 8px 16px;
   background-color: #f7f8fa;
   font-size: 14px;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+}
+
+.group-header:hover {
+  background-color: #ebedf0;
+}
+
+.group-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.collapse-icon {
+  font-size: 12px;
+  color: #969799;
+  transition: transform 0.2s;
+}
+
+.group-header .collapse-icon {
+  transform: rotate(0deg);
+}
+
+.group-header.collapsed .collapse-icon {
+  transform: rotate(-90deg);
 }
 
 .group-date {
@@ -834,20 +876,18 @@ onMounted(async () => {
 }
 
 .group-amount {
-  color: #323233;
   font-weight: 500;
 }
 
-.transaction-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background-color: #f7f8fa;
-  border-radius: 50%;
-  margin-right: 12px;
+.group-amount.positive {
+  color: #07c160;
 }
+
+.group-amount.negative {
+  color: #ee0a24;
+}
+
+
 
 :deep(.positive) {
   color: #07c160;

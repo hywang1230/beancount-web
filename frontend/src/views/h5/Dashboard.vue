@@ -173,17 +173,10 @@ const formatAccountName = (accountName: string) => {
 
 
 const viewTransaction = (transaction: any) => {
-  // 跳转到交易列表页面，目前没有单独的交易详情页面
-  // 可以考虑在URL中传递transaction_id参数，用于在列表页面中高亮显示
-  if (transaction.transaction_id) {
-    router.push({
-      path: '/h5/transactions',
-      query: { highlight: transaction.transaction_id }
-    })
-  } else {
-    router.push('/h5/transactions')
-  }
+  // 跳转到交易详情页面
+  router.push(`/h5/transactions/${transaction.transaction_id}`)
 }
+
 
 const viewAccount = (account: any) => {
   // 跳转到账户详情
