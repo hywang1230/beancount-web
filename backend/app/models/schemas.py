@@ -60,6 +60,7 @@ class TransactionFilter(BaseModel):
     narration: Optional[str] = None
     min_amount: Optional[Decimal] = None
     max_amount: Optional[Decimal] = None
+    transaction_type: Optional[str] = None  # 交易类型：income, expense, transfer
 
 class FileInfo(BaseModel):
     name: str

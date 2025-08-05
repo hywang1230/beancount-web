@@ -157,6 +157,12 @@ class BeancountService:
                                           for posting in entry.postings)
                         if not account_match:
                             continue
+                    
+                    # 交易类型筛选
+                    if filter_params.transaction_type:
+                        transaction_type = self._get_transaction_type(entry)
+                        if transaction_type != filter_params.transaction_type:
+                            continue
                 
                 # 转换为响应模型
                 postings = []
@@ -1047,6 +1053,32 @@ class BeancountService:
             lineno=lineno,
             transaction_id=transaction_id
         )
+    
+    def _get_transaction_type(self, entry: Transaction) -> str:
+        """判断交易类型：income, expense, transfer"""
+        # 检查所有posting的账户类型
+        account_types = set()
+        for posting in entry.postings:
+            if posting.account.startswith('Income:'):
+                account_types.add('income')
+            elif posting.account.startswith('Expenses:'):
+                account_types.add('expense')
+            elif posting.account.startswith('Assets:') or posting.account.startswith('Liabilities:'):
+                account_types.add('asset_liability')
+            else:
+                account_types.add('other')
+        
+        # 根据账户类型组合判断交易类型
+        if 'income' in account_types:
+            return 'income'
+        elif 'expense' in account_types:
+            return 'expense'
+        elif account_types == {'asset_liability'}:
+            # 只包含Assets和Liabilities账户的交易为转账
+            return 'transfer'
+        else:
+            # 其他情况，包含Equity等账户，暂时归类为转账
+            return 'transfer'
 
 # 创建全局服务实例
 beancount_service = BeancountService() 

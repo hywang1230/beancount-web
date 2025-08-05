@@ -27,6 +27,7 @@ export interface TransactionFilter {
   account?: string
   payee?: string
   narration?: string
+  transaction_type?: string  // 交易类型：income, expense, transfer
   page?: number
   page_size?: number
 }

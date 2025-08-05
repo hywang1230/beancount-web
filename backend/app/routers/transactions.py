@@ -16,6 +16,7 @@ async def get_transactions(
     narration: Optional[str] = Query(None, description="摘要筛选"),
     amount_min: Optional[float] = Query(None, description="最小金额筛选"),
     amount_max: Optional[float] = Query(None, description="最大金额筛选"),
+    transaction_type: Optional[str] = Query(None, description="交易类型筛选：income, expense, transfer"),
     page: int = Query(1, description="页码", ge=1),
     page_size: int = Query(50, description="每页条数", ge=1, le=200)
 ):
@@ -28,7 +29,8 @@ async def get_transactions(
             payee=payee,
             narration=narration,
             min_amount=amount_min,
-            max_amount=amount_max
+            max_amount=amount_max,
+            transaction_type=transaction_type
         )
         
         # 获取所有符合条件的交易

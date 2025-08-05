@@ -170,14 +170,7 @@ const transactions = ref<Transaction[]>([])
 const filteredTransactions = computed(() => {
   let filtered = transactions.value
 
-  // 按类型筛选（前端额外过滤，主要用于转账类型）
-  // 注意：收入和支出类型的大部分筛选已在后端完成，这里主要处理转账类型
-  if (filterType.value === 'transfer') {
-    filtered = filtered.filter(transaction => {
-      // 转账：交易涉及Assets或Liabilities账户
-      return transaction.account.startsWith('Assets:') || transaction.account.startsWith('Liabilities:')
-    })
-  }
+  // 所有类型筛选现在都在后端完成，前端不需要额外过滤
 
   return filtered
 })
@@ -440,26 +433,13 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
       targetPage
     })
     
-    // 类型筛选和账户筛选（优先类型筛选）
+    // 类型筛选和账户筛选
     if (filterType.value !== 'all') {
-      if (filterType.value === 'income') {
-        // 如果同时选择了具体账户，则组合筛选
-        if (filterAccount.value !== 'all') {
-          params.account = filterAccount.value.includes('Income:') ? filterAccount.value : 'Income:'
-        } else {
-          params.account = 'Income:'  // 收入：Income账户
-        }
-      } else if (filterType.value === 'expense') {
-        // 如果同时选择了具体账户，则组合筛选
-        if (filterAccount.value !== 'all') {
-          params.account = filterAccount.value.includes('Expenses:') ? filterAccount.value : 'Expenses:'
-        } else {
-          params.account = 'Expenses:'  // 支出：Expenses账户
-        }
-      }
-      // transfer类型暂不通过API筛选，前端处理
-    } else if (filterAccount.value !== 'all') {
-      // 只有账户筛选，没有类型筛选
+      params.transaction_type = filterType.value  // 通过后端筛选交易类型
+    }
+    
+    // 账户筛选
+    if (filterAccount.value !== 'all') {
       params.account = filterAccount.value
     }
     
