@@ -1,61 +1,64 @@
 <template>
   <div class="transfer-form">
     <van-form @submit="onSubmit">
-      <!-- 金额输入 -->
-      <div class="amount-section">
-        <div class="amount-label">转账金额</div>
-        <div class="amount-input">
-          <span class="currency">¥</span>
+      <!-- 转出账户卡片 -->
+      <div class="form-card from-account-card" @click="showFromAccountSelector = true">
+        <div class="card-icon">
+          <van-icon name="gold-coin-o" />
+        </div>
+        <div class="card-content">
+          <div class="card-label">{{ fromAccountDisplayName || '转出账户' }}</div>
+          <van-icon name="arrow" />
+        </div>
+      </div>
+
+      <!-- 金额输入卡片 -->
+      <div class="form-card amount-card">
+        <div class="card-icon">
+          <van-icon name="exchange" />
+        </div>
+        <div class="amount-input-container">
+          <div class="currency-selector" @click="showCurrencySelector = true">
+            <span class="currency-symbol">{{ getCurrencySymbol(localFormData.currency) }}</span>
+            <van-icon name="arrow-down" size="12" />
+          </div>
           <van-field
             v-model="localFormData.amount"
             type="digit"
             placeholder="0.00"
             class="amount-field"
             :border="false"
-            @input="onAmountInput"
+            @update:model-value="onAmountInput"
           />
         </div>
       </div>
 
-      <!-- 转账路径 -->
-      <div class="transfer-path">
-        <div class="account-selector">
-          <div class="account-label">转出账户</div>
-          <van-field
-            v-model="fromAccountName"
-            placeholder="请选择转出账户"
-            right-icon="arrow"
-            readonly
-            @click="showFromAccountSelector = true"
-          />
-        </div>
-        
+      <!-- 转账箭头 -->
+      <div class="transfer-arrow-container">
         <div class="transfer-arrow">
-          <van-icon name="arrow-down" />
-        </div>
-        
-        <div class="account-selector">
-          <div class="account-label">转入账户</div>
-          <van-field
-            v-model="toAccountName"
-            placeholder="请选择转入账户"
-            right-icon="arrow"
-            readonly
-            @click="showToAccountSelector = true"
-          />
+          <van-icon name="arrow-down" size="24" />
         </div>
       </div>
 
-      <!-- 表单字段 -->
+      <!-- 转入账户卡片 -->
+      <div class="form-card to-account-card" @click="showToAccountSelector = true">
+        <div class="card-icon">
+          <van-icon name="gold-coin-o" />
+        </div>
+        <div class="card-content">
+          <div class="card-label">{{ toAccountDisplayName || '转入账户' }}</div>
+          <van-icon name="arrow" />
+        </div>
+      </div>
+
+      <!-- 使用标准的van-cell-group样式 -->
       <van-cell-group inset>
         <!-- 日期 -->
         <van-field
-          v-model="dateText"
+          v-model="dateValue"
+          type="date"
           label="日期"
           placeholder="请选择日期"
-          right-icon="arrow"
-          readonly
-          @click="showDatePicker = true"
         />
 
         <!-- 备注 -->
@@ -68,19 +71,6 @@
           autosize
         />
       </van-cell-group>
-
-      <!-- 提交按钮 -->
-      <div class="submit-section">
-        <van-button
-          type="primary"
-          size="large"
-          round
-          :disabled="!isFormValid"
-          @click="onSubmit"
-        >
-          确认转账
-        </van-button>
-      </div>
     </van-form>
 
     <!-- 转出账户选择器 -->
@@ -101,13 +91,12 @@
       />
     </van-popup>
 
-    <!-- 日期选择器 -->
-    <van-popup v-model:show="showDatePicker" position="bottom">
-      <van-date-picker
-        v-model="localFormData.date"
-        title="选择日期"
-        @cancel="showDatePicker = false"
-        @confirm="onDateConfirm"
+    <!-- 币种选择器 -->
+    <van-popup v-model:show="showCurrencySelector" position="bottom">
+      <van-picker
+        :columns="currencyOptions"
+        @cancel="showCurrencySelector = false"
+        @confirm="onCurrencyConfirm"
       />
     </van-popup>
   </div>
@@ -116,6 +105,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted } from 'vue'
 import { showToast } from 'vant'
+import { getAccountsByType } from '@/api/accounts'
 
 interface Props {
   formData: {
@@ -124,6 +114,7 @@ interface Props {
     toAccount: string
     date: Date
     description: string
+    currency?: string
   }
 }
 
@@ -135,12 +126,15 @@ interface Emits {
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
-const localFormData = ref({ ...props.formData })
+const localFormData = ref({ 
+  ...props.formData,
+  currency: props.formData.currency || 'CNY'
+})
 
 // 弹窗状态
 const showFromAccountSelector = ref(false)
 const showToAccountSelector = ref(false)
-const showDatePicker = ref(false)
+const showCurrencySelector = ref(false)
 
 interface Option {
   text: string
@@ -149,16 +143,49 @@ interface Option {
 
 // 选项数据
 const accountOptions = ref<Option[]>([])
+const currencyOptions = ref<Option[]>([
+  { text: '人民币 (CNY)', value: 'CNY' },
+  { text: '美元 (USD)', value: 'USD' },
+  { text: '欧元 (EUR)', value: 'EUR' },
+  { text: '英镑 (GBP)', value: 'GBP' },
+  { text: '日元 (JPY)', value: 'JPY' },
+  { text: '港币 (HKD)', value: 'HKD' },
+  { text: '台币 (TWD)', value: 'TWD' },
+  { text: '澳元 (AUD)', value: 'AUD' },
+  { text: '加元 (CAD)', value: 'CAD' },
+  { text: '新加坡元 (SGD)', value: 'SGD' }
+])
+
+// 账户格式化函数（参考首页格式化方式）
+const formatAccountNameForDisplay = (accountName: string) => {
+  if (!accountName) return ''
+  
+  // 去掉第一级账户名称（Assets、Liabilities、Income、Expenses等）
+  const parts = accountName.split(':')
+  if (parts.length > 1) {
+    let formattedName = parts.slice(1).join(':')
+    
+    // 进一步处理：去掉第一个"-"以及前面的字母部分
+    const dashIndex = formattedName.indexOf('-')
+    if (dashIndex > 0) {
+      formattedName = formattedName.substring(dashIndex + 1)
+    }
+    
+    // 将":"替换为"-"以提高可读性
+    formattedName = formattedName.replace(/:/g, '-')
+    
+    return formattedName
+  }
+  return accountName
+}
 
 // 计算属性
-const fromAccountName = computed(() => {
-  const account = accountOptions.value.find(item => item.value === localFormData.value.fromAccount)
-  return account?.text || ''
+const fromAccountDisplayName = computed(() => {
+  return formatAccountNameForDisplay(localFormData.value.fromAccount)
 })
 
-const toAccountName = computed(() => {
-  const account = accountOptions.value.find(item => item.value === localFormData.value.toAccount)
-  return account?.text || ''
+const toAccountDisplayName = computed(() => {
+  return formatAccountNameForDisplay(localFormData.value.toAccount)
 })
 
 const toAccountOptions = computed(() => {
@@ -166,8 +193,17 @@ const toAccountOptions = computed(() => {
   return accountOptions.value.filter(item => item.value !== localFormData.value.fromAccount)
 })
 
-const dateText = computed(() => {
-  return localFormData.value.date.toLocaleDateString('zh-CN')
+// 日期值计算属性（用于type="date"的field）
+const dateValue = computed({
+  get: () => {
+    const date = localFormData.value.date
+    return date.toISOString().split('T')[0] // 格式: YYYY-MM-DD
+  },
+  set: (value: string) => {
+    if (value) {
+      localFormData.value.date = new Date(value)
+    }
+  }
 })
 
 const isFormValid = computed(() => {
@@ -193,10 +229,35 @@ watch(() => localFormData.value.fromAccount, (newValue, oldValue) => {
   }
 })
 
+// 币种符号获取函数
+const getCurrencySymbol = (currency: string) => {
+  const symbols: Record<string, string> = {
+    'CNY': '¥',
+    'USD': '$',
+    'EUR': '€',
+    'GBP': '£',
+    'JPY': '¥',
+    'HKD': 'HK$',
+    'TWD': 'NT$',
+    'AUD': 'A$',
+    'CAD': 'C$',
+    'SGD': 'S$'
+  }
+  return symbols[currency] || currency
+}
+
+const onCurrencyConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
+  localFormData.value.currency = selectedValues[0]
+  showCurrencySelector.value = false
+}
+
 // 方法
-const onAmountInput = (value: string) => {
+const onAmountInput = (value: string | number) => {
+  // 确保 value 是字符串类型
+  const stringValue = String(value || '')
+  
   // 格式化金额输入
-  const numericValue = value.replace(/[^\d.]/g, '')
+  const numericValue = stringValue.replace(/[^\d.]/g, '')
   const parts = numericValue.split('.')
   if (parts.length > 2) {
     parts.splice(2)
@@ -217,9 +278,7 @@ const onToAccountConfirm = ({ selectedValues }: { selectedValues: string[] }) =>
   showToAccountSelector.value = false
 }
 
-const onDateConfirm = () => {
-  showDatePicker.value = false
-}
+
 
 const onSubmit = () => {
   if (!isFormValid.value) {
@@ -246,17 +305,35 @@ const onSubmit = () => {
 
 const loadAccountOptions = async () => {
   try {
-    // 这里应该从API获取账户列表
-    accountOptions.value = [
-      { text: '招商银行储蓄卡', value: 'cmb' },
-      { text: '支付宝', value: 'alipay' },
-      { text: '微信钱包', value: 'wechat' },
-      { text: '现金', value: 'cash' },
-      { text: '建设银行储蓄卡', value: 'ccb' },
-      { text: '工商银行储蓄卡', value: 'icbc' }
-    ]
+    // 从API获取资产和负债账户列表
+    const accountData = await getAccountsByType()
+    console.log('转账表单获取到的账户数据:', accountData)
+    
+    // 处理后端返回的按类型分组的数据格式
+    let accounts = []
+    if (accountData && typeof accountData === 'object') {
+      // 提取 Assets 和 Liabilities 类型的账户
+      const assetsAccounts = accountData.Assets || []
+      const liabilitiesAccounts = accountData.Liabilities || []
+      accounts = [...assetsAccounts, ...liabilitiesAccounts]
+    }
+    
+    accountOptions.value = accounts.map((acc: string) => ({
+      text: formatAccountNameForDisplay(acc),
+      value: acc
+    }))
+    
+    console.log('转账表单处理后的账户选项:', accountOptions.value)
   } catch (error) {
-    console.error('加载账户选项失败:', error)
+    console.error('获取账户列表失败:', error)
+    // 备用硬编码数据
+    accountOptions.value = [
+      { text: formatAccountNameForDisplay('Assets:ZJ-资金:现金'), value: 'Assets:ZJ-资金:现金' },
+      { text: formatAccountNameForDisplay('Assets:ZJ-资金:活期存款'), value: 'Assets:ZJ-资金:活期存款' },
+      { text: formatAccountNameForDisplay('Assets:ZJ-资金:香港招行'), value: 'Assets:ZJ-资金:香港招行' },
+      { text: formatAccountNameForDisplay('Liabilities:XYK-信用卡:招行:8164'), value: 'Liabilities:XYK-信用卡:招行:8164' },
+      { text: formatAccountNameForDisplay('Liabilities:XYK-信用卡:招行:经典白'), value: 'Liabilities:XYK-信用卡:招行:经典白' }
+    ]
   }
 }
 
@@ -267,42 +344,106 @@ onMounted(() => {
 
 <style scoped>
 .transfer-form {
+  padding: 0;
+  background: #f7f8fa;
+  min-height: 100vh;
+}
+
+/* 表单卡片基础样式 */
+.form-card {
+  display: flex;
+  align-items: center;
+  background: white;
+  border-radius: 16px;
   padding: 16px;
+  margin: 16px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s ease;
+  cursor: pointer;
 }
 
-.amount-section {
-  background-color: white;
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 16px;
-  text-align: center;
+.form-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
 }
 
-.amount-label {
-  font-size: 14px;
-  color: #646566;
-  margin-bottom: 16px;
-}
-
-.amount-input {
+.card-icon {
+  width: 40px;
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background: #f7f8fa;
+  border-radius: 12px;
+  margin-right: 16px;
+  color: #646566;
+  font-size: 20px;
 }
 
-.currency {
-  font-size: 32px;
+.card-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.card-label {
+  font-size: 16px;
   color: #323233;
-  margin-right: 8px;
+  font-weight: 500;
+}
+
+/* 转出账户卡片 */
+.from-account-card .card-icon {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
+}
+
+/* 金额卡片 */
+.amount-card {
+  background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%);
+}
+
+.amount-card .card-icon {
+  background: rgba(52, 168, 83, 0.1);
+  color: #34a853;
+}
+
+.amount-input-container {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.currency-selector {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  background: #f7f8fa;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.currency-selector:hover {
+  background: #ebedf0;
+}
+
+.currency-symbol {
+  font-size: 24px;
+  font-weight: bold;
+  color: #323233;
 }
 
 .amount-field {
   flex: 1;
-  max-width: 200px;
 }
 
 .amount-field :deep(.van-field__control) {
-  font-size: 32px;
+  font-size: 24px;
   font-weight: bold;
   text-align: left;
   color: #323233;
@@ -312,47 +453,37 @@ onMounted(() => {
   color: #c8c9cc;
 }
 
-.transfer-path {
-  background-color: white;
-  border-radius: 12px;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-
-.account-selector {
-  margin-bottom: 16px;
-}
-
-.account-selector:last-child {
-  margin-bottom: 0;
-}
-
-.account-label {
-  font-size: 14px;
-  color: #646566;
-  margin-bottom: 8px;
-  padding-left: 16px;
+/* 转账箭头 */
+.transfer-arrow-container {
+  display: flex;
+  justify-content: center;
+  margin: -6px 16px;
+  position: relative;
+  z-index: 1;
 }
 
 .transfer-arrow {
+  width: 48px;
+  height: 48px;
   display: flex;
-  justify-content: center;
   align-items: center;
-  margin: 16px 0;
-  color: #969799;
-  font-size: 20px;
+  justify-content: center;
+  background: linear-gradient(135deg, #34a853 0%, #4caf50 100%);
+  border-radius: 50%;
+  color: white;
+  box-shadow: 0 4px 12px rgba(52, 168, 83, 0.3);
 }
 
-.submit-section {
-  margin-top: 32px;
-  padding: 0 16px;
+/* 转入账户卡片 */
+.to-account-card .card-icon {
+  background: rgba(255, 193, 7, 0.1);
+  color: #ffc107;
 }
 
+
+
+/* 使用标准 van-cell-group 样式 */
 :deep(.van-cell-group--inset) {
-  margin: 16px 0;
-}
-
-:deep(.van-field__control) {
-  font-size: 16px;
+  margin: 16px;
 }
 </style>
