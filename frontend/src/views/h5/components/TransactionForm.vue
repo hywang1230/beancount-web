@@ -340,6 +340,7 @@ const currentCategoryIndex = ref(0)
 interface Option {
   text: string
   value: string
+  disabled?: boolean
 }
 
 // 选项数据
@@ -361,7 +362,7 @@ const currencyOptions = ref<Option[]>([
 
 
 
-// 账户格式化函数（参考首页格式化方式）
+// 账户格式化函数（参考Reports的实现）
 const formatAccountNameForDisplay = (accountName: string) => {
   if (!accountName) return ''
   
@@ -382,6 +383,180 @@ const formatAccountNameForDisplay = (accountName: string) => {
     return formattedName
   }
   return accountName
+}
+
+// 格式化单个账户名称段（去掉字母前缀和连字符）
+const formatAccountName = (accountName: string) => {
+  if (!accountName) return '未知账户'
+  
+  // 处理单个名称段：去掉字母前缀和连字符
+  const dashIndex = accountName.indexOf('-')
+  if (dashIndex > 0) {
+    return accountName.substring(dashIndex + 1)
+  }
+  return accountName
+}
+
+// 格式化分类名称
+const formatCategoryName = (categoryName: string) => {
+  return formatAccountName(categoryName)
+}
+
+// 获取账户类型
+const getAccountType = (accountName: string) => {
+  if (accountName.startsWith('Assets:')) return 'assets'
+  if (accountName.startsWith('Liabilities:')) return 'liabilities'
+  if (accountName.startsWith('Income:')) return 'income'
+  if (accountName.startsWith('Expenses:')) return 'expenses'
+  if (accountName.startsWith('Equity:')) return 'equity'
+  return 'other'
+}
+
+
+
+// 构建层级选项（参考Reports的精细层级结构）
+const buildHierarchicalOptions = (accounts: string[], allowedTypes: string[]): Option[] => {
+  console.log('构建精细层级选项，输入账户:', accounts)
+  console.log('允许的类型:', allowedTypes)
+  
+  // 按类型和分类分组账户
+  const accountsByType: Record<string, any> = {
+    'assets': {},
+    'liabilities': {},
+    'income': {},
+    'expenses': {},
+    'equity': {},
+    'other': {}
+  }
+  
+  // 按分类分组账户，支持层级结构
+  accounts.forEach((accountName: string) => {
+    const accountType = getAccountType(accountName)
+    if (!allowedTypes.includes(accountType)) return
+    
+    const parts = accountName.split(':')
+    console.log(`处理账户: ${accountName}, parts:`, parts)
+    
+    if (parts.length < 2) return
+    
+    // 第二级作为主分类名
+    const categoryName = parts[1]
+    
+    if (!accountsByType[accountType][categoryName]) {
+      accountsByType[accountType][categoryName] = {
+        accounts: [],
+        subGroups: {}
+      }
+    }
+    
+    // 从第三级开始构建子层级
+    const remainingParts = parts.slice(2)
+    console.log(`  remainingParts:`, remainingParts)
+    
+    if (remainingParts.length === 0) {
+      // 如果没有更多层级，直接添加到accounts中
+      accountsByType[accountType][categoryName].accounts.push({
+        name: formatAccountName(parts[parts.length - 1]),
+        value: accountName,
+        fullName: accountName
+      })
+    } else if (remainingParts.length === 1) {
+      // 只有一级子账户，直接添加
+      accountsByType[accountType][categoryName].accounts.push({
+        name: formatAccountName(remainingParts[0]),
+        value: accountName,
+        fullName: accountName
+      })
+    } else {
+      // 有多级子账户，按第一级分组
+      const subGroupName = remainingParts[0]
+      console.log(`  创建子分组: ${subGroupName}`)
+      
+      if (!accountsByType[accountType][categoryName].subGroups[subGroupName]) {
+        accountsByType[accountType][categoryName].subGroups[subGroupName] = []
+      }
+      
+      // 剩余的层级作为子账户名称
+      const finalAccountName = remainingParts.slice(1).map((part: string) => formatAccountName(part)).join('-')
+      console.log(`  子账户名称: ${finalAccountName}`)
+      
+      accountsByType[accountType][categoryName].subGroups[subGroupName].push({
+        name: finalAccountName,
+        value: accountName,
+        fullName: accountName
+      })
+    }
+  })
+  
+  console.log('按类型和分类分组的账户:', accountsByType)
+  
+  // 构建分层选项
+  const options: Option[] = []
+  
+  // 按类型添加账户（不显示类型标题）
+  const typeOrder = ['assets', 'liabilities', 'income', 'expenses', 'equity', 'other']
+  
+  typeOrder.forEach(type => {
+    const typeCategories = accountsByType[type]
+    if (Object.keys(typeCategories).length > 0 && allowedTypes.includes(type)) {
+      
+      // 遍历该类型下的所有分类
+      Object.keys(typeCategories).forEach(categoryName => {
+        const category = typeCategories[categoryName]
+        
+        // 检查是否只有一个直接账户且无子分组（避免重复显示）
+        const hasSubGroups = Object.keys(category.subGroups).length > 0
+        const directAccountsCount = category.accounts.length
+        
+        if (!hasSubGroups && directAccountsCount === 1) {
+          // 只有一个直接账户且无子分组，直接显示账户（无缩进）
+          const account = category.accounts[0]
+          options.push({
+            text: account.name,
+            value: account.value
+          })
+        } else {
+          // 有多个账户或有子分组，显示分类标题
+          options.push({
+            text: formatCategoryName(categoryName),
+            value: `__category_${type}_${categoryName}__`,
+            disabled: true
+          })
+          
+          // 添加直接账户（一级缩进）
+          category.accounts.forEach((account: any) => {
+            options.push({
+              text: `　${account.name}`,
+              value: account.value
+            })
+          })
+          
+          // 添加子分组
+          Object.keys(category.subGroups).forEach(subGroupName => {
+            const subGroupAccounts = category.subGroups[subGroupName]
+            
+            // 添加子分组标题（一级缩进）
+            options.push({
+              text: `　${formatAccountName(subGroupName)}`,
+              value: `__subgroup_${type}_${categoryName}_${subGroupName}__`,
+              disabled: true
+            })
+            
+            // 添加子分组下的账户（二级缩进）
+            subGroupAccounts.forEach((account: any) => {
+              options.push({
+                text: `　　${account.name}`,
+                value: account.value
+              })
+            })
+          })
+        }
+      })
+    }
+  })
+  
+  console.log('最终构建的精细层级选项:', options)
+  return options
 }
 
 // 计算属性
@@ -764,10 +939,8 @@ const loadOptions = async () => {
         console.warn('账户数据格式不正确或为空:', accountData)
       }
       
-      accountOptions.value = accounts.map((acc: string) => ({
-        text: formatAccountNameForDisplay(acc),
-        value: acc
-      }))
+      // 构建分层账户选项
+      accountOptions.value = buildHierarchicalOptions(accounts, ['assets', 'liabilities'])
         
       console.log('最终账户选项:', accountOptions.value)
       console.log('账户选项数量:', accountOptions.value.length)
@@ -777,11 +950,12 @@ const loadOptions = async () => {
       
       // 备用硬编码数据
       console.log('使用备用账户数据')
-      accountOptions.value = [
-        { text: formatAccountNameForDisplay('Assets:ZJ-资金:现金'), value: 'Assets:ZJ-资金:现金' },
-        { text: formatAccountNameForDisplay('Assets:ZJ-资金:活期存款'), value: 'Assets:ZJ-资金:活期存款' },
-        { text: formatAccountNameForDisplay('Liabilities:XYK-信用卡:招行:8164'), value: 'Liabilities:XYK-信用卡:招行:8164' }
+      const fallbackAccounts = [
+        'Assets:ZJ-资金:现金',
+        'Assets:ZJ-资金:活期存款',
+        'Liabilities:XYK-信用卡:招行:8164'
       ]
+      accountOptions.value = buildHierarchicalOptions(fallbackAccounts, ['assets', 'liabilities'])
     }
 
     // 加载分类选项
@@ -810,10 +984,9 @@ const loadOptions = async () => {
         console.warn('分类数据格式不正确或为空:', categoryData)
       }
       
-      categoryOptions.value = categories.map((acc: string) => ({
-        text: formatAccountNameForDisplay(acc),
-        value: acc
-      }))
+      // 构建分层分类选项
+      const categoryTypes = props.type === 'expense' ? ['expenses'] : props.type === 'income' ? ['income'] : ['expenses']
+      categoryOptions.value = buildHierarchicalOptions(categories, categoryTypes)
         
       console.log('最终分类选项:', categoryOptions.value)
       console.log('分类选项数量:', categoryOptions.value.length)
@@ -824,18 +997,20 @@ const loadOptions = async () => {
       // 备用硬编码数据
       console.log('使用备用分类数据')
       if (props.type === 'expense') {
-        categoryOptions.value = [
-          { text: formatAccountNameForDisplay('Expenses:CY-餐饮'), value: 'Expenses:CY-餐饮' },
-          { text: formatAccountNameForDisplay('Expenses:JT-交通:公交'), value: 'Expenses:JT-交通:公交' },
-          { text: formatAccountNameForDisplay('Expenses:JT-交通:打车'), value: 'Expenses:JT-交通:打车' },
-          { text: formatAccountNameForDisplay('Expenses:YL-娱乐:其他'), value: 'Expenses:YL-娱乐:其他' }
+        const fallbackCategories = [
+          'Expenses:CY-餐饮',
+          'Expenses:JT-交通:公交',
+          'Expenses:JT-交通:打车',
+          'Expenses:YL-娱乐:其他'
         ]
+        categoryOptions.value = buildHierarchicalOptions(fallbackCategories, ['expenses'])
       } else {
-        categoryOptions.value = [
-          { text: formatAccountNameForDisplay('Income:GZ-工资'), value: 'Income:GZ-工资' },
-          { text: formatAccountNameForDisplay('Income:TZ-投资'), value: 'Income:TZ-投资' },
-          { text: formatAccountNameForDisplay('Income:QT-其他'), value: 'Income:QT-其他' }
+        const fallbackCategories = [
+          'Income:GZ-工资',
+          'Income:TZ-投资',
+          'Income:QT-其他'
         ]
+        categoryOptions.value = buildHierarchicalOptions(fallbackCategories, ['income'])
       }
     }
   } catch (error) {
