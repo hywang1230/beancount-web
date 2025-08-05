@@ -40,14 +40,35 @@
               :value="formatCurrency(category.total)"
             >
               <div class="account-list">
-                <div 
-                  v-for="account in category.accounts" 
-                  :key="account.name"
-                  class="account-item"
-                >
-                  <span class="account-name">{{ account.name }}</span>
-                  <span class="account-amount">{{ formatCurrency(account.balance) }}</span>
-                </div>
+                <template v-for="account in category.accounts" :key="account.fullName">
+                  <!-- 如果是子分组，显示为可折叠的子分组 -->
+                  <div v-if="account.isSubGroup" class="sub-group">
+                    <van-collapse v-model="subGroupExpandedItems">
+                      <van-collapse-item 
+                        :name="account.fullName"
+                        :title="account.name"
+                        :value="formatCurrency(account.balance)"
+                        class="sub-group-collapse"
+                      >
+                        <div class="sub-account-list">
+                          <div 
+                            v-for="subAccount in account.subAccounts" 
+                            :key="subAccount.fullName"
+                            class="sub-account-item"
+                          >
+                            <span class="account-name">{{ subAccount.name }}</span>
+                            <span class="account-amount">{{ formatCurrency(subAccount.balance) }}</span>
+                          </div>
+                        </div>
+                      </van-collapse-item>
+                    </van-collapse>
+                  </div>
+                  <!-- 普通账户直接显示 -->
+                  <div v-else class="account-item">
+                    <span class="account-name">{{ account.name }}</span>
+                    <span class="account-amount">{{ formatCurrency(account.balance) }}</span>
+                  </div>
+                </template>
               </div>
             </van-collapse-item>
           </van-collapse>
@@ -73,7 +94,7 @@
                   :key="account.name"
                   class="account-item"
                 >
-                  <span class="account-name">{{ account.name }}</span>
+                  <span class="account-name">{{ formatAccountName(account.name) }}</span>
                   <span class="account-amount">{{ formatCurrency(Math.abs(account.balance)) }}</span>
                 </div>
               </div>
@@ -96,14 +117,35 @@
               :value="formatCurrency(category.total)"
             >
               <div class="account-list">
-                <div 
-                  v-for="account in category.accounts" 
-                  :key="account.name"
-                  class="account-item"
-                >
-                  <span class="account-name">{{ account.name }}</span>
-                  <span class="account-amount">{{ formatCurrency(account.balance) }}</span>
-                </div>
+                <template v-for="account in category.accounts" :key="account.fullName">
+                  <!-- 如果是子分组，显示为可折叠的子分组 -->
+                  <div v-if="account.isSubGroup" class="sub-group">
+                    <van-collapse v-model="subGroupExpandedItems">
+                      <van-collapse-item 
+                        :name="account.fullName"
+                        :title="account.name"
+                        :value="formatCurrency(account.balance)"
+                        class="sub-group-collapse"
+                      >
+                        <div class="sub-account-list">
+                          <div 
+                            v-for="subAccount in account.subAccounts" 
+                            :key="subAccount.fullName"
+                            class="sub-account-item"
+                          >
+                            <span class="account-name">{{ subAccount.name }}</span>
+                            <span class="account-amount">{{ formatCurrency(subAccount.balance) }}</span>
+                          </div>
+                        </div>
+                      </van-collapse-item>
+                    </van-collapse>
+                  </div>
+                  <!-- 普通账户直接显示 -->
+                  <div v-else class="account-item">
+                    <span class="account-name">{{ account.name }}</span>
+                    <span class="account-amount">{{ formatCurrency(account.balance) }}</span>
+                  </div>
+                </template>
               </div>
             </van-collapse-item>
           </van-collapse>
@@ -155,7 +197,7 @@
                   :key="account.name"
                   class="account-item"
                 >
-                  <span class="account-name">{{ account.name }}</span>
+                  <span class="account-name">{{ formatAccountName(account.name) }}</span>
                   <span class="account-amount positive">{{ formatCurrency(Math.abs(account.balance)) }}</span>
                 </div>
               </div>
@@ -183,7 +225,7 @@
                   :key="account.name"
                   class="account-item"
                 >
-                  <span class="account-name">{{ account.name }}</span>
+                  <span class="account-name">{{ formatAccountName(account.name) }}</span>
                   <span class="account-amount negative">{{ formatCurrency(Math.abs(account.balance)) }}</span>
                 </div>
               </div>
@@ -307,7 +349,7 @@
           <van-cell 
             v-for="account in sortedMonthlyIncomeAccounts" 
             :key="account.name"
-            :title="account.name.replace('Income:', '')"
+            :title="formatAccountName(account.name.replace('Income:', ''))"
             :value="formatCurrency(Math.abs(account.balance))"
             value-class="positive"
           />
@@ -317,7 +359,7 @@
           <van-cell 
             v-for="account in sortedMonthlyExpenseAccounts" 
             :key="account.name"
-            :title="account.name.replace('Expenses:', '')"
+            :title="formatAccountName(account.name.replace('Expenses:', ''))"
             :value="formatCurrency(Math.abs(account.balance))"
             value-class="negative"
           />
@@ -400,6 +442,7 @@ const balanceSheet = ref<any>(null)
 const assetExpandedItems = ref<string[]>([])
 const liabilityExpandedItems = ref<string[]>([])
 const equityExpandedItems = ref<string[]>([])
+const subGroupExpandedItems = ref<string[]>([]) // 子分组展开状态
 
 // 损益表相关
 const today = new Date()
@@ -465,6 +508,23 @@ const formatCurrency = (amount: number) => {
   }).format(amount)
 }
 
+// 格式化账户名称 - 去掉字母前缀和连字符，但保持层级
+const formatAccountName = (accountName: string) => {
+  if (!accountName) return '未知账户'
+  
+  // 处理单个名称段：去掉字母前缀和连字符
+  const dashIndex = accountName.indexOf('-')
+  if (dashIndex > 0) {
+    return accountName.substring(dashIndex + 1)
+  }
+  return accountName
+}
+
+// 格式化分类名称
+const formatCategoryName = (categoryName: string) => {
+  return formatAccountName(categoryName)
+}
+
 // 分组账户数据
 const groupedAssetCategories = computed(() => {
   if (!balanceSheet.value?.accounts) return []
@@ -508,12 +568,17 @@ const sortedMonthlyExpenseAccounts = computed(() => {
   return [...monthlySummary.value.income_statement.expense_accounts].sort((a, b) => Math.abs(b.balance) - Math.abs(a.balance))
 })
 
-// 按分类分组账户
-const groupAccountsByCategory = (accounts: any[], prefix: string) => {
-  const categories: { [key: string]: any[] } = {}
+// 按分类分组账户，支持层级结构
+const groupAccountsByCategory = (accounts: any[], _prefix: string) => {
+  const categories: { [key: string]: any } = {}
+  
+  // 调试：打印账户数据
+  console.log('账户数据:', accounts.map(acc => ({ name: acc.name, balance: acc.balance })))
   
   accounts.forEach(account => {
     const parts = account.name.split(':')
+    console.log(`处理账户: ${account.name}, parts:`, parts)
+    
     let categoryName = '其他'
     
     if (parts.length > 1) {
@@ -521,20 +586,86 @@ const groupAccountsByCategory = (accounts: any[], prefix: string) => {
     }
     
     if (!categories[categoryName]) {
-      categories[categoryName] = []
+      categories[categoryName] = {
+        accounts: [],
+        subGroups: {}
+      }
     }
     
-    categories[categoryName].push({
-      name: account.name.replace(`${prefix}:`, '').replace(`${categoryName}:`, ''),
-      balance: account.balance
-    })
+    // 从第三级开始构建子层级
+    const remainingParts = parts.slice(2)
+    console.log(`  remainingParts:`, remainingParts)
+    
+    if (remainingParts.length === 0) {
+      // 如果没有更多层级，直接添加到accounts中
+      categories[categoryName].accounts.push({
+        name: formatAccountName(account.name.split(':').pop() || ''),
+        balance: account.balance,
+        fullName: account.name
+      })
+    } else if (remainingParts.length === 1) {
+      // 只有一级子账户，直接添加
+      categories[categoryName].accounts.push({
+        name: formatAccountName(remainingParts[0]),
+        balance: account.balance,
+        fullName: account.name
+      })
+    } else {
+      // 有多级子账户，按第一级分组
+      const subGroupName = remainingParts[0]
+      console.log(`  创建子分组: ${subGroupName}`)
+      
+      if (!categories[categoryName].subGroups[subGroupName]) {
+        categories[categoryName].subGroups[subGroupName] = []
+      }
+      
+      // 剩余的层级作为子账户名称
+      const finalAccountName = remainingParts.slice(1).map((part: string) => formatAccountName(part)).join('-')
+      console.log(`  子账户名称: ${finalAccountName}`)
+      
+      categories[categoryName].subGroups[subGroupName].push({
+        name: finalAccountName,
+        balance: account.balance,
+        fullName: account.name
+      })
+    }
   })
   
-  return Object.keys(categories).map(categoryName => ({
-    name: categoryName,
-    accounts: categories[categoryName],
-    total: categories[categoryName].reduce((sum, acc) => sum + Math.abs(acc.balance), 0)
-  }))
+  // 构建最终的分类结构
+  return Object.keys(categories).map(categoryName => {
+    const category = categories[categoryName]
+    const allAccounts = [...category.accounts]
+    
+    // 添加子分组
+    Object.keys(category.subGroups).forEach(subGroupName => {
+      const subGroupAccounts = category.subGroups[subGroupName]
+      const subGroupTotal = subGroupAccounts.reduce((sum: number, acc: any) => sum + Math.abs(acc.balance), 0)
+      
+      // 为子分组创建一个汇总账户
+      allAccounts.push({
+        name: formatAccountName(subGroupName),
+        balance: subGroupTotal,
+        fullName: `${categoryName}-${subGroupName}`,
+        isSubGroup: true,
+        subAccounts: subGroupAccounts
+      })
+    })
+    
+    const result = {
+      name: formatCategoryName(categoryName),
+      accounts: allAccounts,
+      total: allAccounts.reduce((sum, acc) => sum + Math.abs(acc.balance), 0)
+    }
+    
+    // 调试：打印分组结果
+    console.log(`分类 ${categoryName}:`, allAccounts.map(acc => ({
+      name: acc.name,
+      isSubGroup: acc.isSubGroup,
+      subAccounts: acc.subAccounts?.length || 0
+    })))
+    
+    return result
+  })
 }
 
 // 加载资产负债表
@@ -801,6 +932,68 @@ onMounted(() => {
   color: #646566;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 13px;
+}
+
+/* 子分组样式 */
+.sub-group {
+  margin-bottom: 8px;
+}
+
+.sub-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px;
+  background-color: #f7f8fa;
+  border-bottom: 1px solid #ebedf0;
+  font-weight: 500;
+}
+
+.sub-group-name {
+  flex: 1;
+  color: #323233;
+  font-size: 14px;
+}
+
+.sub-group-amount {
+  color: #646566;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.sub-account-list {
+  background-color: #ffffff;
+}
+
+.sub-account-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 16px 8px 32px; /* 左侧增加缩进表示层级 */
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+}
+
+.sub-account-item:last-child {
+  border-bottom: none;
+}
+
+/* 子分组折叠样式 */
+.sub-group-collapse {
+  margin: 0;
+}
+
+.sub-group-collapse :deep(.van-collapse-item__title) {
+  background-color: #f7f8fa;
+  font-size: 14px;
+  font-weight: 500;
+  padding: 10px 16px;
+}
+
+.sub-group-collapse :deep(.van-collapse-item__content) {
+  padding: 0;
+  background-color: #ffffff;
 }
 
 .total-row {
