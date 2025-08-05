@@ -38,35 +38,39 @@ const redirectBasedOnDevice = () => {
   const mobile = detectDevice()
   isMobile.value = mobile
   
-  if (mobile) {
-    // 移动端逻辑
-    if (!currentPath.startsWith('/h5')) {
-      // 将PC端路径转换为移动端路径
-      const h5Path = currentPath === '/' ? '/h5/dashboard' : `/h5${currentPath}`
-      router.replace(h5Path)
-    }
-  } else {
-    // PC端逻辑
-    if (currentPath.startsWith('/h5')) {
-      // 将移动端路径转换为PC端路径
-      const pcPath = currentPath.replace('/h5', '') || '/dashboard'
-      router.replace(pcPath)
-    } else if (currentPath === '/') {
-      // 根路径重定向到仪表盘
+  // 只处理根路径重定向，其他路径保持不变
+  if (currentPath === '/') {
+    if (mobile) {
+      router.replace('/h5/dashboard')
+    } else {
       router.replace('/dashboard')
     }
+  }
+  
+  // 处理H5子路径的重定向
+  if (currentPath === '/h5' || currentPath === '/h5/') {
+    router.replace('/h5/dashboard')
   }
 }
 
 onMounted(() => {
-  redirectBasedOnDevice()
+  // 暂时禁用自动重定向，只设置设备类型
+  isMobile.value = detectDevice()
+  
+  // 仅处理根路径重定向
+  if (route.path === '/') {
+    if (isMobile.value) {
+      router.replace('/h5/dashboard')
+    } else {
+      router.replace('/dashboard')
+    }
+  }
   
   // 监听窗口大小变化
   window.addEventListener('resize', () => {
     const newIsMobile = detectDevice()
     if (newIsMobile !== isMobile.value) {
       isMobile.value = newIsMobile
-      redirectBasedOnDevice()
     }
   })
 })
