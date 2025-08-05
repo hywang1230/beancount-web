@@ -48,7 +48,7 @@
                         :name="account.fullName"
                         :title="account.name"
                         :value="formatCurrency(account.balance)"
-                        class="sub-group-collapse"
+                        
                       >
                         <div class="sub-account-list">
                           <div 
@@ -89,14 +89,34 @@
               :value="formatCurrency(category.total)"
             >
               <div class="account-list">
-                <div 
-                  v-for="account in category.accounts" 
-                  :key="account.name"
-                  class="account-item"
-                >
-                  <span class="account-name">{{ formatAccountName(account.name) }}</span>
-                  <span class="account-amount">{{ formatCurrency(Math.abs(account.balance)) }}</span>
-                </div>
+                <template v-for="account in category.accounts" :key="account.fullName">
+                  <!-- 如果是子分组，显示为可折叠的子分组 -->
+                  <div v-if="account.isSubGroup" class="sub-group">
+                    <van-collapse v-model="subGroupExpandedItems">
+                      <van-collapse-item 
+                        :name="account.fullName"
+                        :title="account.name"
+                        :value="formatCurrency(Math.abs(account.balance))"
+                      >
+                        <div class="sub-account-list">
+                          <div 
+                            v-for="subAccount in account.subAccounts" 
+                            :key="subAccount.fullName"
+                            class="sub-account-item"
+                          >
+                            <span class="account-name">{{ subAccount.name }}</span>
+                            <span class="account-amount">{{ formatCurrency(Math.abs(subAccount.balance)) }}</span>
+                          </div>
+                        </div>
+                      </van-collapse-item>
+                    </van-collapse>
+                  </div>
+                  <!-- 普通账户直接显示 -->
+                  <div v-else class="account-item">
+                    <span class="account-name">{{ formatAccountName(account.name) }}</span>
+                    <span class="account-amount">{{ formatCurrency(Math.abs(account.balance)) }}</span>
+                  </div>
+                </template>
               </div>
             </van-collapse-item>
           </van-collapse>
@@ -125,7 +145,7 @@
                         :name="account.fullName"
                         :title="account.name"
                         :value="formatCurrency(account.balance)"
-                        class="sub-group-collapse"
+                        
                       >
                         <div class="sub-account-list">
                           <div 
