@@ -17,12 +17,11 @@
       <!-- 日期选择 -->
       <div class="date-selector">
         <van-cell-group inset>
-          <van-field
-            v-model="asOfDate"
-            type="date"
-            label="截止日期"
-            placeholder="选择截止日期"
-            @change="loadBalanceSheet"
+          <van-cell
+            title="截止日期"
+            :value="formatDateDisplay(asOfDate)"
+            is-link
+            @click="showAsOfDateCalendar = true"
           />
         </van-cell-group>
       </div>
@@ -182,19 +181,11 @@
       <!-- 日期范围选择 -->
       <div class="date-range-selector">
         <van-cell-group inset>
-          <van-field
-            v-model="startDate"
-            type="date"
-            label="开始日期"
-            placeholder="选择开始日期"
-            @change="onStartDateChange"
-          />
-          <van-field
-            v-model="endDate"
-            type="date"
-            label="结束日期"
-            placeholder="选择结束日期"
-            @change="onEndDateChange"
+          <van-cell
+            title="日期范围"
+            :value="formatDateRangeDisplay(startDate, endDate)"
+            is-link
+            @click="showDateRangeCalendar = true"
           />
         </van-cell-group>
       </div>
@@ -415,6 +406,33 @@
       />
     </van-popup>
 
+    <!-- 日历组件 -->
+    <van-calendar
+      v-model:show="showAsOfDateCalendar"
+      title="选择截止日期"
+      :default-date="asOfDate ? new Date(asOfDate) : new Date()"
+      :min-date="new Date(2020, 0, 1)"
+      :max-date="new Date()"
+      switch-mode="year-month"
+      :show-confirm="false"
+      @confirm="onAsOfDateConfirm"
+      @close="showAsOfDateCalendar = false"
+    />
+    
+    <van-calendar
+      v-model:show="showDateRangeCalendar"
+      title="选择日期范围"
+      type="range"
+      :default-date="getDefaultDateRange()"
+      :min-date="new Date(2025, 5, 1)"
+      :max-date="new Date()"
+      switch-mode="year-month"
+      :show-confirm="false"
+      :allow-same-day="true"
+      @confirm="onDateRangeConfirm"
+      @close="showDateRangeCalendar = false"
+    />
+
     <!-- 加载状态 -->
     <van-loading v-if="loading" type="spinner" vertical>加载中...</van-loading>
   </div>
@@ -489,6 +507,10 @@ const showTrendsPicker = ref(false)
 const showYearPicker = ref(false)
 const showMonthPicker = ref(false)
 
+// 日历组件相关
+const showAsOfDateCalendar = ref(false)
+const showDateRangeCalendar = ref(false)
+
 // 选择器选项
 const trendsOptions = [
   { text: '最近6个月', value: 6 },
@@ -526,6 +548,33 @@ const formatCurrency = (amount: number) => {
     style: 'currency',
     currency: 'CNY'
   }).format(amount)
+}
+
+// 格式化日期显示
+const formatDateDisplay = (dateStr: string) => {
+  if (!dateStr) return '选择日期'
+  const date = new Date(dateStr)
+  return date.toLocaleDateString('zh-CN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
+  })
+}
+
+// 格式化日期范围显示
+const formatDateRangeDisplay = (startDateStr: string, endDateStr: string) => {
+  if (!startDateStr || !endDateStr) return '选择日期范围'
+  const startDate = new Date(startDateStr)
+  const endDate = new Date(endDateStr)
+  const startFormatted = startDate.toLocaleDateString('zh-CN', {
+    month: 'short',
+    day: 'numeric'
+  })
+  const endFormatted = endDate.toLocaleDateString('zh-CN', {
+    month: 'short',
+    day: 'numeric'
+  })
+  return `${startFormatted} 至 ${endFormatted}`
 }
 
 // 格式化账户名称 - 去掉字母前缀和连字符，但保持层级
@@ -863,53 +912,6 @@ const onTabChange = (tabName: string) => {
 
 
 
-// 损益表日期变化处理
-const onStartDateChange = (value: string | Date | any) => {
-  // 确保日期格式为 yyyy-MM-dd 字符串
-  if (value instanceof Date) {
-    startDate.value = value.toLocaleDateString('en-CA')
-  } else if (typeof value === 'string') {
-    startDate.value = value
-  } else if (value && typeof value === 'object') {
-    // 处理可能的日期对象
-    try {
-      const dateObj = new Date(value.toString())
-      if (!isNaN(dateObj.getTime())) {
-        startDate.value = dateObj.toLocaleDateString('en-CA')
-      }
-    } catch (error) {
-      console.warn('日期格式转换失败:', value)
-    }
-  }
-  
-  if (startDate.value && endDate.value) {
-    loadIncomeStatement()
-  }
-}
-
-const onEndDateChange = (value: string | Date | any) => {
-  // 确保日期格式为 yyyy-MM-dd 字符串
-  if (value instanceof Date) {
-    endDate.value = value.toLocaleDateString('en-CA')
-  } else if (typeof value === 'string') {
-    endDate.value = value
-  } else if (value && typeof value === 'object') {
-    // 处理可能的日期对象
-    try {
-      const dateObj = new Date(value.toString())
-      if (!isNaN(dateObj.getTime())) {
-        endDate.value = dateObj.toLocaleDateString('en-CA')
-      }
-    } catch (error) {
-      console.warn('日期格式转换失败:', value)
-    }
-  }
-  
-  if (startDate.value && endDate.value) {
-    loadIncomeStatement()
-  }
-}
-
 const onTrendsConfirm = ({ selectedOptions }: any) => {
   trendsMonths.value = selectedOptions[0].value
   showTrendsPicker.value = false
@@ -926,6 +928,34 @@ const onMonthConfirm = ({ selectedOptions }: any) => {
   selectedMonth.value = selectedOptions[0].value
   showMonthPicker.value = false
   loadMonthlyReport()
+}
+
+// 日历确认处理函数
+const onAsOfDateConfirm = (date: Date) => {
+  asOfDate.value = date.toLocaleDateString('en-CA')
+  showAsOfDateCalendar.value = false
+  loadBalanceSheet()
+}
+
+// 获取默认日期范围
+const getDefaultDateRange = () => {
+  if (startDate.value && endDate.value) {
+    return [new Date(startDate.value), new Date(endDate.value)]
+  }
+  // 默认返回本月第一天到今天
+  const today = new Date()
+  const thisMonthStart = new Date(today.getFullYear(), today.getMonth(), 1)
+  return [thisMonthStart, today]
+}
+
+// 日期范围确认处理函数
+const onDateRangeConfirm = (dates: Date[]) => {
+  if (dates && dates.length === 2) {
+    startDate.value = dates[0].toLocaleDateString('en-CA')
+    endDate.value = dates[1].toLocaleDateString('en-CA')
+    showDateRangeCalendar.value = false
+    loadIncomeStatement()
+  }
 }
 
 onMounted(() => {
