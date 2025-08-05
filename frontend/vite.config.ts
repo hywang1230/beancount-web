@@ -3,7 +3,7 @@ import vue from '@vitejs/plugin-vue'
 import { resolve } from 'path'
 import AutoImport from 'unplugin-auto-import/vite'
 import Components from 'unplugin-vue-components/vite'
-import { ElementPlusResolver } from 'unplugin-vue-components/resolvers'
+import { ElementPlusResolver, VantResolver } from 'unplugin-vue-components/resolvers'
 
 // https://vitejs.dev/config/
 export default defineConfig({
@@ -12,10 +12,10 @@ export default defineConfig({
   plugins: [
     vue(),
     AutoImport({
-      resolvers: [ElementPlusResolver()],
+      resolvers: [ElementPlusResolver(), VantResolver()],
     }),
     Components({
-      resolvers: [ElementPlusResolver()],
+      resolvers: [ElementPlusResolver(), VantResolver()],
     }),
   ],
   resolve: {
@@ -37,6 +37,7 @@ export default defineConfig({
           vue: ['vue', 'vue-router', 'pinia'],
           // 将UI库分离
           'element-plus': ['element-plus', '@element-plus/icons-vue'],
+          'vant': ['vant'],
           // 将图表库分离
           echarts: ['echarts', 'vue-echarts'],
           // 将工具库分离
@@ -97,6 +98,7 @@ export default defineConfig({
       'pinia',
       'element-plus',
       '@element-plus/icons-vue',
+      'vant',
       'axios',
       'dayjs',
       'echarts',

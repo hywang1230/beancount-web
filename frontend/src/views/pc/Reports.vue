@@ -49,7 +49,7 @@
                         class="account-name" 
                         :style="{ paddingLeft: (12 + row.level * 20) + 'px' }"
                       >
-                        {{ row.name }}
+                        {{ formatAccountName(row.name) }}
                       </span>
                       <span class="account-amount">
                         {{ row.amount }}
@@ -80,7 +80,7 @@
                         class="account-name" 
                         :style="{ paddingLeft: (12 + row.level * 20) + 'px' }"
                       >
-                        {{ row.name }}
+                        {{ formatAccountName(row.name) }}
                       </span>
                       <span class="account-amount">
                         {{ row.amount }}
@@ -108,7 +108,7 @@
                         class="account-name" 
                         :style="{ paddingLeft: (12 + row.level * 20) + 'px' }"
                       >
-                        {{ row.name }}
+                        {{ formatAccountName(row.name) }}
                       </span>
                       <span class="account-amount">
                         {{ row.amount }}
@@ -420,7 +420,7 @@ use([
 
 const loading = ref(false)
 const activeTab = ref('balance-sheet')
-const asOfDate = ref(new Date().toISOString().split('T')[0])
+const asOfDate = ref(new Date().toLocaleDateString('en-CA'))
 const periodRange = ref<[string, string] | null>(null)
 const trendsMonths = ref(12)
 const isMobile = ref(false)
@@ -569,7 +569,7 @@ const groupedLiabilityAccounts = computed(() => {
             isLeaf: false
           }
         }
-        current[part].balance += Number(Math.abs(acc.balance)) || 0
+        current[part].balance += Number(acc.balance) || 0
         
         // 如果是最后一级，标记为叶子节点
         if (i === parts.length - 1) {
@@ -926,6 +926,18 @@ const formatCurrency = (amount: number) => {
     style: 'currency',
     currency: 'CNY'
   }).format(amount)
+}
+
+// 格式化账户名称 - 去掉字母前缀和连字符
+const formatAccountName = (accountName: string) => {
+  if (!accountName) return '未知账户'
+  
+  // 处理单个名称段：去掉字母前缀和连字符
+  const dashIndex = accountName.indexOf('-')
+  if (dashIndex > 0) {
+    return accountName.substring(dashIndex + 1)
+  }
+  return accountName
 }
 
 // 加载资产负债表

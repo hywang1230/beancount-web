@@ -157,6 +157,12 @@ class BeancountService:
                                           for posting in entry.postings)
                         if not account_match:
                             continue
+                    
+                    # 交易类型筛选
+                    if filter_params.transaction_type:
+                        transaction_type = self._get_transaction_type(entry)
+                        if transaction_type != filter_params.transaction_type:
+                            continue
                 
                 # 转换为响应模型
                 postings = []
@@ -168,6 +174,24 @@ class BeancountService:
                     )
                     postings.append(posting_data)
                 
+                # 提取文件名和行号元数据
+                filename = getattr(entry.meta, 'filename', None) if hasattr(entry, 'meta') else None
+                lineno = getattr(entry.meta, 'lineno', None) if hasattr(entry, 'meta') else None
+                
+                # 如果没有从meta中获取到，尝试直接从entry属性获取
+                if filename is None and hasattr(entry, 'meta') and entry.meta:
+                    filename = entry.meta.get('filename')
+                if lineno is None and hasattr(entry, 'meta') and entry.meta:
+                    lineno = entry.meta.get('lineno')
+                
+                # 生成唯一的交易ID
+                transaction_id = None
+                if filename and lineno:
+                    # 使用相对路径和行号组成唯一ID
+                    import os
+                    relative_filename = os.path.basename(filename) if filename else 'unknown'
+                    transaction_id = f"{relative_filename}:{lineno}"
+                
                 transaction = TransactionResponse(
                     date=entry.date,
                     flag=entry.flag,
@@ -175,7 +199,10 @@ class BeancountService:
                     narration=entry.narration,
                     tags=list(entry.tags) if entry.tags else [],
                     links=list(entry.links) if entry.links else [],
-                    postings=postings
+                    postings=postings,
+                    filename=filename,
+                    lineno=lineno,
+                    transaction_id=transaction_id
                 )
                 transactions.append(transaction)
         
@@ -204,9 +231,25 @@ class BeancountService:
         
         entries = conversions(entries, current_conversions_account, conversion_currency, date_filter)
         
+        # 获取默认货币
+        default_currency = options_map.get('operating_currency', ['CNY'])[0]
+        
         # 获取所有账户余额
         account_balances = {}
         
+        # 首先获取所有已定义的账户（通过Open指令）
+        all_opened_accounts = {}
+        for entry in entries:
+            if hasattr(entry, 'account') and hasattr(entry, 'currencies'):
+                # 这是一个Open指令
+                account = entry.account
+                currencies = entry.currencies or [default_currency]
+                for currency in currencies:
+                    key = (account, currency)
+                    if key not in all_opened_accounts:
+                        all_opened_accounts[key] = Decimal('0')
+        
+        # 然后计算账户余额
         for entry in entries:
             if entry.date > date_filter:
                 continue
@@ -223,6 +266,11 @@ class BeancountService:
                             account_balances[key] = Decimal('0')
                         account_balances[key] += amount_val
         
+        # 确保所有已定义的账户都在余额字典中（即使余额为0）
+        for key in all_opened_accounts:
+            if key not in account_balances:
+                account_balances[key] = Decimal('0')
+        
         # 分类账户和计算收支
         assets = []
         liabilities = []
@@ -230,15 +278,11 @@ class BeancountService:
         income_total = Decimal('0')
         expense_total = Decimal('0')
         
-        default_currency = options_map.get('operating_currency', ['CNY'])[0]
-        
         # 获取汇率信息
         exchange_rates = self._get_latest_exchange_rates(entries, date_filter, default_currency)
         
         for (account, currency), balance in account_balances.items():
-            if balance == 0:
-                continue
-                
+            # 不过滤零金额账户，让资产负债表显示所有账户
             account_info = AccountInfo(
                 name=account,
                 balance=balance,
@@ -485,34 +529,52 @@ class BeancountService:
         
         default_currency = options_map.get('operating_currency', ['CNY'])[0]
         
+        # 获取汇率信息用于转换
+        exchange_rates = self._get_latest_exchange_rates(entries, end_date, default_currency)
+        
+        # 用于合并同名账户的字典
+        merged_income_accounts = {}
+        merged_expense_accounts = {}
+        
         for (account, currency), balance in account_balances.items():
-            if balance == 0:
-                continue
+            # 不过滤零金额账户，让损益表也显示所有账户
                 
+            # 转换到基础货币
+            converted_balance = balance
+            if currency != default_currency and currency in exchange_rates:
+                converted_balance = balance * exchange_rates[currency]
+            
             account_info = AccountInfo(
                 name=account,
-                balance=balance,
-                currency=currency,
+                balance=converted_balance,
+                currency=default_currency,  # 统一转换为基础货币
                 account_type=self._get_account_type(account)
             )
             
             if account.startswith('Income:'):
-                income_accounts.append(account_info)
+                # 合并同名收入账户
+                if account in merged_income_accounts:
+                    merged_income_accounts[account].balance += converted_balance
+                else:
+                    merged_income_accounts[account] = account_info
             elif account.startswith('Expenses:'):
-                expense_accounts.append(account_info)
+                # 合并同名支出账户
+                if account in merged_expense_accounts:
+                    merged_expense_accounts[account].balance += converted_balance
+                else:
+                    merged_expense_accounts[account] = account_info
         
-        # 获取汇率信息用于收入计算
-        exchange_rates = self._get_latest_exchange_rates(entries, end_date, default_currency)
+        # 转换字典为列表
+        income_accounts = list(merged_income_accounts.values())
+        expense_accounts = list(merged_expense_accounts.values())
         
         # 收入账户：在beancount中负数表示收入，正数表示损失
         # 需要将负数转为正数表示收入金额
-        total_income_raw = self._calculate_total_with_currency_conversion(
-            income_accounts, default_currency, exchange_rates)
+        total_income_raw = sum(acc.balance for acc in income_accounts)
         total_income = -total_income_raw  # 取负值：负数变正数(收入)，正数变负数(损失)
         
         # 支出账户：正数表示支出
-        total_expenses = self._calculate_total_with_currency_conversion(
-            expense_accounts, default_currency, exchange_rates)
+        total_expenses = sum(acc.balance for acc in expense_accounts)
         
         return IncomeStatement(
             income_accounts=income_accounts,
@@ -859,6 +921,256 @@ class BeancountService:
         """构建close指令字符串"""
         date_str = close_date.strftime('%Y-%m-%d')
         return f"{date_str} close {account_name}"
+
+    def get_transaction_by_location(self, filename: str, lineno: int) -> Optional[TransactionResponse]:
+        """根据文件名和行号获取特定交易"""
+        try:
+            entries, _, _ = self._load_entries()
+            
+            for entry in entries:
+                if isinstance(entry, Transaction):
+                    # 检查元数据中的文件名和行号
+                    entry_filename = entry.meta.get('filename') if entry.meta else None
+                    entry_lineno = entry.meta.get('lineno') if entry.meta else None
+                    
+                    if entry_filename and entry_lineno:
+                        import os
+                        entry_basename = os.path.basename(entry_filename)
+                        if entry_basename == filename and entry_lineno == lineno:
+                            # 找到匹配的交易，转换为响应格式
+                            return self._convert_entry_to_response(entry)
+            
+            return None
+            
+        except Exception as e:
+            print(f"获取交易失败: {e}")
+            return None
+
+    def update_transaction_by_location(self, filename: str, lineno: int, transaction_data: Dict) -> bool:
+        """根据文件名和行号更新交易"""
+        try:
+            # 首先找到要更新的交易
+            entries, _, _ = self._load_entries()
+            target_entry = None
+            
+            for entry in entries:
+                if isinstance(entry, Transaction):
+                    entry_filename = entry.meta.get('filename') if entry.meta else None
+                    entry_lineno = entry.meta.get('lineno') if entry.meta else None
+                    
+                    if entry_filename and entry_lineno:
+                        import os
+                        entry_basename = os.path.basename(entry_filename)
+                        if entry_basename == filename and entry_lineno == lineno:
+                            target_entry = entry
+                            break
+            
+            if not target_entry:
+                print(f"未找到要更新的交易: {filename}:{lineno}")
+                return False
+            
+            # 读取原始文件内容
+            target_filename = target_entry.meta.get('filename')
+            if not target_filename:
+                print("无法获取交易所在的文件名")
+                return False
+            
+            with open(target_filename, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            # 构建新的交易字符串
+            new_transaction_str = self._build_transaction_string(transaction_data)
+            
+            # 找到交易的起始行和结束行
+            start_line = lineno - 1  # 转换为0基索引
+            end_line = start_line
+            
+            # 查找交易的结束行：从起始行开始，找到下一个不以空格或制表符开头的行
+            for i in range(start_line + 1, len(lines)):
+                line = lines[i].rstrip()
+                if line and not line.startswith(('  ', '\t')) and not line.startswith(';'):
+                    # 找到下一个交易或其他条目的开始
+                    end_line = i - 1
+                    break
+                elif i == len(lines) - 1:
+                    # 这是文件的最后一行
+                    end_line = i
+                    break
+                elif line.strip():
+                    # 这是交易的一部分（posting行）
+                    end_line = i
+            
+            print(f"更新交易范围: 行 {start_line + 1} 到 {end_line + 1}")
+            
+            # 替换整个交易块
+            if start_line < len(lines):
+                # 删除原有的交易行
+                del lines[start_line:end_line + 1]
+                
+                # 在原位置插入新的交易内容
+                new_lines = (new_transaction_str + '\n').split('\n')
+                # 移除最后一个空行（split产生的）
+                if new_lines and not new_lines[-1]:
+                    new_lines = new_lines[:-1]
+                
+                for i, new_line in enumerate(new_lines):
+                    lines.insert(start_line + i, new_line + '\n')
+                
+                # 写回文件
+                with open(target_filename, 'w', encoding='utf-8') as f:
+                    f.writelines(lines)
+                
+                print(f"交易更新成功，新内容：\n{new_transaction_str}")
+                
+                # 重新加载条目
+                self._load_entries(force_reload=True)
+                return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"更新交易失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def delete_transaction_by_location(self, filename: str, lineno: int) -> bool:
+        """根据文件名和行号删除交易"""
+        try:
+            # 首先找到要删除的交易
+            entries, _, _ = self._load_entries()
+            target_entry = None
+            
+            for entry in entries:
+                if isinstance(entry, Transaction):
+                    entry_filename = entry.meta.get('filename') if entry.meta else None
+                    entry_lineno = entry.meta.get('lineno') if entry.meta else None
+                    
+                    if entry_filename and entry_lineno:
+                        import os
+                        entry_basename = os.path.basename(entry_filename)
+                        if entry_basename == filename and entry_lineno == lineno:
+                            target_entry = entry
+                            break
+            
+            if not target_entry:
+                print(f"未找到要删除的交易: {filename}:{lineno}")
+                return False
+            
+            # 读取原始文件内容
+            target_filename = target_entry.meta.get('filename')
+            if not target_filename:
+                print("无法获取交易所在的文件名")
+                return False
+            
+            with open(target_filename, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            # 找到交易的起始行和结束行（使用与更新相同的逻辑）
+            start_line = lineno - 1  # 转换为0基索引
+            end_line = start_line
+            
+            # 查找交易的结束行：从起始行开始，找到下一个不以空格或制表符开头的行
+            for i in range(start_line + 1, len(lines)):
+                line = lines[i].rstrip()
+                if line and not line.startswith(('  ', '\t')) and not line.startswith(';'):
+                    # 找到下一个交易或其他条目的开始
+                    end_line = i - 1
+                    break
+                elif i == len(lines) - 1:
+                    # 这是文件的最后一行
+                    end_line = i
+                    break
+                elif line.strip():
+                    # 这是交易的一部分（posting行）
+                    end_line = i
+            
+            print(f"删除交易范围: 行 {start_line + 1} 到 {end_line + 1}")
+            
+            # 直接删除整个交易块
+            if start_line < len(lines):
+                # 删除交易的所有行
+                del lines[start_line:end_line + 1]
+                
+                # 写回文件
+                with open(target_filename, 'w', encoding='utf-8') as f:
+                    f.writelines(lines)
+                
+                print(f"交易删除成功，删除了 {end_line - start_line + 1} 行")
+                
+                # 重新加载条目
+                self._load_entries(force_reload=True)
+                return True
+            
+            return False
+            
+        except Exception as e:
+            print(f"删除交易失败: {e}")
+            import traceback
+            traceback.print_exc()
+            return False
+
+    def _convert_entry_to_response(self, entry: Transaction) -> TransactionResponse:
+        """将Beancount交易条目转换为响应格式"""
+        # 转换分录
+        postings = []
+        for posting in entry.postings:
+            posting_data = PostingBase(
+                account=posting.account,
+                amount=posting.units.number if posting.units else None,
+                currency=posting.units.currency if posting.units else None
+            )
+            postings.append(posting_data)
+        
+        # 提取元数据
+        filename = entry.meta.get('filename') if entry.meta else None
+        lineno = entry.meta.get('lineno') if entry.meta else None
+        
+        # 生成唯一ID
+        transaction_id = None
+        if filename and lineno:
+            import os
+            relative_filename = os.path.basename(filename) if filename else 'unknown'
+            transaction_id = f"{relative_filename}:{lineno}"
+        
+        return TransactionResponse(
+            date=entry.date,
+            flag=entry.flag,
+            payee=entry.payee,
+            narration=entry.narration,
+            tags=list(entry.tags) if entry.tags else [],
+            links=list(entry.links) if entry.links else [],
+            postings=postings,
+            filename=filename,
+            lineno=lineno,
+            transaction_id=transaction_id
+        )
+    
+    def _get_transaction_type(self, entry: Transaction) -> str:
+        """判断交易类型：income, expense, transfer"""
+        # 检查所有posting的账户类型
+        account_types = set()
+        for posting in entry.postings:
+            if posting.account.startswith('Income:'):
+                account_types.add('income')
+            elif posting.account.startswith('Expenses:'):
+                account_types.add('expense')
+            elif posting.account.startswith('Assets:') or posting.account.startswith('Liabilities:'):
+                account_types.add('asset_liability')
+            else:
+                account_types.add('other')
+        
+        # 根据账户类型组合判断交易类型
+        if 'income' in account_types:
+            return 'income'
+        elif 'expense' in account_types:
+            return 'expense'
+        elif account_types == {'asset_liability'}:
+            # 只包含Assets和Liabilities账户的交易为转账
+            return 'transfer'
+        else:
+            # 其他情况，包含Equity等账户，暂时归类为转账
+            return 'transfer'
 
 # 创建全局服务实例
 beancount_service = BeancountService() 

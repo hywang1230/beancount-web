@@ -238,11 +238,17 @@ const flattenedTransactions = computed(() => {
   const result: any[] = []
   
   transactions.value.forEach((transaction, transactionIndex) => {
+    // 使用文件名+行号作为唯一标识，如果没有则回退到索引
+    const transactionId = transaction.transaction_id || `transaction-${transactionIndex}`
+    
     // 添加交易头行
     result.push({
-      id: `transaction-${transactionIndex}`,
+      id: transactionId,
       isHeader: true,
       transactionIndex,
+      transactionId: transaction.transaction_id,
+      filename: transaction.filename,
+      lineno: transaction.lineno,
       date: transaction.date,
       flag: transaction.flag,
       payee: transaction.payee,
@@ -254,10 +260,13 @@ const flattenedTransactions = computed(() => {
     // 添加每个分录行
     transaction.postings?.forEach((posting: any, postingIndex: number) => {
       result.push({
-        id: `posting-${transactionIndex}-${postingIndex}`,
+        id: `${transactionId}-posting-${postingIndex}`,
         isHeader: false,
         transactionIndex,
         postingIndex,
+        transactionId: transaction.transaction_id,
+        filename: transaction.filename,
+        lineno: transaction.lineno,
         account: posting.account,
         amount: posting.amount,
         currency: posting.currency

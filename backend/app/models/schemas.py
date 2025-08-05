@@ -23,6 +23,10 @@ class TransactionCreate(TransactionBase):
 
 class TransactionResponse(TransactionBase):
     postings: List[PostingBase]
+    # 添加唯一标识字段
+    filename: Optional[str] = None
+    lineno: Optional[int] = None
+    transaction_id: Optional[str] = None  # 由filename+lineno组成的唯一标识
     
     model_config = {"from_attributes": True}
 
@@ -56,6 +60,7 @@ class TransactionFilter(BaseModel):
     narration: Optional[str] = None
     min_amount: Optional[Decimal] = None
     max_amount: Optional[Decimal] = None
+    transaction_type: Optional[str] = None  # 交易类型：income, expense, transfer
 
 class FileInfo(BaseModel):
     name: str

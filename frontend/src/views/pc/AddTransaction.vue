@@ -222,7 +222,7 @@ interface Posting {
 }
 
 const transactionForm = reactive({
-  date: new Date().toISOString().split('T')[0],
+  date: new Date().toLocaleDateString('en-CA'),
   flag: '*',
   payee: '',
   narration: '',
@@ -375,7 +375,7 @@ const submitTransaction = async () => {
 
 // 重置表单
 const resetForm = () => {
-  transactionForm.date = new Date().toISOString().split('T')[0]
+  transactionForm.date = new Date().toLocaleDateString('en-CA')
   transactionForm.flag = '*'
   transactionForm.payee = ''
   transactionForm.narration = ''
