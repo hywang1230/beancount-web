@@ -33,10 +33,10 @@
       <van-cell
         v-for="transaction in recentTransactions"
         :key="transaction.id"
-        :title="formatAccountName(transaction.account)"
+        :title="transaction.account"
         :label="transaction.date"
         :value="formatAmount(transaction.amount)"
-        :value-class="transaction.amount > 0 ? 'positive' : 'negative'"
+        :value-class="transaction.type === 'income' ? 'positive' : 'negative'"
         is-link
         @click="viewTransaction(transaction)"
       />
@@ -170,6 +170,60 @@ const formatAccountName = (accountName: string) => {
   return accountName
 }
 
+// 通用的交易数据转换函数（和Transactions.vue保持一致）
+const convertTransactionData = (trans: any, fallbackId: string | number) => {
+  // 根据账户类型分组分录
+  const incomePostings = trans.postings?.filter((p: any) => p.account.startsWith('Income:')) || []
+  const expensePostings = trans.postings?.filter((p: any) => p.account.startsWith('Expenses:')) || []
+  
+  let mainAccountName = ''
+  let mainAmount = 0
+  let transactionType = 'transfer'
+  
+  if (expensePostings.length > 0) {
+    // 支出类：汇总所有支出分录的账户名和金额
+    const accountNames = expensePostings.map((p: any) => formatAccountName(p.account)).join(',')
+    const totalAmount = expensePostings.reduce((sum: number, p: any) => {
+      const amount = typeof p.amount === 'string' ? parseFloat(p.amount) : (p.amount || 0)
+      return sum + Math.abs(amount) // 取绝对值确保显示正数
+    }, 0)
+    
+    mainAccountName = accountNames
+    mainAmount = totalAmount
+    transactionType = 'expense'
+  } else if (incomePostings.length > 0) {
+    // 收入类：汇总所有收入分录的账户名和金额
+    const accountNames = incomePostings.map((p: any) => formatAccountName(p.account)).join(',')
+    const totalAmount = incomePostings.reduce((sum: number, p: any) => {
+      const amount = typeof p.amount === 'string' ? parseFloat(p.amount) : (p.amount || 0)
+      return sum + Math.abs(amount) // 取绝对值确保显示正数
+    }, 0)
+    
+    mainAccountName = accountNames
+    mainAmount = totalAmount
+    transactionType = 'income'
+  } else {
+    // 转账：使用第一个分录
+    const firstPosting = trans.postings?.[0]
+    if (firstPosting) {
+      mainAccountName = formatAccountName(firstPosting.account)
+      const amount = typeof firstPosting.amount === 'string' ? parseFloat(firstPosting.amount) : (firstPosting.amount || 0)
+      mainAmount = amount
+      transactionType = 'transfer'
+    }
+  }
+  
+  return {
+    id: trans.transaction_id || `dashboard-transaction-${fallbackId}`, // 使用唯一ID
+    transaction_id: trans.transaction_id, // 文件名+行号组成的唯一标识
+    payee: trans.payee || trans.narration || '',
+    account: mainAccountName,
+    date: trans.date,
+    amount: mainAmount,
+    type: transactionType
+  }
+}
+
 
 
 const viewTransaction = (transaction: any) => {
@@ -226,38 +280,23 @@ const loadDashboardData = async () => {
     // 处理最近交易数据
     if (recentTransactionsRes.status === 'fulfilled') {
       const transactionsData = recentTransactionsRes.value as unknown as any[]
-      const expenseTransactions: Transaction[] = []
+      const convertedTransactions: Transaction[] = []
       let count = 0
       
       for (const trans of transactionsData || []) {
         if (count >= 3) break
         
-        // 查找支出账户（Expenses开头且金额为正的账户）
-        const expensePosting = trans.postings?.find((posting: any) => {
-          const amount = typeof posting.amount === 'string' ? parseFloat(posting.amount) : posting.amount
-          const account = posting.account || ''
-          // 只选择支出账户（Expenses开头）且金额为正的posting
-          return account.startsWith('Expenses:') && amount > 0
-        })
+        // 使用和交易流水相同的汇总逻辑
+        const convertedTransaction = convertTransactionData(trans, count)
         
-        if (expensePosting) {
-          const amount = expensePosting.amount || 0
-          const parsedAmount = typeof amount === 'string' ? parseFloat(amount) : amount
-          
-          expenseTransactions.push({
-            id: trans.transaction_id || `transaction-${count + 1}`,  // 使用transaction_id作为id
-            transaction_id: trans.transaction_id,  // 保存原始的transaction_id
-            payee: trans.payee || trans.narration || '未知',
-            account: expensePosting.account,
-            date: trans.date,
-            amount: parsedAmount,
-            type: 'expense'
-          })
+        // 只显示支出和收入类交易
+        if (convertedTransaction.type === 'expense' || convertedTransaction.type === 'income') {
+          convertedTransactions.push(convertedTransaction)
           count++
         }
       }
       
-      recentTransactions.value = expenseTransactions
+      recentTransactions.value = convertedTransactions
     } else {
       console.error('获取最近交易失败:', recentTransactionsRes.reason)
     }
