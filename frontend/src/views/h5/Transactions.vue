@@ -6,46 +6,45 @@
         <van-dropdown-menu>
           <van-dropdown-item v-model="filterType" :options="typeOptions" />
           <van-dropdown-item v-model="filterAccount" :options="accountOptions" />
-          <van-dropdown-item v-model="sortBy" :options="sortOptions" />
+          <van-dropdown-item :title="dateFilterTitle" ref="dateFilterDropdown">
+            <div class="date-filter-panel">
+              <van-row gutter="8">
+                <van-col span="12">
+                  <van-field
+                    v-model="startDate"
+                    type="date"
+                    label="开始日期"
+                    placeholder="选择开始日期"
+                  />
+                </van-col>
+                <van-col span="12">
+                  <van-field
+                    v-model="endDate"
+                    type="date"
+                    label="结束日期"
+                    placeholder="选择结束日期"
+                  />
+                </van-col>
+              </van-row>
+              <van-row gutter="8" style="margin-top: 8px;">
+                <van-col span="6">
+                  <van-button size="small" @click="setQuickDateRange('last7days')">7天</van-button>
+                </van-col>
+                <van-col span="6">
+                  <van-button size="small" @click="setQuickDateRange('last30days')">30天</van-button>
+                </van-col>
+                <van-col span="6">
+                  <van-button size="small" @click="setQuickDateRange('thisMonth')">本月</van-button>
+                </van-col>
+                <van-col span="6">
+                  <van-button size="small" @click="clearDateRange()">清空</van-button>
+                </van-col>
+              </van-row>
+            </div>
+          </van-dropdown-item>
         </van-dropdown-menu>
       </div>
     </van-sticky>
-
-    <!-- 日期筛选栏 -->
-    <div class="date-filter-bar">
-      <van-row gutter="8">
-        <van-col span="12">
-          <van-field
-            v-model="startDate"
-            type="date"
-            label="开始日期"
-            placeholder="选择开始日期"
-          />
-        </van-col>
-        <van-col span="12">
-          <van-field
-            v-model="endDate"
-            type="date"
-            label="结束日期"
-            placeholder="选择结束日期"
-          />
-        </van-col>
-      </van-row>
-      <van-row gutter="8" style="margin-top: 8px;">
-        <van-col span="6">
-          <van-button size="small" @click="setQuickDateRange('last7days')">7天</van-button>
-        </van-col>
-        <van-col span="6">
-          <van-button size="small" @click="setQuickDateRange('last30days')">30天</van-button>
-        </van-col>
-        <van-col span="6">
-          <van-button size="small" @click="setQuickDateRange('thisMonth')">本月</van-button>
-        </van-col>
-        <van-col span="6">
-          <van-button size="small" @click="clearDateRange()">清空</van-button>
-        </van-col>
-      </van-row>
-    </div>
 
 
 
@@ -164,12 +163,7 @@ const accountOptions = ref([
   { text: '全部账户', value: 'all' }
 ])
 
-const sortOptions = [
-  { text: '按日期降序', value: 'date_desc' },
-  { text: '按日期升序', value: 'date_asc' },
-  { text: '按金额降序', value: 'amount_desc' },
-  { text: '按金额升序', value: 'amount_asc' }
-]
+
 
 interface Transaction {
   id: string  // 改为string类型支持transaction_id
@@ -230,6 +224,18 @@ const groupedTransactions = computed(() => {
   return Object.values(groups).sort((a, b) => 
     new Date(b.date).getTime() - new Date(a.date).getTime()
   )
+})
+
+// 计算属性 - 日期筛选显示标题
+const dateFilterTitle = computed(() => {
+  if (startDate.value && endDate.value) {
+    return `${startDate.value} 至 ${endDate.value}`
+  } else if (startDate.value) {
+    return `从 ${startDate.value}`
+  } else if (endDate.value) {
+    return `到 ${endDate.value}`
+  }
+  return '按日期筛选'
 })
 
 // 方法
@@ -682,10 +688,9 @@ onMounted(async () => {
   border-bottom: 1px solid #ebedf0;
 }
 
-.date-filter-bar {
-  padding: 12px 16px;
+.date-filter-panel {
+  padding: 16px;
   background-color: white;
-  border-bottom: 1px solid #ebedf0;
 }
 
 .transaction-group {
