@@ -449,21 +449,6 @@ const isMultiCategoryValid = computed(() => {
   return hasValidCategories && amountsMatch
 })
 
-const isFormValid = computed(() => {
-  // 基础信息校验
-  const hasBasicInfo = localFormData.value.amount && 
-                      localFormData.value.account &&
-                      parseFloat(localFormData.value.amount) > 0
-  
-  // 分类校验 - 每个分类都必须有分类名称和有效金额
-  const hasValidCategories = localFormData.value.categories.length > 0 && 
-                            localFormData.value.categories.every(cat => isCategoryComplete(cat))
-  
-  // 金额分配校验 - 剩余金额必须为0
-  const amountsMatch = Math.abs(remainingAmount.value) < 0.01 // 允许小数误差
-  
-  return hasBasicInfo && hasValidCategories && amountsMatch
-})
 
 // 监听数据变化
 watch(localFormData, (newData) => {
@@ -735,13 +720,20 @@ const onSubmit = () => {
 }
 
 const loadOptions = async () => {
+  console.log('=== TransactionForm loadOptions 开始 ===')
+  console.log('当前交易类型:', props.type)
+  
   try {
     // 加载收款人历史
     try {
+      console.log('正在加载收款人列表...')
       const payeeData = await getPayees()
+      console.log('收款人API原始响应:', payeeData)
+      
       payeeOptions.value = Array.isArray(payeeData) 
         ? payeeData.map(p => ({ text: p, value: p }))
         : []
+      console.log('处理后的收款人选项:', payeeOptions.value)
     } catch (error) {
       console.error('获取收款人列表失败:', error)
       payeeOptions.value = []
@@ -749,17 +741,27 @@ const loadOptions = async () => {
 
     // 加载账户选项 - 资产和负债账户
     try {
+      console.log('正在加载账户列表...')
       const response = await getAccountsByType()
-      const accountData = response.data
-      console.log('获取到的账户数据:', accountData)
+      console.log('账户API完整响应:', response)
+      const accountData = response.data || response
+      console.log('账户数据:', accountData)
+      console.log('账户数据类型:', typeof accountData)
       
       // 处理后端返回的按类型分组的数据格式
       let accounts: string[] = []
       if (accountData && typeof accountData === 'object') {
+        console.log('Assets账户:', accountData.Assets)
+        console.log('Liabilities账户:', accountData.Liabilities)
+        
         // 提取 Assets 和 Liabilities 类型的账户
         const assetsAccounts: string[] = accountData.Assets || []
         const liabilitiesAccounts: string[] = accountData.Liabilities || []
         accounts = [...assetsAccounts, ...liabilitiesAccounts]
+        
+        console.log('合并后的账户列表:', accounts)
+      } else {
+        console.warn('账户数据格式不正确或为空:', accountData)
       }
       
       accountOptions.value = accounts.map((acc: string) => ({
@@ -767,10 +769,14 @@ const loadOptions = async () => {
         value: acc
       }))
         
-      console.log('处理后的账户选项:', accountOptions.value)
+      console.log('最终账户选项:', accountOptions.value)
+      console.log('账户选项数量:', accountOptions.value.length)
     } catch (error) {
       console.error('获取账户列表失败:', error)
+      console.error('错误详情:', (error as any).response || (error as any).message || error)
+      
       // 备用硬编码数据
+      console.log('使用备用账户数据')
       accountOptions.value = [
         { text: formatAccountNameForDisplay('Assets:ZJ-资金:现金'), value: 'Assets:ZJ-资金:现金' },
         { text: formatAccountNameForDisplay('Assets:ZJ-资金:活期存款'), value: 'Assets:ZJ-资金:活期存款' },
@@ -780,9 +786,11 @@ const loadOptions = async () => {
 
     // 加载分类选项
     try {
+      console.log('正在加载分类列表...')
       const response = await getAccountsByType()
-      const categoryData = response.data
-      console.log('获取到的分类数据:', categoryData)
+      console.log('分类API完整响应:', response)
+      const categoryData = response.data || response
+      console.log('分类数据:', categoryData)
       
       // 处理后端返回的按类型分组的数据格式
       let categories: string[] = []
@@ -790,9 +798,16 @@ const loadOptions = async () => {
         // 根据交易类型选择对应的分类
         if (props.type === 'expense') {
           categories = categoryData.Expenses || []
-        } else {
+          console.log('支出分类:', categories)
+        } else if (props.type === 'income') {
           categories = categoryData.Income || []
+          console.log('收入分类:', categories)
+        } else {
+          console.log('调整类型，使用支出分类')
+          categories = categoryData.Expenses || []
         }
+      } else {
+        console.warn('分类数据格式不正确或为空:', categoryData)
       }
       
       categoryOptions.value = categories.map((acc: string) => ({
@@ -800,10 +815,14 @@ const loadOptions = async () => {
         value: acc
       }))
         
-      console.log('处理后的分类选项:', categoryOptions.value)
+      console.log('最终分类选项:', categoryOptions.value)
+      console.log('分类选项数量:', categoryOptions.value.length)
     } catch (error) {
       console.error('获取分类列表失败:', error)
+      console.error('错误详情:', (error as any).response || (error as any).message || error)
+      
       // 备用硬编码数据
+      console.log('使用备用分类数据')
       if (props.type === 'expense') {
         categoryOptions.value = [
           { text: formatAccountNameForDisplay('Expenses:CY-餐饮'), value: 'Expenses:CY-餐饮' },
@@ -822,6 +841,8 @@ const loadOptions = async () => {
   } catch (error) {
     console.error('加载选项数据失败:', error)
   }
+  
+  console.log('=== TransactionForm loadOptions 结束 ===')
 }
 
 onMounted(() => {

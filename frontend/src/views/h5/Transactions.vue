@@ -6,47 +6,28 @@
         <van-dropdown-menu>
           <van-dropdown-item v-model="filterType" :options="typeOptions" />
           <van-dropdown-item v-model="filterAccount" :options="accountOptions" />
-          <van-dropdown-item :title="dateFilterTitle" ref="dateFilterDropdown">
+          <van-dropdown-item :title="formatDateRangeDisplay(startDate, endDate)" ref="dateFilterDropdown">
             <div class="date-filter-panel">
-              <van-row gutter="8">
-                <van-col span="12">
-                  <van-cell
-                    title="开始日期"
-                    :value="formatDateDisplay(startDate)"
-                    is-link
-                    @click="showStartDateCalendar = true"
-                  />
-                </van-col>
-                <van-col span="12">
-                  <van-cell
-                    title="结束日期"
-                    :value="formatDateDisplay(endDate)"
-                    is-link
-                    @click="showEndDateCalendar = true"
-                  />
-                </van-col>
-              </van-row>
-              <van-row gutter="8" style="margin-top: 8px;">
-                <van-col span="6">
-                  <van-button size="small" @click="setQuickDateRange('last7days')">7天</van-button>
-                </van-col>
-                <van-col span="6">
-                  <van-button size="small" @click="setQuickDateRange('last30days')">30天</van-button>
-                </van-col>
-                <van-col span="6">
-                  <van-button size="small" @click="setQuickDateRange('thisMonth')">本月</van-button>
-                </van-col>
-                <van-col span="6">
-                  <van-button size="small" @click="clearDateRange()">清空</van-button>
-                </van-col>
-              </van-row>
+              <van-cell
+                title="日期范围"
+                :value="formatDateRangeDisplay(startDate, endDate)"
+                is-link
+                @click="showDateRangeCalendar = true"
+              />
+              <van-button 
+                v-if="startDate || endDate"
+                type="default" 
+                size="small" 
+                @click="clearDateRange"
+                style="margin-top: 12px; width: 100%;"
+              >
+                清除日期筛选
+              </van-button>
             </div>
           </van-dropdown-item>
         </van-dropdown-menu>
       </div>
     </van-sticky>
-
-
 
     <!-- 交易列表 -->
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
@@ -114,30 +95,18 @@
       @click="$router.push('/h5/add-transaction')"
     />
 
-    <!-- 开始日期日历 -->
+    <!-- 日期范围日历 -->
     <van-calendar
-      v-model:show="showStartDateCalendar"
-      title="选择开始日期"
-      :default-date="startDate ? new Date(startDate) : new Date()"
+      v-model:show="showDateRangeCalendar"
+      title="选择日期范围"
+      type="range"
       :min-date="new Date(2025, 5, 1)"
       :max-date="new Date()"
       switch-mode="year-month"
       :show-confirm="false"
-      @confirm="onStartDateConfirm"
-      @close="showStartDateCalendar = false"
-    />
-
-    <!-- 结束日期日历 -->
-    <van-calendar
-      v-model:show="showEndDateCalendar"
-      title="选择结束日期"
-      :default-date="endDate ? new Date(endDate) : new Date()"
-      :min-date="new Date(2025, 5, 1)"
-      :max-date="new Date()"
-      switch-mode="year-month"
-      :show-confirm="false"
-      @confirm="onEndDateConfirm"
-      @close="showEndDateCalendar = false"
+      :allow-same-day="true"
+      @confirm="onDateRangeConfirm"
+      @close="showDateRangeCalendar = false"
     />
   </div>
 </template>
@@ -175,8 +144,7 @@ const sortBy = ref('date_desc')
 // 日期筛选相关
 const startDate = ref('')
 const endDate = ref('')
-const showStartDateCalendar = ref(false)
-const showEndDateCalendar = ref(false)
+const showDateRangeCalendar = ref(false)
 
 // 选项数据
 const typeOptions = [
@@ -270,17 +238,40 @@ const groupedTransactions = computed(() => {
   )
 })
 
-// 计算属性 - 日期筛选显示标题
-const dateFilterTitle = computed(() => {
-  if (startDate.value && endDate.value) {
-    return `${startDate.value} 至 ${endDate.value}`
-  } else if (startDate.value) {
-    return `从 ${startDate.value}`
-  } else if (endDate.value) {
-    return `到 ${endDate.value}`
+// 格式化日期范围显示
+const formatDateRangeDisplay = (startDateStr: string, endDateStr: string) => {
+  if (!startDateStr && !endDateStr) return '按日期筛选'
+  if (startDateStr && endDateStr) {
+    const startDate = new Date(startDateStr)
+    const endDate = new Date(endDateStr)
+    const startFormatted = startDate.toLocaleDateString('zh-CN', {
+      month: 'short',
+      day: 'numeric'
+    })
+    const endFormatted = endDate.toLocaleDateString('zh-CN', {
+      month: 'short',
+      day: 'numeric'
+    })
+    return `${startFormatted} 至 ${endFormatted}`
+  }
+  if (startDateStr) {
+    const startDate = new Date(startDateStr)
+    const startFormatted = startDate.toLocaleDateString('zh-CN', {
+      month: 'short',
+      day: 'numeric'
+    })
+    return `从 ${startFormatted}`
+  }
+  if (endDateStr) {
+    const endDate = new Date(endDateStr)
+    const endFormatted = endDate.toLocaleDateString('zh-CN', {
+      month: 'short',
+      day: 'numeric'
+    })
+    return `到 ${endFormatted}`
   }
   return '按日期筛选'
-})
+}
 
 // 方法
 const formatAmount = (amount: number) => {
@@ -587,8 +578,8 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
       const today = new Date()
       const threeMonthsAgo = new Date()
       threeMonthsAgo.setMonth(today.getMonth() - 3)
-      params.start_date = formatDate(threeMonthsAgo)
-      params.end_date = formatDate(today)
+      params.start_date = threeMonthsAgo.toLocaleDateString('en-CA')
+      params.end_date = today.toLocaleDateString('en-CA')
     }
 
     console.log('🌐 Making API call to getTransactions with final params:', params)
@@ -764,57 +755,24 @@ const loadAccountOptions = async () => {
   }
 }
 
-// 日期筛选相关方法
-const formatDate = (date: Date) => {
-  return date.toLocaleDateString('en-CA')
-}
 
-const setQuickDateRange = (range: string) => {
-  const today = new Date()
-  const endDateValue = new Date(today)
-  let startDateValue = new Date(today)
-  
-  switch (range) {
-    case 'last7days':
-      startDateValue.setDate(today.getDate() - 7)
-      break
-    case 'last30days':
-      startDateValue.setDate(today.getDate() - 30)
-      break
-    case 'thisMonth':
-      startDateValue = new Date(today.getFullYear(), today.getMonth(), 1)
-      break
+
+// 日期范围确认处理函数
+const onDateRangeConfirm = (dates: Date[]) => {
+  if (dates && dates.length === 2) {
+    startDate.value = dates[0].toLocaleDateString('en-CA')
+    endDate.value = dates[1].toLocaleDateString('en-CA')
+    showDateRangeCalendar.value = false
   }
-  
-  startDate.value = formatDate(startDateValue)
-  endDate.value = formatDate(endDateValue)
 }
 
+// 清除日期范围
 const clearDateRange = () => {
   startDate.value = ''
   endDate.value = ''
 }
 
-// 日期处理
-const formatDateDisplay = (dateStr: string) => {
-  if (!dateStr) return '选择日期'
-  const date = new Date(dateStr)
-  return date.toLocaleDateString('zh-CN', {
-    year: 'numeric',
-    month: 'long',
-    day: 'numeric'
-  })
-}
 
-const onStartDateConfirm = (date: Date) => {
-  startDate.value = formatDate(date)
-  showStartDateCalendar.value = false
-}
-
-const onEndDateConfirm = (date: Date) => {
-  endDate.value = formatDate(date)
-  showEndDateCalendar.value = false
-}
 
 // 组件是否已初始化完成
 const isInitialized = ref(false)
@@ -889,6 +847,7 @@ onMounted(async () => {
   border-bottom: 1px solid #ebedf0;
 }
 
+/* 日期筛选面板 */
 .date-filter-panel {
   padding: 16px;
   background-color: white;

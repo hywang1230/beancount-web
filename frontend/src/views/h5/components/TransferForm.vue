@@ -349,19 +349,31 @@ const onSubmit = () => {
 }
 
 const loadAccountOptions = async () => {
+  console.log('=== TransferForm loadAccountOptions 开始 ===')
+  
   try {
     // 从API获取资产和负债账户列表
+    console.log('正在加载转账账户列表...')
     const response = await getAccountsByType()
-    const accountData = response.data
-    console.log('转账表单获取到的账户数据:', accountData)
+    console.log('转账表单API完整响应:', response)
+    const accountData = response.data || response
+    console.log('转账表单账户数据:', accountData)
+    console.log('转账表单账户数据类型:', typeof accountData)
     
     // 处理后端返回的按类型分组的数据格式
     let accounts: string[] = []
     if (accountData && typeof accountData === 'object') {
+      console.log('转账表单Assets账户:', accountData.Assets)
+      console.log('转账表单Liabilities账户:', accountData.Liabilities)
+      
       // 提取 Assets 和 Liabilities 类型的账户
       const assetsAccounts: string[] = accountData.Assets || []
       const liabilitiesAccounts: string[] = accountData.Liabilities || []
       accounts = [...assetsAccounts, ...liabilitiesAccounts]
+      
+      console.log('转账表单合并后的账户列表:', accounts)
+    } else {
+      console.warn('转账表单账户数据格式不正确或为空:', accountData)
     }
     
     accountOptions.value = accounts.map((acc: string) => ({
@@ -369,10 +381,14 @@ const loadAccountOptions = async () => {
       value: acc
     }))
     
-    console.log('转账表单处理后的账户选项:', accountOptions.value)
+    console.log('转账表单最终账户选项:', accountOptions.value)
+    console.log('转账表单账户选项数量:', accountOptions.value.length)
   } catch (error) {
-    console.error('获取账户列表失败:', error)
+    console.error('转账表单获取账户列表失败:', error)
+    console.error('转账表单错误详情:', (error as any).response || (error as any).message || error)
+    
     // 备用硬编码数据
+    console.log('转账表单使用备用账户数据')
     accountOptions.value = [
       { text: formatAccountNameForDisplay('Assets:ZJ-资金:现金'), value: 'Assets:ZJ-资金:现金' },
       { text: formatAccountNameForDisplay('Assets:ZJ-资金:活期存款'), value: 'Assets:ZJ-资金:活期存款' },
@@ -381,6 +397,8 @@ const loadAccountOptions = async () => {
       { text: formatAccountNameForDisplay('Liabilities:XYK-信用卡:招行:经典白'), value: 'Liabilities:XYK-信用卡:招行:经典白' }
     ]
   }
+  
+  console.log('=== TransferForm loadAccountOptions 结束 ===')
 }
 
 onMounted(() => {
