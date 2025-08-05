@@ -123,8 +123,7 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showConfirmDialog, showToast } from 'vant'
-import { getTransactions, deleteTransaction as deleteTransactionApi } from '@/api/transactions'
-import { getAllAccounts } from '@/api/accounts'
+import { getTransactions, deleteTransaction as deleteTransactionApi, getAccounts } from '@/api/transactions'
 
 const router = useRouter()
 const route = useRoute()
@@ -159,7 +158,13 @@ const typeOptions = [
   { text: '转账', value: 'transfer' }
 ]
 
-const accountOptions = ref([
+interface AccountOption {
+  text: string
+  value: string
+  disabled?: boolean
+}
+
+const accountOptions = ref<AccountOption[]>([
   { text: '全部账户', value: 'all' }
 ])
 
@@ -563,22 +568,104 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
   }
 }
 
+// 格式化账户名称（用于显示）
+const formatAccountNameForDisplay = (accountName: string) => {
+  if (!accountName) return '未知账户'
+  
+  // 去掉第一级账户名称（Assets、Liabilities、Income、Expenses等）
+  const parts = accountName.split(':')
+  if (parts.length > 1) {
+    let formattedName = parts.slice(1).join(':')
+    
+    // 进一步处理：去掉第一个"-"以及前面的字母部分
+    const dashIndex = formattedName.indexOf('-')
+    if (dashIndex > 0) {
+      formattedName = formattedName.substring(dashIndex + 1)
+    }
+    
+    // 将":"替换为"-"以提高可读性
+    formattedName = formattedName.replace(/:/g, '-')
+    
+    return formattedName
+  }
+  return accountName
+}
+
+// 获取账户类型
+const getAccountType = (accountName: string) => {
+  if (accountName.startsWith('Assets:')) return 'assets'
+  if (accountName.startsWith('Liabilities:')) return 'liabilities'
+  if (accountName.startsWith('Income:')) return 'income'
+  if (accountName.startsWith('Expenses:')) return 'expenses'
+  if (accountName.startsWith('Equity:')) return 'equity'
+  return 'other'
+}
+
+// 获取账户类型的显示名称
+const getAccountTypeLabel = (type: string) => {
+  const typeLabels: Record<string, string> = {
+    'assets': '💰 资产',
+    'liabilities': '📝 负债',
+    'income': '💵 收入',
+    'expenses': '💸 支出',
+    'equity': '⚖️ 权益',
+    'other': '📁 其他'
+  }
+  return typeLabels[type] || '📁 其他'
+}
+
 // 加载账户选项
 const loadAccountOptions = async () => {
   try {
-    const response = await getAllAccounts()
-    const accounts = response.data || []
+    const response = await getAccounts()
+    const accounts = response.data || response || []
     
-    // 添加账户选项
-    const options = [{ text: '全部账户', value: 'all' }]
+    // 按类型分组账户
+    const accountsByType: Record<string, any[]> = {
+      'assets': [],
+      'liabilities': [],
+      'income': [],
+      'expenses': [],
+      'equity': [],
+      'other': []
+    }
+    
     accounts.forEach((account: any) => {
-      options.push({
-        text: account.name || account.full_path,
-        value: account.name || account.full_path
+      const accountName = typeof account === 'string' ? account : (account.name || account.full_path)
+      const accountType = getAccountType(accountName)
+      accountsByType[accountType].push({
+        text: formatAccountNameForDisplay(accountName),
+        value: accountName
       })
     })
     
+    // 构建分层选项
+    const options = [{ text: '全部账户', value: 'all' }]
+    
+    // 按类型添加账户，并在每个类型前添加分隔符
+    const typeOrder = ['assets', 'liabilities', 'income', 'expenses', 'equity', 'other']
+    
+    typeOrder.forEach(type => {
+      if (accountsByType[type].length > 0) {
+        // 添加类型标题（不可选择）
+        options.push({
+          text: getAccountTypeLabel(type),
+          value: `__type_${type}__`,
+          disabled: true // 标记为不可选择
+        })
+        
+        // 添加该类型下的账户，并增加缩进
+        accountsByType[type].forEach(account => {
+          options.push({
+            text: `　　${account.text}`, // 使用全角空格增加缩进
+            value: account.value
+          })
+        })
+      }
+    })
+    
     accountOptions.value = options
+    console.log('账户选项加载成功:', accounts.length, '个账户，按', typeOrder.filter(type => accountsByType[type].length > 0).length, '种类型分组')
   } catch (error) {
     console.error('加载账户选项失败:', error)
   }
@@ -691,6 +778,30 @@ onMounted(async () => {
 .date-filter-panel {
   padding: 16px;
   background-color: white;
+}
+
+/* 账户分组样式 */
+:deep(.van-dropdown-item__option) {
+  padding: 10px 16px;
+}
+
+/* 账户类型标题样式 */
+:deep(.van-dropdown-item__option[disabled]) {
+  background-color: #f7f8fa !important;
+  color: #646566 !important;
+  font-weight: 500;
+  font-size: 13px;
+  padding: 8px 16px;
+  cursor: default;
+}
+
+/* 账户选项缩进样式 */
+:deep(.van-dropdown-item__option:not([disabled])) {
+  border-left: 2px solid transparent;
+}
+
+:deep(.van-dropdown-item__option:hover:not([disabled])) {
+  border-left-color: #1989fa;
 }
 
 .transaction-group {
