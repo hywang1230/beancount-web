@@ -238,22 +238,57 @@
     <!-- 归档确认对话框 -->
     <van-dialog
       v-model:show="showArchiveDialog"
-      title="归档账户"
-      show-cancel-button
-      @confirm="confirmArchiveAccount"
-      :before-close="beforeCloseArchive"
+      title=""
+      :show-cancel-button="false"
+      :show-confirm-button="false"
+      class-name="archive-dialog"
+      close-on-click-overlay
     >
       <div class="archive-content">
-        <p>确定要归档账户 <strong>{{ archiveAccountName }}</strong> 吗？</p>
-        <p class="warning-text">归档后该账户将在指定日期后不可用。</p>
-        <van-field
-          v-model="archiveDate"
-          label="归档日期"
-          placeholder="请选择归档日期"
-          readonly
-          is-link
-          @click="showArchiveDatePicker = true"
-        />
+        <!-- 自定义标题 -->
+        <div class="dialog-header">
+          <van-icon name="warning-o" class="warning-icon" />
+          <h3 class="dialog-title">归档账户</h3>
+        </div>
+        
+        <!-- 账户信息 -->
+        <div class="account-info">
+          <p class="account-name">{{ archiveAccountName }}</p>
+          <p class="warning-message">归档后该账户将在指定日期后不可用</p>
+        </div>
+        
+        <!-- 日期选择 -->
+        <div class="date-section">
+          <van-cell
+            title="归档日期"
+            :value="archiveDate || '请选择归档日期'"
+            is-link
+            @click="showArchiveDatePicker = true"
+            class="date-cell"
+          >
+            <template #icon>
+              <van-icon name="calendar-o" class="calendar-icon" />
+            </template>
+          </van-cell>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="dialog-actions">
+          <van-button
+            class="cancel-btn"
+            @click="showArchiveDialog = false"
+          >
+            取消
+          </van-button>
+          <van-button
+            type="danger"
+            class="confirm-btn"
+            :disabled="!archiveDate"
+            @click="confirmArchiveAccount"
+          >
+            确认归档
+          </van-button>
+        </div>
       </div>
     </van-dialog>
 
@@ -746,12 +781,7 @@ const onArchiveDateConfirm = ({ selectedValues }: any) => {
   showArchiveDatePicker.value = false
 }
 
-const beforeCloseArchive = (action: string) => {
-  if (action === 'confirm') {
-    return confirmArchiveAccount()
-  }
-  return true
-}
+
 
 const confirmArchiveAccount = async () => {
   if (!archiveDate.value) {
@@ -1019,22 +1049,115 @@ onMounted(() => {
   margin-top: 24px;
 }
 
-/* 对话框内容样式 */
-.archive-content,
-.restore-content {
-  padding: 16px 0;
+/* 归档对话框样式 */
+:deep(.archive-dialog) {
+  border-radius: 16px;
+  overflow: hidden;
 }
 
-.archive-content p,
+.archive-content {
+  padding: 0;
+}
+
+.dialog-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 20px 16px;
+  background: #fff;
+}
+
+.warning-icon {
+  font-size: 48px;
+  color: #ff6b35;
+  margin-bottom: 12px;
+}
+
+.dialog-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #323233;
+  margin: 0;
+}
+
+.account-info {
+  padding: 16px 20px;
+  text-align: center;
+  background: #f7f8fa;
+}
+
+.account-name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323233;
+  margin: 0 0 8px 0;
+  padding: 8px 16px;
+  background: white;
+  border-radius: 8px;
+  border: 1px solid #ebedf0;
+}
+
+.warning-message {
+  font-size: 13px;
+  color: #ff6b35;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.date-section {
+  padding: 16px 20px;
+}
+
+.date-cell {
+  border-radius: 8px;
+  border: 1px solid #ebedf0;
+  overflow: hidden;
+}
+
+.calendar-icon {
+  color: #409eff;
+  margin-right: 8px;
+}
+
+.dialog-actions {
+  display: flex;
+  gap: 12px;
+  padding: 20px;
+  background: #f7f8fa;
+}
+
+.cancel-btn {
+  flex: 1;
+  height: 44px;
+  border: 1px solid #ebedf0;
+  background: white;
+  color: #646566;
+  border-radius: 8px;
+}
+
+.confirm-btn {
+  flex: 1;
+  height: 44px;
+  background: #ff6b35;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.confirm-btn:disabled {
+  background: #c8c9cc;
+  color: white;
+}
+
+/* 恢复对话框样式保持简单 */
+.restore-content {
+  padding: 16px 20px;
+}
+
 .restore-content p {
   margin: 0 0 12px 0;
   line-height: 1.5;
   color: #303133;
-}
-
-.warning-text {
-  font-size: 12px;
-  color: #e6a23c;
 }
 
 .info-text {
