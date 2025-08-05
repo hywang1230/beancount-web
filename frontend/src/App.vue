@@ -32,26 +32,7 @@ const detectDevice = () => {
   return isMobileDevice || isSmallScreen
 }
 
-// 路由重定向逻辑
-const redirectBasedOnDevice = () => {
-  const currentPath = route.path
-  const mobile = detectDevice()
-  isMobile.value = mobile
-  
-  // 只处理根路径重定向，其他路径保持不变
-  if (currentPath === '/') {
-    if (mobile) {
-      router.replace('/h5/dashboard')
-    } else {
-      router.replace('/dashboard')
-    }
-  }
-  
-  // 处理H5子路径的重定向
-  if (currentPath === '/h5' || currentPath === '/h5/') {
-    router.replace('/h5/dashboard')
-  }
-}
+
 
 onMounted(() => {
   // 暂时禁用自动重定向，只设置设备类型
