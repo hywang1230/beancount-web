@@ -70,6 +70,7 @@ const tabbarItems = [
   { name: 'dashboard', title: '首页', icon: 'home-o', path: '/h5/dashboard' },
   { name: 'transactions', title: '流水', icon: 'bill-o', path: '/h5/transactions' },
   { name: 'add', title: '记账', icon: 'plus', path: '/h5/add-transaction' },
+  { name: 'recurring', title: '周期', icon: 'replay', path: '/h5/recurring' },
   { name: 'reports', title: '报表', icon: 'bar-chart-o', path: '/h5/reports' },
   { name: 'accounts', title: '账户', icon: 'manager-o', path: '/h5/accounts' }
 ]

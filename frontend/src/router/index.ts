@@ -117,6 +117,24 @@ const routes: RouteRecordRaw[] = [
         name: 'H5RecurringTransactions',
         component: () => import('@/views/h5/RecurringTransactions.vue'),
         meta: { title: '周期记账', platform: 'h5' }
+      },
+      {
+        path: 'recurring/add',
+        name: 'H5AddRecurring',
+        component: () => import('@/views/h5/AddRecurring.vue'),
+        meta: { title: '新增周期记账', platform: 'h5' }
+      },
+      {
+        path: 'recurring/:id',
+        name: 'H5RecurringDetail',
+        component: () => import('@/views/h5/RecurringDetail.vue'),
+        meta: { title: '周期记账详情', platform: 'h5' }
+      },
+      {
+        path: 'recurring/edit/:id',
+        name: 'H5EditRecurring',
+        component: () => import('@/views/h5/EditRecurring.vue'),
+        meta: { title: '编辑周期记账', platform: 'h5' }
       }
     ]
   }
