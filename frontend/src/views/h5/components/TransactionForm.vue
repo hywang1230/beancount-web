@@ -527,20 +527,6 @@ const onCurrencyConfirm = ({ selectedValues }: { selectedValues: string[] }) => 
 
 
 
-// 智能分配金额的函数
-const updateCategoryAmounts = (totalAmount: string) => {
-  // 只在有有效金额时才执行分配
-  if (!totalAmount || parseFloat(totalAmount) <= 0) {
-    return
-  }
-  
-  // 如果只有一个分类且金额为空，自动分配全部金额
-  if (localFormData.value.categories.length === 1 && !localFormData.value.categories[0].amount) {
-    localFormData.value.categories[0].amount = totalAmount
-    return
-  }
-}
-
 // 方法  
 const onAmountInput = (value: string | number) => {
   console.log('onAmountInput called with:', value, typeof value)
@@ -763,15 +749,16 @@ const loadOptions = async () => {
 
     // 加载账户选项 - 资产和负债账户
     try {
-      const accountData = await getAccountsByType()
+      const response = await getAccountsByType()
+      const accountData = response.data
       console.log('获取到的账户数据:', accountData)
       
       // 处理后端返回的按类型分组的数据格式
-      let accounts = []
+      let accounts: string[] = []
       if (accountData && typeof accountData === 'object') {
         // 提取 Assets 和 Liabilities 类型的账户
-        const assetsAccounts = accountData.Assets || []
-        const liabilitiesAccounts = accountData.Liabilities || []
+        const assetsAccounts: string[] = accountData.Assets || []
+        const liabilitiesAccounts: string[] = accountData.Liabilities || []
         accounts = [...assetsAccounts, ...liabilitiesAccounts]
       }
       
@@ -793,11 +780,12 @@ const loadOptions = async () => {
 
     // 加载分类选项
     try {
-      const categoryData = await getAccountsByType()
+      const response = await getAccountsByType()
+      const categoryData = response.data
       console.log('获取到的分类数据:', categoryData)
       
       // 处理后端返回的按类型分组的数据格式
-      let categories = []
+      let categories: string[] = []
       if (categoryData && typeof categoryData === 'object') {
         // 根据交易类型选择对应的分类
         if (props.type === 'expense') {
@@ -898,6 +886,7 @@ onMounted(() => {
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
 }
 

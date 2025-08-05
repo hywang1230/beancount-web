@@ -351,15 +351,16 @@ const onSubmit = () => {
 const loadAccountOptions = async () => {
   try {
     // 从API获取资产和负债账户列表
-    const accountData = await getAccountsByType()
+    const response = await getAccountsByType()
+    const accountData = response.data
     console.log('转账表单获取到的账户数据:', accountData)
     
     // 处理后端返回的按类型分组的数据格式
-    let accounts = []
+    let accounts: string[] = []
     if (accountData && typeof accountData === 'object') {
       // 提取 Assets 和 Liabilities 类型的账户
-      const assetsAccounts = accountData.Assets || []
-      const liabilitiesAccounts = accountData.Liabilities || []
+      const assetsAccounts: string[] = accountData.Assets || []
+      const liabilitiesAccounts: string[] = accountData.Liabilities || []
       accounts = [...assetsAccounts, ...liabilitiesAccounts]
     }
     
