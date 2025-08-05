@@ -1031,16 +1031,37 @@ class BeancountService:
             with open(target_filename, 'r', encoding='utf-8') as f:
                 lines = f.readlines()
             
-            # 删除指定行的交易（这里简化处理，假设交易占一行）
-            # 实际上可能需要更复杂的解析来处理多行交易
-            if lineno <= len(lines):
-                # 注释掉该行而不是直接删除，以保持行号的一致性
-                original_line = lines[lineno - 1]
-                lines[lineno - 1] = f"; DELETED: {original_line}"
+            # 找到交易的起始行和结束行（使用与更新相同的逻辑）
+            start_line = lineno - 1  # 转换为0基索引
+            end_line = start_line
+            
+            # 查找交易的结束行：从起始行开始，找到下一个不以空格或制表符开头的行
+            for i in range(start_line + 1, len(lines)):
+                line = lines[i].rstrip()
+                if line and not line.startswith(('  ', '\t')) and not line.startswith(';'):
+                    # 找到下一个交易或其他条目的开始
+                    end_line = i - 1
+                    break
+                elif i == len(lines) - 1:
+                    # 这是文件的最后一行
+                    end_line = i
+                    break
+                elif line.strip():
+                    # 这是交易的一部分（posting行）
+                    end_line = i
+            
+            print(f"删除交易范围: 行 {start_line + 1} 到 {end_line + 1}")
+            
+            # 直接删除整个交易块
+            if start_line < len(lines):
+                # 删除交易的所有行
+                del lines[start_line:end_line + 1]
                 
                 # 写回文件
                 with open(target_filename, 'w', encoding='utf-8') as f:
                     f.writelines(lines)
+                
+                print(f"交易删除成功，删除了 {end_line - start_line + 1} 行")
                 
                 # 重新加载条目
                 self._load_entries(force_reload=True)
@@ -1050,6 +1071,8 @@ class BeancountService:
             
         except Exception as e:
             print(f"删除交易失败: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def _convert_entry_to_response(self, entry: Transaction) -> TransactionResponse:
