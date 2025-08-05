@@ -103,7 +103,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { showToast } from 'vant'
 import { getAccountsByType } from '@/api/accounts'
 
@@ -215,11 +215,38 @@ const isFormValid = computed(() => {
 
 // 监听数据变化
 watch(localFormData, (newData) => {
-  emit('update', newData)
+  // 只在不是从props更新时才emit
+  if (!isUpdatingFromProps) {
+    emit('update', newData)
+  }
 }, { deep: true })
 
+// 避免循环更新的标志
+let isUpdatingFromProps = false
 watch(() => props.formData, (newData) => {
-  localFormData.value = { ...newData }
+  // 避免循环更新：只在有实质性变化且不是来自内部更新时更新
+  if (newData && !isUpdatingFromProps) {
+    // 检查是否真的有变化
+    const hasSignificantChange = 
+      newData.amount !== localFormData.value.amount ||
+      newData.fromAccount !== localFormData.value.fromAccount ||
+      newData.toAccount !== localFormData.value.toAccount ||
+      newData.description !== localFormData.value.description
+    
+    if (hasSignificantChange) {
+      console.log('TransferForm收到新的formData:', newData)
+      
+      isUpdatingFromProps = true
+      localFormData.value = { 
+        ...newData,
+        currency: newData.currency || 'CNY'
+      }
+      // 下一个tick后重置标志
+      nextTick(() => {
+        isUpdatingFromProps = false
+      })
+    }
+  }
 }, { deep: true })
 
 // 监听转出账户变化，清空转入账户

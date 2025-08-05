@@ -85,7 +85,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { showToast, showLoadingToast, closeToast } from 'vant'
 import TransactionForm from '@/views/h5/components/TransactionForm.vue'
 import TransferForm from '@/views/h5/components/TransferForm.vue'
-import { createTransaction, getTransactions } from '@/api/transactions'
+import { createTransaction, getTransactionById, updateTransaction } from '@/api/transactions'
 
 const router = useRouter()
 const route = useRoute()
@@ -136,13 +136,16 @@ const canSave = computed(() => {
 
 // 页面标题
 const getPageTitle = () => {
+  const isEditMode = !!route.query.id
+  
   const titleMap: Record<string, string> = {
-    expense: '新增支出',
-    income: '新增收入', 
-    transfer: '新增转账',
-    adjustment: '调整余额'
+    expense: isEditMode ? '编辑支出' : '新增支出',
+    income: isEditMode ? '编辑收入' : '新增收入', 
+    transfer: isEditMode ? '编辑转账' : '新增转账',
+    adjustment: isEditMode ? '编辑余额' : '调整余额'
   }
-  return titleMap[activeTab.value] || '新增交易'
+  const title = titleMap[activeTab.value] || (isEditMode ? '编辑交易' : '新增交易')
+  return title
 }
 
 // 设置活动标签
@@ -173,6 +176,30 @@ const updateFormData = (data: any) => {
 
 const updateTransferFormData = (data: any) => {
   transferFormData.value = { ...transferFormData.value, ...data }
+}
+
+// 格式化账户名称用于分类显示
+const formatAccountNameForCategory = (accountName: string) => {
+  if (!accountName) return '未知分类'
+  
+  // 去掉第一级账户名称（通常是Assets、Liabilities、Income、Expenses等）
+  const parts = accountName.split(':')
+  if (parts.length > 1) {
+    let formattedName = parts.slice(1).join(':')
+    
+    // 进一步处理：去掉第一个"-"以及前面的字母部分
+    // 例如：JT-交通:过路费 -> 交通:过路费，然后替换":"为"-"变成：交通-过路费
+    const dashIndex = formattedName.indexOf('-')
+    if (dashIndex > 0) {
+      formattedName = formattedName.substring(dashIndex + 1)
+    }
+    
+    // 将":"替换为"-"以提高可读性
+    formattedName = formattedName.replace(/:/g, '-')
+    
+    return formattedName
+  }
+  return accountName
 }
 
 const resetForm = () => {
@@ -246,17 +273,29 @@ const onSubmit = async () => {
       postings
     }
     
-    // 调用API保存交易
-    await createTransaction(transactionData)
+    console.log('准备发送的交易数据:', transactionData)
+    console.log('postings详情:', postings)
+    
+    // 检查是否为编辑模式
+    const editId = route.query.id as string
+    if (editId) {
+      // 编辑模式：直接更新原交易
+      console.log('编辑模式：更新原交易')
+      await updateTransaction(editId, transactionData)
+      showToast('更新成功')
+    } else {
+      // 新增模式：调用创建API
+      await createTransaction(transactionData)
+      showToast('保存成功')
+    }
     
     closeToast()
-    showToast('保存成功')
     
     // 返回上一页或跳转到交易列表
     router.back()
   } catch (error) {
     closeToast()
-    showToast('保存失败')
+    showToast(route.query.id ? '更新失败' : '保存失败')
     console.error('保存交易失败:', error)
   }
 }
@@ -288,16 +327,25 @@ const onTransferSubmit = async () => {
       ]
     }
     
-    // 调用API保存转账
-    await createTransaction(transferData)
+    // 检查是否为编辑模式
+    const editId = route.query.id as string
+    if (editId) {
+      // 编辑模式：直接更新原转账交易
+      console.log('编辑转账模式：更新原交易')
+      await updateTransaction(editId, transferData)
+      showToast('更新成功')
+    } else {
+      // 新增模式：调用创建API
+      await createTransaction(transferData)
+      showToast('转账成功')
+    }
     
     closeToast()
-    showToast('转账成功')
     
     router.back()
   } catch (error) {
     closeToast()
-    showToast('转账失败')
+    showToast(route.query.id ? '更新失败' : '转账失败')
     console.error('保存转账失败:', error)
   }
 }
@@ -321,34 +369,165 @@ const loadTransactionData = async () => {
     const id = route.query.id as string
     if (!id) return
     
-    // 调用API获取交易数据
-    // 注意：实际的API可能需要不同的参数来获取单个交易
-    const response = await getTransactions({ page: 1, page_size: 1000 })
-    const transactions = response.data || []
+    console.log('开始加载交易数据，ID:', id)
     
-    // 查找对应的交易（这里简化处理，实际应该有专门的API获取单个交易）
-    const transaction = transactions.find((_: any, index: number) => (index + 1).toString() === id)
+    // 使用正确的API获取单个交易数据
+    const response = await getTransactionById(id)
+    const transaction = response.data || response
+    
+    console.log('加载到的交易数据:', transaction)
     
     if (transaction) {
-      const posting = transaction.postings?.[0]
-      const amount = posting?.amount || 0
-      const parsedAmount = typeof amount === 'string' ? parseFloat(amount) : amount
+      // 分析交易类型和数据
+      const postings = transaction.postings || []
+      console.log('分析postings:', postings)
       
-      const transactionData = {
-        amount: Math.abs(parsedAmount).toString(),
-        payee: transaction.payee || '',
-        account: posting?.account || '',
-        category: '', // API中没有category，暂时留空
-        date: new Date(transaction.date),
-        description: transaction.narration || '',
-        currency: posting?.currency || 'CNY',
-        flag: transaction.flag || '*',
-        categories: [{ categoryName: '', categoryDisplayName: '', category: '', amount: Math.abs(parsedAmount).toString() }]
+      // 分离不同类型的分录
+      const assetPostings = postings.filter((p: any) => 
+        p.account?.startsWith('Assets:') || p.account?.startsWith('Liabilities:')
+      )
+      const expensePostings = postings.filter((p: any) => 
+        p.account?.startsWith('Expenses:')
+      )
+      const incomePostings = postings.filter((p: any) => 
+        p.account?.startsWith('Income:')
+      )
+      
+      console.log('资产分录:', assetPostings)
+      console.log('支出分录:', expensePostings)
+      console.log('收入分录:', incomePostings)
+      
+      // 判断交易类型
+      if (assetPostings.length === 2 && expensePostings.length === 0 && incomePostings.length === 0) {
+        // 转账：只有两个资产/负债账户
+        const fromPosting = assetPostings.find((p: any) => {
+          const amt = typeof p.amount === 'string' ? parseFloat(p.amount) : (p.amount || 0)
+          return amt < 0
+        })
+        const toPosting = assetPostings.find((p: any) => {
+          const amt = typeof p.amount === 'string' ? parseFloat(p.amount) : (p.amount || 0)
+          return amt > 0
+        })
+        
+        if (fromPosting && toPosting) {
+          const transferAmount = typeof toPosting.amount === 'string' ? 
+            parseFloat(toPosting.amount) : (toPosting.amount || 0)
+          
+          // 更新转账表单数据
+          transferFormData.value = {
+            amount: Math.abs(transferAmount).toString(),
+            fromAccount: fromPosting.account,
+            toAccount: toPosting.account,
+            date: new Date(transaction.date),
+            description: transaction.narration || '',
+            currency: toPosting.currency || 'CNY',
+            flag: transaction.flag || '*'
+          }
+          
+          activeTab.value = 'transfer'
+          console.log('设置的转账类型:', 'transfer')
+          console.log('设置的转账表单数据:', transferFormData.value)
+          return
+        }
+      } else if (expensePostings.length > 0 && assetPostings.length > 0) {
+        // 支出交易：有支出分录和资产分录
+        const assetPosting = assetPostings[0] // 通常只有一个资产账户
+        const assetAmount = typeof assetPosting.amount === 'string' ? 
+          parseFloat(assetPosting.amount) : (assetPosting.amount || 0)
+        
+        // 计算总支出金额（应该等于资产减少的金额）
+        const totalExpenseAmount = Math.abs(assetAmount)
+        
+        // 构建分类数组
+        const categories = expensePostings.map((p: any) => {
+          const amt = typeof p.amount === 'string' ? parseFloat(p.amount) : (p.amount || 0)
+          return {
+            categoryName: '',
+            categoryDisplayName: formatAccountNameForCategory(p.account),
+            category: p.account,
+            amount: Math.abs(amt).toString()
+          }
+        })
+        
+        // 更新支出表单数据
+        const transactionData = {
+          amount: totalExpenseAmount.toString(),
+          payee: transaction.payee || '',
+          account: assetPosting.account,
+          category: categories[0]?.category || '', // 主分类
+          date: new Date(transaction.date),
+          description: transaction.narration || '',
+          currency: assetPosting.currency || 'CNY',
+          flag: transaction.flag || '*',
+          categories: categories
+        }
+        
+        formData.value = transactionData
+        activeTab.value = 'expense'
+        
+        console.log('设置的支出交易类型:', 'expense')
+        console.log('设置的支出表单数据:', transactionData)
+        return
+        
+      } else if (incomePostings.length > 0 && assetPostings.length > 0) {
+        // 收入交易：有收入分录和资产分录
+        const assetPosting = assetPostings[0]
+        const assetAmount = typeof assetPosting.amount === 'string' ? 
+          parseFloat(assetPosting.amount) : (assetPosting.amount || 0)
+        
+        // 计算总收入金额（应该等于资产增加的金额）
+        const totalIncomeAmount = Math.abs(assetAmount)
+        
+        // 构建分类数组
+        const categories = incomePostings.map((p: any) => {
+          const amt = typeof p.amount === 'string' ? parseFloat(p.amount) : (p.amount || 0)
+          return {
+            categoryName: '',
+            categoryDisplayName: formatAccountNameForCategory(p.account),
+            category: p.account,
+            amount: Math.abs(amt).toString()
+          }
+        })
+        
+        // 更新收入表单数据
+        const transactionData = {
+          amount: totalIncomeAmount.toString(),
+          payee: transaction.payee || '',
+          account: assetPosting.account,
+          category: categories[0]?.category || '',
+          date: new Date(transaction.date),
+          description: transaction.narration || '',
+          currency: assetPosting.currency || 'CNY',
+          flag: transaction.flag || '*',
+          categories: categories
+        }
+        
+        formData.value = transactionData
+        activeTab.value = 'income'
+        
+        console.log('设置的收入交易类型:', 'income')
+        console.log('设置的收入表单数据:', transactionData)
+        return
       }
       
-      const transactionType = parsedAmount > 0 ? 'income' : 'expense'
-      activeTab.value = transactionType
-      formData.value = transactionData
+      // 如果没有匹配到已知模式，使用默认处理
+      console.warn('未识别的交易模式，使用默认处理')
+      const defaultData = {
+        amount: '0',
+        payee: transaction.payee || '',
+        account: '',
+        category: '',
+        date: new Date(transaction.date),
+        description: transaction.narration || '',
+        currency: 'CNY',
+        flag: transaction.flag || '*',
+        categories: [{ categoryName: '', categoryDisplayName: '', category: '', amount: '' }]
+      }
+      
+      formData.value = defaultData
+      activeTab.value = 'expense'
+      
+      console.log('设置的默认交易数据:', defaultData)
     }
   } catch (error) {
     showToast('加载交易数据失败')

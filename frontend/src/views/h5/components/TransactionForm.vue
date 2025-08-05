@@ -464,13 +464,41 @@ const isFormValid = computed(() => {
 
 // 监听数据变化
 watch(localFormData, (newData) => {
-  emit('update', newData)
+  // 只在不是从props更新时才emit
+  if (!isUpdatingFromProps) {
+    emit('update', newData)
+  }
 }, { deep: true })
 
-// 暂时禁用 props.formData 的 watch，避免与用户输入冲突
-// watch(() => props.formData, (newData) => {
-//   // ... watch logic
-// }, { deep: true, immediate: false })
+// 监听props.formData变化，用于编辑模式的数据加载
+let isUpdatingFromProps = false
+watch(() => props.formData, (newData) => {
+  // 避免循环更新：只在有实质性变化且不是来自内部更新时更新
+  if (newData && newData.amount && newData.account && !isUpdatingFromProps) {
+    // 检查是否真的有变化
+    const hasSignificantChange = 
+      newData.amount !== localFormData.value.amount ||
+      newData.account !== localFormData.value.account ||
+      newData.category !== localFormData.value.category ||
+      newData.payee !== localFormData.value.payee
+    
+    if (hasSignificantChange) {
+      console.log('TransactionForm收到新的formData:', newData)
+      
+      isUpdatingFromProps = true
+      localFormData.value = {
+        ...newData,
+        currency: newData.currency || 'CNY',
+        flag: newData.flag || '*',
+        categories: newData.categories || [{ categoryName: '', categoryDisplayName: '', category: '', amount: '' }]
+      }
+      // 下一个tick后重置标志
+      nextTick(() => {
+        isUpdatingFromProps = false
+      })
+    }
+  }
+}, { deep: true, immediate: false })
 
 // 币种相关方法
 const getCurrencySymbol = (currency: string) => {

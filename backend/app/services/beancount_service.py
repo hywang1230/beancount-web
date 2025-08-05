@@ -946,14 +946,46 @@ class BeancountService:
             # 构建新的交易字符串
             new_transaction_str = self._build_transaction_string(transaction_data)
             
-            # 替换指定行的交易（这里简化处理，假设交易占一行）
-            # 实际上可能需要更复杂的解析来处理多行交易
-            if lineno <= len(lines):
-                lines[lineno - 1] = new_transaction_str + '\n'
+            # 找到交易的起始行和结束行
+            start_line = lineno - 1  # 转换为0基索引
+            end_line = start_line
+            
+            # 查找交易的结束行：从起始行开始，找到下一个不以空格或制表符开头的行
+            for i in range(start_line + 1, len(lines)):
+                line = lines[i].rstrip()
+                if line and not line.startswith(('  ', '\t')) and not line.startswith(';'):
+                    # 找到下一个交易或其他条目的开始
+                    end_line = i - 1
+                    break
+                elif i == len(lines) - 1:
+                    # 这是文件的最后一行
+                    end_line = i
+                    break
+                elif line.strip():
+                    # 这是交易的一部分（posting行）
+                    end_line = i
+            
+            print(f"更新交易范围: 行 {start_line + 1} 到 {end_line + 1}")
+            
+            # 替换整个交易块
+            if start_line < len(lines):
+                # 删除原有的交易行
+                del lines[start_line:end_line + 1]
+                
+                # 在原位置插入新的交易内容
+                new_lines = (new_transaction_str + '\n').split('\n')
+                # 移除最后一个空行（split产生的）
+                if new_lines and not new_lines[-1]:
+                    new_lines = new_lines[:-1]
+                
+                for i, new_line in enumerate(new_lines):
+                    lines.insert(start_line + i, new_line + '\n')
                 
                 # 写回文件
                 with open(target_filename, 'w', encoding='utf-8') as f:
                     f.writelines(lines)
+                
+                print(f"交易更新成功，新内容：\n{new_transaction_str}")
                 
                 # 重新加载条目
                 self._load_entries(force_reload=True)
@@ -963,6 +995,8 @@ class BeancountService:
             
         except Exception as e:
             print(f"更新交易失败: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def delete_transaction_by_location(self, filename: str, lineno: int) -> bool:
