@@ -112,10 +112,16 @@ const mainAccounts = ref<Account[]>([])
 
 const quickActions = [
   {
-    name: 'add',
+    name: 'expense',
+    icon: 'minus',
+    text: '支出',
+    onClick: () => router.push('/h5/add-transaction?type=expense')
+  },
+  {
+    name: 'income',
     icon: 'plus',
-    text: '记账',
-    onClick: () => router.push('/h5/add-transaction')
+    text: '收入',
+    onClick: () => router.push('/h5/add-transaction?type=income')
   },
   {
     name: 'transfer',
@@ -128,12 +134,6 @@ const quickActions = [
     icon: 'bar-chart-o',
     text: '报表',
     onClick: () => router.push('/h5/reports')
-  },
-  {
-    name: 'more',
-    icon: 'apps-o',
-    text: '更多',
-    onClick: () => {}
   }
 ]
 
