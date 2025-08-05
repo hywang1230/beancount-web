@@ -11,29 +11,43 @@
       </div>
     </van-sticky>
 
-    <!-- 统计信息 -->
-    <div class="stats-section">
-      <van-row gutter="16">
-        <van-col span="8">
-          <div class="stat-item income">
-            <div class="stat-value">{{ formatAmount(stats.income) }}</div>
-            <div class="stat-label">收入</div>
-          </div>
+    <!-- 日期筛选栏 -->
+    <div class="date-filter-bar">
+      <van-row gutter="8">
+        <van-col span="12">
+          <van-field
+            v-model="startDate"
+            type="date"
+            label="开始日期"
+            placeholder="选择开始日期"
+          />
         </van-col>
-        <van-col span="8">
-          <div class="stat-item expense">
-            <div class="stat-value">{{ formatAmount(stats.expense) }}</div>
-            <div class="stat-label">支出</div>
-          </div>
+        <van-col span="12">
+          <van-field
+            v-model="endDate"
+            type="date"
+            label="结束日期"
+            placeholder="选择结束日期"
+          />
         </van-col>
-        <van-col span="8">
-          <div class="stat-item balance">
-            <div class="stat-value">{{ formatAmount(stats.balance) }}</div>
-            <div class="stat-label">结余</div>
-          </div>
+      </van-row>
+      <van-row gutter="8" style="margin-top: 8px;">
+        <van-col span="6">
+          <van-button size="small" @click="setQuickDateRange('last7days')">7天</van-button>
+        </van-col>
+        <van-col span="6">
+          <van-button size="small" @click="setQuickDateRange('last30days')">30天</van-button>
+        </van-col>
+        <van-col span="6">
+          <van-button size="small" @click="setQuickDateRange('thisMonth')">本月</van-button>
+        </van-col>
+        <van-col span="6">
+          <van-button size="small" @click="clearDateRange()">清空</van-button>
         </van-col>
       </van-row>
     </div>
+
+
 
     <!-- 交易列表 -->
     <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
@@ -134,6 +148,10 @@ const filterType = ref('all')
 const filterAccount = ref('all')
 const sortBy = ref('date_desc')
 
+// 日期筛选相关
+const startDate = ref('')
+const endDate = ref('')
+
 // 选项数据
 const typeOptions = [
   { text: '全部类型', value: 'all' },
@@ -175,29 +193,7 @@ const filteredTransactions = computed(() => {
   return filtered
 })
 
-// 计算属性 - 统计数据（基于筛选后的数据）
-const stats = computed(() => {
-  const filtered = filteredTransactions.value
-  
-  let totalIncome = 0
-  let totalExpense = 0
-  
-  filtered.forEach(transaction => {
-    if (transaction.type === 'income') {
-      // 收入账户：负数是盈利，正数是亏损
-      totalIncome += -transaction.amount  // 取负值：负数变正数(收入)，正数变负数(损失)
-    } else if (transaction.type === 'expense') {
-      // 支出账户：正数是支出，负数是退款
-      totalExpense += transaction.amount  // 保持原值：正数(支出)，负数(退款)
-    }
-  })
-  
-  return {
-    income: totalIncome,   // 显示为正数表示总收入
-    expense: totalExpense, // 正数表示总支出，可能包含负数退款
-    balance: totalIncome - totalExpense  // 净收入 = 收入 - 支出
-  }
-})
+
 
 // 计算交易的显示金额（用于合计计算）
 const getTransactionDisplayAmount = (transaction: any) => {
@@ -429,13 +425,15 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
       filterType: filterType.value,
       filterAccount: filterAccount.value,
       sortBy: sortBy.value,
+      startDate: startDate.value,
+      endDate: endDate.value,
       isRefresh,
       targetPage
     })
     
-    // 类型筛选和账户筛选
+    // 类型筛选
     if (filterType.value !== 'all') {
-      params.transaction_type = filterType.value  // 通过后端筛选交易类型
+      params.transaction_type = filterType.value
     }
     
     // 账户筛选
@@ -443,13 +441,21 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
       params.account = filterAccount.value
     }
     
-    // 根据排序设置日期范围
-    if (sortBy.value.includes('date')) {
-      const endDate = new Date()
-      const startDate = new Date()
-      startDate.setMonth(startDate.getMonth() - 3) // 获取最近3个月数据
-      params.start_date = startDate.toISOString().split('T')[0]
-      params.end_date = endDate.toISOString().split('T')[0]
+    // 日期范围筛选
+    if (startDate.value) {
+      params.start_date = startDate.value
+    }
+    if (endDate.value) {
+      params.end_date = endDate.value
+    }
+    
+    // 如果没有设置日期范围，默认获取最近3个月的数据
+    if (!startDate.value && !endDate.value) {
+      const today = new Date()
+      const threeMonthsAgo = new Date()
+      threeMonthsAgo.setMonth(today.getMonth() - 3)
+      params.start_date = formatDate(threeMonthsAgo)
+      params.end_date = formatDate(today)
     }
 
     console.log('🌐 Making API call to getTransactions with final params:', params)
@@ -516,17 +522,13 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
     // 统计数据现在通过计算属性自动更新
     
     // 判断是否还有更多数据
-    const hasMoreData = currentPage.value < response.total_pages && response.total_pages > 1
+    const hasMoreData = currentPage.value < response.total_pages
     
-    // 特殊情况处理
-    if (currentPage.value === 1 && convertedTransactions.length === 0) {
-      // 第一页没有数据，可能是筛选条件太严格或网络问题
-      finished.value = false
-      console.log('⚠️ First page with no data, keeping finished as false')
-    } else if (convertedTransactions.length === 0 && currentPage.value > 1) {
-      // 后续页面没有数据，说明已经到底了
+    // 设置finished状态
+    if (response.total_pages === 0 || (currentPage.value === 1 && convertedTransactions.length === 0)) {
+      // 没有数据或第一页没有数据
       finished.value = true
-      console.log('📄 No data in subsequent page, marking as finished')
+      console.log('📄 No data available, marking as finished')
     } else {
       finished.value = !hasMoreData
     }
@@ -576,20 +578,53 @@ const loadAccountOptions = async () => {
   }
 }
 
+// 日期筛选相关方法
+const formatDate = (date: Date) => {
+  return date.toISOString().split('T')[0]
+}
+
+const setQuickDateRange = (range: string) => {
+  const today = new Date()
+  const endDateValue = new Date(today)
+  let startDateValue = new Date(today)
+  
+  switch (range) {
+    case 'last7days':
+      startDateValue.setDate(today.getDate() - 7)
+      break
+    case 'last30days':
+      startDateValue.setDate(today.getDate() - 30)
+      break
+    case 'thisMonth':
+      startDateValue = new Date(today.getFullYear(), today.getMonth(), 1)
+      break
+  }
+  
+  startDate.value = formatDate(startDateValue)
+  endDate.value = formatDate(endDateValue)
+}
+
+const clearDateRange = () => {
+  startDate.value = ''
+  endDate.value = ''
+}
+
 // 组件是否已初始化完成
 const isInitialized = ref(false)
 // 是否正在处理筛选变化
 const isHandlingFilterChange = ref(false)
 
 // 监听筛选条件变化
-watch([filterType, filterAccount, sortBy], async () => {
+watch([filterType, filterAccount, sortBy, startDate, endDate], async () => {
   // 只有在组件初始化完成后才响应筛选条件变化
   if (isInitialized.value && !isHandlingFilterChange.value) {
     isHandlingFilterChange.value = true
     console.log('🔄 Filter changed, refreshing data:', {
       filterType: filterType.value,
       filterAccount: filterAccount.value,
-      sortBy: sortBy.value
+      sortBy: sortBy.value,
+      startDate: startDate.value,
+      endDate: endDate.value
     })
     try {
       await onRefresh()
@@ -647,51 +682,10 @@ onMounted(async () => {
   border-bottom: 1px solid #ebedf0;
 }
 
-.stats-section {
+.date-filter-bar {
+  padding: 12px 16px;
   background-color: white;
-  padding: 16px;
-  margin-bottom: 8px;
-}
-
-.stat-item {
-  text-align: center;
-  padding: 8px;
-  border-radius: 8px;
-}
-
-.stat-item.income {
-  background-color: #f0f9ff;
-}
-
-.stat-item.expense {
-  background-color: #fef2f2;
-}
-
-.stat-item.balance {
-  background-color: #f9fafb;
-}
-
-.stat-value {
-  font-size: 16px;
-  font-weight: bold;
-  margin-bottom: 4px;
-}
-
-.stat-item.income .stat-value {
-  color: #07c160;
-}
-
-.stat-item.expense .stat-value {
-  color: #ee0a24;
-}
-
-.stat-item.balance .stat-value {
-  color: #323233;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: #969799;
+  border-bottom: 1px solid #ebedf0;
 }
 
 .transaction-group {
