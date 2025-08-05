@@ -58,7 +58,7 @@
                   </div>
                   <van-tag 
                     :type="getStatusTagType(item.status)"
-                    size="mini"
+                    
                   >
                     {{ getStatusText(item.status) }}
                   </van-tag>
@@ -141,7 +141,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { showToast, showConfirmDialog } from 'vant'
-import { recurringApi, type RecurringTransaction, type ExecutionLog } from '@/api/recurring'
+import { recurringApi, type ExecutionLog } from '@/api/recurring'
 
 const router = useRouter()
 
@@ -342,7 +342,7 @@ const toggleStatus = async (item: any) => {
     showToast(`${actionText}成功`)
   } catch (error) {
     if (error !== 'cancel') { // 不是用户取消
-      showToast(`${newStatus === 'active' ? '启用' : '暂停'}失败`)
+      // showToast(`${newStatus === 'active' ? '启用' : '暂停'}失败`)
       console.error('切换状态失败:', error)
     }
   }

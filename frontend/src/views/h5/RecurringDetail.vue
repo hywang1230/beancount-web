@@ -62,7 +62,7 @@
               <span :class="['balance-amount', isBalanced ? 'balanced' : 'unbalanced']">
                 {{ totalAmount.toFixed(2) }}
               </span>
-              <van-tag :type="isBalanced ? 'success' : 'danger'" size="small">
+              <van-tag :type="isBalanced ? 'success' : 'danger'">
                 {{ isBalanced ? '平衡' : '不平衡' }}
               </van-tag>
             </div>
