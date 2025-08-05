@@ -569,7 +569,7 @@ const groupedLiabilityAccounts = computed(() => {
             isLeaf: false
           }
         }
-        current[part].balance += Number(Math.abs(acc.balance)) || 0
+        current[part].balance += Number(acc.balance) || 0
         
         // 如果是最后一级，标记为叶子节点
         if (i === parts.length - 1) {

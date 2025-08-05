@@ -659,7 +659,7 @@ const groupAccountsByCategory = (accounts: any[], _prefix: string) => {
     // 添加子分组
     Object.keys(category.subGroups).forEach(subGroupName => {
       const subGroupAccounts = category.subGroups[subGroupName]
-      const subGroupTotal = subGroupAccounts.reduce((sum: number, acc: any) => sum + Math.abs(acc.balance), 0)
+      const subGroupTotal = subGroupAccounts.reduce((sum: number, acc: any) => sum + (Number(acc.balance) || 0), 0)
       
       // 为子分组创建一个汇总账户
       allAccounts.push({
@@ -671,10 +671,17 @@ const groupAccountsByCategory = (accounts: any[], _prefix: string) => {
       })
     })
     
+    // 根据账户类型决定汇总方式
+    let total = allAccounts.reduce((sum, acc) => sum + Number(acc.balance), 0)
+    // 负债类账户汇总后取相反数
+    if (_prefix === 'Liabilities') {
+      total = -total
+    }
+    
     const result = {
       name: formatCategoryName(categoryName),
       accounts: allAccounts,
-      total: allAccounts.reduce((sum, acc) => sum + Math.abs(acc.balance), 0)
+      total: total
     }
     
     // 调试：打印分组结果
