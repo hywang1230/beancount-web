@@ -574,19 +574,20 @@ const loadTransactionData = async () => {
 .tab-content {
   height: 100%;
   background: #f7f8fa;
-  padding-bottom: 80px; /* 为底部按钮留出空间 */
+  padding-bottom: 120px; /* 为底部按钮和导航留出更多空间 */
 }
 
 /* 操作按钮 */
 .action-buttons {
   position: fixed;
-  bottom: 50px; /* 为底部导航栏留出空间 */
+  bottom: 60px; /* 为底部导航栏留出更多空间 */
   left: 0;
   right: 0;
   padding: 12px 16px;
   background-color: white;
   border-top: 1px solid #ebedf0;
-  z-index: 999; /* 确保在内容之上，但在导航栏之下 */
+  z-index: 998; /* 确保在内容之上，但在导航栏之下 */
+  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
 }
 
 /* 响应式设计 */

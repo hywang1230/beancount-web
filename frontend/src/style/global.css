@@ -28,6 +28,19 @@ html, body {
     -ms-user-select: text;
     user-select: text;
   }
+  
+  /* Vant 组件优化 */
+  .van-cell {
+    min-height: 48px; /* 增加触摸目标大小 */
+  }
+  
+  .van-button {
+    min-height: 44px; /* 确保按钮触摸目标大小 */
+  }
+  
+  .van-popup {
+    border-radius: 16px 16px 0 0 !important;
+  }
 }
 
 /* 滚动条样式 */

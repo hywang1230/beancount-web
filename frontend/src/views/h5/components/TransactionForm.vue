@@ -1039,11 +1039,12 @@ onMounted(() => {
   background: white;
   border-radius: 16px;
   padding: 16px;
-  margin: 16px;
+  margin: 12px 16px;
   margin-bottom: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
   transition: all 0.3s ease;
   cursor: pointer;
+  min-height: 64px; /* 确保足够的触摸目标大小 */
 }
 
 .form-card:hover {
@@ -1168,6 +1169,8 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  position: relative;
+  z-index: 2003;
 }
 
 .multi-category-header {
@@ -1298,6 +1301,8 @@ onMounted(() => {
   border-radius: 16px 16px 0 0;
   max-height: 70vh;
   overflow: hidden;
+  position: relative;
+  z-index: 2002;
 }
 
 .popup-header {
@@ -1347,12 +1352,47 @@ onMounted(() => {
 
 /* 使用标准 van-cell-group 样式 */
 :deep(.van-cell-group--inset) {
-  margin: 16px;
+  margin: 12px 16px;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 :deep(.van-button--mini) {
   min-width: 60px;
-  height: 28px;
+  height: 32px; /* 增加按钮高度以便触摸 */
   font-size: 12px;
+}
+
+/* 移动端响应式优化 */
+@media (max-width: 375px) {
+  .form-card {
+    margin: 8px 12px;
+    padding: 12px;
+  }
+  
+  .card-label {
+    font-size: 14px;
+  }
+  
+  .currency-symbol {
+    font-size: 20px;
+  }
+  
+  .amount-field :deep(.van-field__control) {
+    font-size: 20px;
+  }
+}
+
+@media (max-width: 320px) {
+  .form-card {
+    margin: 6px 8px;
+    padding: 10px;
+  }
+  
+  .card-icon {
+    width: 36px;
+    height: 36px;
+    margin-right: 12px;
+  }
 }
 </style>

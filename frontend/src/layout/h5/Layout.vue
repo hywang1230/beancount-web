@@ -152,7 +152,8 @@ const navigateTo = (path: string) => {
 .main-content {
   flex: 1;
   overflow-y: auto;
-  padding-bottom: 50px; /* 为底部导航留出空间 */
+  padding-bottom: 60px; /* 为底部导航留出更多空间 */
+  -webkit-overflow-scrolling: touch; /* 启用iOS平滑滚动 */
 }
 
 .menu-popup {

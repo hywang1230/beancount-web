@@ -2,11 +2,22 @@
   <div class="h5-accounts">
     <!-- 账户统计 -->
     <div class="stats-section">
-      <van-row gutter="8">
-        <van-col v-for="(group, type) in accountGroups" :key="type" span="6">
+      <!-- 第一行：资产、负债、权益、收入 -->
+      <van-row gutter="12">
+        <van-col v-for="item in firstRowAccountGroups" :key="item.type" span="6">
           <div class="stat-item">
-            <div class="stat-value">{{ group.accounts.length }}</div>
-            <div class="stat-label">{{ getTypeLabel(type) }}</div>
+            <div class="stat-value">{{ item.group.accounts.length }}</div>
+            <div class="stat-label">{{ getTypeLabel(item.type) }}</div>
+          </div>
+        </van-col>
+      </van-row>
+      
+      <!-- 第二行：支出 -->
+      <van-row gutter="12" v-if="secondRowAccountGroups.length > 0">
+        <van-col v-for="item in secondRowAccountGroups" :key="item.type" span="6">
+          <div class="stat-item">
+            <div class="stat-value">{{ item.group.accounts.length }}</div>
+            <div class="stat-label">{{ getTypeLabel(item.type) }}</div>
           </div>
         </van-col>
       </van-row>
@@ -374,6 +385,45 @@ const accountGroups = computed(() => {
 
 // 账户类型顺序定义
 const accountTypeOrder = ['Assets', 'Liabilities', 'Income', 'Expenses', 'Equity', 'archived']
+
+// 第一行显示的账户类型
+const firstRowTypes = ['Assets', 'Liabilities', 'Equity', 'Income']
+// 第二行显示的账户类型
+const secondRowTypes = ['Expenses']
+
+// 计算属性：第一行账户组
+const firstRowAccountGroups = computed(() => {
+  const groups = accountGroups.value
+  const result: Array<{ type: string, group: AccountGroup }> = []
+  
+  firstRowTypes.forEach(type => {
+    if (groups[type]) {
+      result.push({
+        type,
+        group: groups[type]
+      })
+    }
+  })
+  
+  return result
+})
+
+// 计算属性：第二行账户组
+const secondRowAccountGroups = computed(() => {
+  const groups = accountGroups.value
+  const result: Array<{ type: string, group: AccountGroup }> = []
+  
+  secondRowTypes.forEach(type => {
+    if (groups[type]) {
+      result.push({
+        type,
+        group: groups[type]
+      })
+    }
+  })
+  
+  return result
+})
 
 // 计算属性：排序后的账户分组
 const orderedAccountGroups = computed(() => {
@@ -815,6 +865,7 @@ onMounted(() => {
 .h5-accounts {
   background-color: #f7f8fa;
   min-height: 100vh;
+  padding-bottom: 60px; /* 为底部导航留出空间 */
 }
 
 .overview-section {
@@ -851,7 +902,15 @@ onMounted(() => {
 
 /* 统计卡片样式 */
 .stats-section {
-  padding: 0 16px 16px;
+  padding: 16px;
+}
+
+.stats-section :deep(.van-row) {
+  margin-bottom: 12px; /* 为行添加底部间距 */
+}
+
+.stats-section :deep(.van-row:last-child) {
+  margin-bottom: 0; /* 最后一行不需要底部间距 */
 }
 
 .stat-item {
@@ -1045,6 +1104,7 @@ onMounted(() => {
 /* 弹出层样式覆盖 */
 :deep(.van-popup) {
   border-radius: 16px 16px 0 0;
+  z-index: 2001; /* 确保弹窗在最上层 */
 }
 
 :deep(.van-picker__toolbar) {
