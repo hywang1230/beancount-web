@@ -229,6 +229,15 @@ const onSubmit = async () => {
       currency: formData.value.currency || 'CNY'
     })
     
+    // 验证分录平衡（复式记账规则：所有分录金额合计必须为0）
+    const postingsSum = postings.reduce((sum, posting) => sum + posting.amount, 0)
+    if (Math.abs(postingsSum) >= 0.01) {
+      closeToast()
+      showToast(`分录不平衡，差额：¥${postingsSum.toFixed(2)}`)
+      console.error('分录不平衡:', postings, '合计:', postingsSum)
+      return
+    }
+    
     const transactionData = {
       date: formData.value.date.toISOString().split('T')[0],
       flag: '*', // 默认标记

@@ -40,9 +40,9 @@
         </div>
         <div class="card-content">
           <div class="card-label">
-            {{ localFormData.categories[0]?.categoryDisplayName || '选择 分类' }}
+            {{ categoryDisplayText }}
           </div>
-          <div class="multi-category-btn" @click.stop="showMultiCategorySheet = true">
+          <div class="multi-category-btn" @click.stop="openMultiCategorySheet">
             多类别
             <van-icon name="filter-o" />
           </div>
@@ -164,17 +164,39 @@
     </van-popup>
 
     <!-- 多类别分配面板 -->
-    <van-action-sheet 
-      v-model:show="showMultiCategorySheet" 
-      title="分类分配"
-      closeable
+    <van-popup 
+      v-model:show="showMultiCategorySheet"
+      position="bottom"
+      :style="{ height: '80vh' }"
+      round
     >
       <div class="multi-category-content">
+        <!-- 自定义头部 -->
+        <div class="multi-category-header">
+          <van-button 
+            type="default" 
+            size="small"
+            @click="cancelMultiCategory"
+          >
+            取消
+          </van-button>
+          <div class="header-title">分类分配</div>
+          <van-button 
+            type="primary" 
+            size="small"
+            :disabled="!isMultiCategoryValid"
+            @click="confirmMultiCategory"
+          >
+            确认
+          </van-button>
+        </div>
+        
         <div class="category-items">
           <div 
-            v-for="(item, index) in localFormData.categories" 
+            v-for="(item, index) in (isEditingMultiCategory ? tempCategories : localFormData.categories)" 
             :key="index"
             class="category-item"
+            :class="{ 'category-item--incomplete': !isCategoryComplete(item) }"
           >
             <div class="category-row">
               <van-field
@@ -185,14 +207,14 @@
                 @click="showCategorySelector = true; currentCategoryIndex = index"
               />
               <van-field
-                v-model="item.amount"
+                :model-value="item.amount"
                 type="digit"
                 placeholder="0.00"
                 class="amount-field-small"
-                @input="(value) => onCategoryAmountInput(index, value)"
+                @update:model-value="(value) => onCategoryAmountInput(index, value)"
               />
               <van-button 
-                v-if="localFormData.categories.length > 1"
+                v-if="(isEditingMultiCategory ? tempCategories : localFormData.categories).length > 1"
                 size="mini" 
                 type="danger" 
                 plain
@@ -214,12 +236,32 @@
           </van-button>
         </div>
         
-        <div class="amount-summary">
-          <span>已分配: ¥{{ allocatedAmount.toFixed(2) }}</span>
-          <span>剩余: ¥{{ remainingAmount.toFixed(2) }}</span>
+        <div class="amount-summary" :class="{ 
+          'amount-summary--balanced': Math.abs(remainingAmount) < 0.01,
+          'amount-summary--unbalanced': Math.abs(remainingAmount) >= 0.01 
+        }">
+          <div class="summary-row">
+            <span>总金额: ¥{{ parseFloat(localFormData.amount || '0').toFixed(2) }}</span>
+          </div>
+          <div class="summary-row">
+            <span>已分配: ¥{{ allocatedAmount.toFixed(2) }}</span>
+            <span :class="{ 
+              'remaining-balanced': Math.abs(remainingAmount) < 0.01,
+              'remaining-positive': remainingAmount > 0.01,
+              'remaining-negative': remainingAmount < -0.01
+            }">
+              {{ remainingAmount >= 0 ? '剩余' : '超出' }}: ¥{{ Math.abs(remainingAmount).toFixed(2) }}
+            </span>
+          </div>
+          <div v-if="Math.abs(remainingAmount) >= 0.01" class="balance-hint">
+            {{ remainingAmount > 0 ? '⚠️ 还需继续分配' : '⚠️ 分配金额超出总额' }}
+          </div>
+          <div v-else class="balance-hint balance-hint--success">
+            ✅ 分配完成
+          </div>
         </div>
       </div>
-    </van-action-sheet>
+    </van-popup>
   </div>
 </template>
 
@@ -272,6 +314,10 @@ const showAccountSelector = ref(false)
 const showCategorySelector = ref(false)
 const showCurrencySelector = ref(false)
 const showMultiCategorySheet = ref(false)
+
+// 多类别编辑的临时数据
+const tempCategories = ref<CategoryItem[]>([])
+const isEditingMultiCategory = ref(false)
 
 // 临时数据
 const tempPayee = ref('')
@@ -329,6 +375,22 @@ const accountDisplayName = computed(() => {
   return formatAccountNameForDisplay(localFormData.value.account)
 })
 
+// 分类显示名称 - 多个分类用英文逗号隔开
+const categoryDisplayText = computed(() => {
+  const categories = localFormData.value.categories.filter(cat => cat.categoryDisplayName)
+  
+  if (categories.length === 0) {
+    return '选择分类'
+  }
+  
+  if (categories.length === 1) {
+    return categories[0].categoryDisplayName
+  }
+  
+  // 多个分类用英文逗号隔开
+  return categories.map(cat => cat.categoryDisplayName).join(', ')
+})
+
 // 日期值计算属性（用于type="date"的field）
 const dateValue = computed({
   get: () => {
@@ -355,13 +417,46 @@ const remainingAmount = computed(() => {
   return totalAmount - allocatedAmount.value
 })
 
+// 检查单个分类是否完整
+const isCategoryComplete = (category: CategoryItem) => {
+  return category.category && 
+         category.categoryDisplayName && 
+         category.amount && 
+         parseFloat(category.amount) > 0
+}
+
+// 检查多类别编辑状态下的有效性
+const isMultiCategoryValid = computed(() => {
+  if (!isEditingMultiCategory.value) return true
+  
+  const categories = tempCategories.value.length > 0 ? tempCategories.value : localFormData.value.categories
+  
+  // 每个分类都必须完整
+  const hasValidCategories = categories.length > 0 && 
+                            categories.every(cat => isCategoryComplete(cat))
+  
+  // 金额分配必须匹配
+  const totalAmount = parseFloat(localFormData.value.amount) || 0
+  const allocatedAmount = categories.reduce((sum, item) => {
+    const amount = parseFloat(item.amount) || 0
+    return sum + amount
+  }, 0)
+  const amountsMatch = Math.abs(totalAmount - allocatedAmount) < 0.01
+  
+  return hasValidCategories && amountsMatch
+})
+
 const isFormValid = computed(() => {
+  // 基础信息校验
   const hasBasicInfo = localFormData.value.amount && 
-                      localFormData.value.account
+                      localFormData.value.account &&
+                      parseFloat(localFormData.value.amount) > 0
   
+  // 分类校验 - 每个分类都必须有分类名称和有效金额
   const hasValidCategories = localFormData.value.categories.length > 0 && 
-                            localFormData.value.categories.every(cat => cat.category && cat.amount)
+                            localFormData.value.categories.every(cat => isCategoryComplete(cat))
   
+  // 金额分配校验 - 剩余金额必须为0
   const amountsMatch = Math.abs(remainingAmount.value) < 0.01 // 允许小数误差
   
   return hasBasicInfo && hasValidCategories && amountsMatch
@@ -439,18 +534,26 @@ const onAmountInput = (value: string | number) => {
 const onCategoryAmountInput = (index: number, value: string | number) => {
   console.log(`Category ${index} amount input:`, value, typeof value)
   
+  // 获取当前编辑的分类数组
+  const targetCategories = isEditingMultiCategory.value ? tempCategories.value : localFormData.value.categories
+  
   // 确保分类数组存在且索引有效
-  if (!localFormData.value.categories[index]) {
+  if (!targetCategories[index]) {
     console.error(`Category at index ${index} does not exist`)
     return
   }
   
   // 直接更新分类金额，不影响总金额
   const stringValue = String(value || '')
-  localFormData.value.categories[index].amount = stringValue
+  
+  // 使用 Vue 3 的响应式更新方式
+  targetCategories[index] = {
+    ...targetCategories[index],
+    amount: stringValue
+  }
   
   console.log(`Updated category ${index} amount to:`, stringValue)
-  console.log('Current categories:', localFormData.value.categories)
+  console.log('Current categories:', targetCategories)
 }
 
 // 收款人相关方法
@@ -490,13 +593,43 @@ const onAccountConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
 
 // 分类管理
 const addCategory = () => {
-  localFormData.value.categories.push({ categoryName: '', categoryDisplayName: '', category: '', amount: '' })
+  if (isEditingMultiCategory.value) {
+    tempCategories.value.push({ categoryName: '', categoryDisplayName: '', category: '', amount: '' })
+  } else {
+    localFormData.value.categories.push({ categoryName: '', categoryDisplayName: '', category: '', amount: '' })
+  }
 }
 
 const removeCategory = (index: number) => {
-  if (localFormData.value.categories.length > 1) {
-    localFormData.value.categories.splice(index, 1)
+  const targetCategories = isEditingMultiCategory.value ? tempCategories.value : localFormData.value.categories
+  if (targetCategories.length > 1) {
+    targetCategories.splice(index, 1)
   }
+}
+
+// 多类别弹窗操作
+const openMultiCategorySheet = () => {
+  // 开始编辑模式，复制当前数据到临时变量
+  tempCategories.value = JSON.parse(JSON.stringify(localFormData.value.categories))
+  isEditingMultiCategory.value = true
+  showMultiCategorySheet.value = true
+}
+
+const cancelMultiCategory = () => {
+  // 取消编辑，恢复原始数据
+  tempCategories.value = []
+  isEditingMultiCategory.value = false
+  showMultiCategorySheet.value = false
+}
+
+const confirmMultiCategory = () => {
+  // 确认编辑，应用临时数据
+  if (tempCategories.value.length > 0) {
+    localFormData.value.categories = [...tempCategories.value]
+  }
+  tempCategories.value = []
+  isEditingMultiCategory.value = false
+  showMultiCategorySheet.value = false
 }
 
 const onCategoryConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
@@ -504,9 +637,12 @@ const onCategoryConfirm = ({ selectedValues }: { selectedValues: string[] }) => 
   const selectedCategory = categoryOptions.value.find(opt => opt.value === selectedValues[0])
   
   if (selectedCategory) {
-    localFormData.value.categories[index].category = selectedCategory.value // 原始值用于提交
-    localFormData.value.categories[index].categoryName = selectedCategory.text // 保持兼容
-    localFormData.value.categories[index].categoryDisplayName = formatAccountNameForDisplay(selectedCategory.value) // 格式化显示值
+    // 获取当前编辑的分类数组
+    const targetCategories = isEditingMultiCategory.value ? tempCategories.value : localFormData.value.categories
+    
+    targetCategories[index].category = selectedCategory.value // 原始值用于提交
+    targetCategories[index].categoryName = selectedCategory.text // 保持兼容
+    targetCategories[index].categoryDisplayName = formatAccountNameForDisplay(selectedCategory.value) // 格式化显示值
   }
   
   showCategorySelector.value = false
@@ -515,22 +651,48 @@ const onCategoryConfirm = ({ selectedValues }: { selectedValues: string[] }) => 
 
 
 const onSubmit = () => {
-  if (!isFormValid.value) {
-    if (!localFormData.value.amount) {
-      showToast('请输入金额')
-    } else if (!localFormData.value.account) {
-      showToast('请选择账户')
-    } else if (Math.abs(remainingAmount.value) >= 0.01) {
-      showToast('分类金额分配不匹配')
-    } else {
-      showToast('请填写完整信息')
-    }
+  // 基础信息校验
+  if (!localFormData.value.amount) {
+    showToast('请输入金额')
     return
   }
-
+  
+  if (!localFormData.value.account) {
+    showToast('请选择账户')
+    return
+  }
+  
   const amount = parseFloat(localFormData.value.amount)
   if (isNaN(amount) || amount <= 0) {
     showToast('请输入有效金额')
+    return
+  }
+  
+  // 分类校验 - 每个分类都必须有值
+  const invalidCategories = []
+  for (let i = 0; i < localFormData.value.categories.length; i++) {
+    const category = localFormData.value.categories[i]
+    
+    if (!category.category || !category.categoryDisplayName) {
+      invalidCategories.push(`第${i + 1}个分类未选择`)
+    } else if (!category.amount || parseFloat(category.amount) <= 0) {
+      invalidCategories.push(`第${i + 1}个分类金额无效`)
+    }
+  }
+  
+  if (invalidCategories.length > 0) {
+    showToast(invalidCategories[0]) // 显示第一个错误
+    return
+  }
+  
+  // 金额分配校验 - 剩余金额必须为0
+  if (Math.abs(remainingAmount.value) >= 0.01) {
+    const remaining = remainingAmount.value
+    if (remaining > 0) {
+      showToast(`还需分配 ¥${remaining.toFixed(2)}`)
+    } else {
+      showToast(`超出分配 ¥${Math.abs(remaining).toFixed(2)}`)
+    }
     return
   }
 
@@ -683,6 +845,14 @@ onMounted(() => {
   font-size: 16px;
   color: #323233;
   font-weight: 500;
+  flex: 1;
+  margin-right: 8px;
+  line-height: 1.4;
+  max-height: 2.8em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 
 /* 账户卡片 */
@@ -764,11 +934,34 @@ onMounted(() => {
 
 /* 多类别面板样式 */
 .multi-category-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.multi-category-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   padding: 16px;
+  border-bottom: 1px solid #ebedf0;
+  background: white;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.header-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #323233;
 }
 
 .category-items {
-  margin-bottom: 16px;
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  padding-bottom: 8px;
 }
 
 .category-item {
@@ -776,6 +969,12 @@ onMounted(() => {
   padding: 12px;
   background: #f7f8fa;
   border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.category-item--incomplete {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
 }
 
 .category-row {
@@ -795,18 +994,71 @@ onMounted(() => {
 
 .category-actions {
   text-align: center;
-  margin-bottom: 16px;
+  padding: 8px 16px;
+  border-top: 1px solid #ebedf0;
+  background: white;
 }
 
 .amount-summary {
+  padding: 16px;
+  background: #f7f8fa;
+  border-radius: 12px 12px 0 0;
+  border-top: 1px solid #ebedf0;
+  font-size: 14px;
+  color: #646566;
+  transition: all 0.3s ease;
+}
+
+.amount-summary--balanced {
+  background: #f6ffed;
+  border: 1px solid #b7eb8f;
+}
+
+.amount-summary--unbalanced {
+  background: #fff2f0;
+  border: 1px solid #ffccc7;
+}
+
+.summary-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 16px;
-  background: #f7f8fa;
-  border-radius: 12px;
-  font-size: 14px;
-  color: #646566;
+  margin-bottom: 8px;
+}
+
+.summary-row:last-of-type {
+  margin-bottom: 12px;
+}
+
+.remaining-balanced {
+  color: #52c41a;
+  font-weight: 500;
+}
+
+.remaining-positive {
+  color: #fa8c16;
+  font-weight: 500;
+}
+
+.remaining-negative {
+  color: #ff4d4f;
+  font-weight: 500;
+}
+
+.balance-hint {
+  text-align: center;
+  font-size: 13px;
+  color: #fa8c16;
+  padding: 8px;
+  background: #fff7e6;
+  border-radius: 8px;
+  border: 1px solid #ffd591;
+}
+
+.balance-hint--success {
+  color: #52c41a;
+  background: #f6ffed;
+  border-color: #b7eb8f;
 }
 
 /* 收款人输入弹窗样式 */
