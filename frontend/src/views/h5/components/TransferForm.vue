@@ -2,7 +2,7 @@
   <div class="transfer-form">
     <van-form @submit="onSubmit">
       <!-- 转出账户卡片 -->
-      <div class="form-card from-account-card" @click="showFromAccountSelector = true">
+      <div class="form-card from-account-card" @click="showFullScreenFromAccountSelector">
         <div class="card-icon">
           <van-icon name="gold-coin-o" />
         </div>
@@ -41,7 +41,7 @@
       </div>
 
       <!-- 转入账户卡片 -->
-      <div class="form-card to-account-card" @click="showToAccountSelector = true">
+      <div class="form-card to-account-card" @click="showFullScreenToAccountSelector">
         <div class="card-icon">
           <van-icon name="gold-coin-o" />
         </div>
@@ -73,23 +73,29 @@
       </van-cell-group>
     </van-form>
 
-    <!-- 转出账户选择器 -->
-    <van-popup v-model:show="showFromAccountSelector" position="bottom">
-      <van-picker
-        :columns="accountOptions"
-        @cancel="showFromAccountSelector = false"
-        @confirm="onFromAccountConfirm"
-      />
-    </van-popup>
+    <!-- 全屏转出账户选择器 -->
+    <FullScreenSelector
+      ref="fromAccountSelectorRef"
+      type="account"
+      title="选择转出账户"
+      :show-search="true"
+      :show-account-types="true"
+      :account-types="['Assets', 'Liabilities']"
+      @confirm="onFullScreenFromAccountConfirm"
+      @close="onFullScreenFromAccountClose"
+    />
 
-    <!-- 转入账户选择器 -->
-    <van-popup v-model:show="showToAccountSelector" position="bottom">
-      <van-picker
-        :columns="toAccountOptions"
-        @cancel="showToAccountSelector = false"
-        @confirm="onToAccountConfirm"
-      />
-    </van-popup>
+    <!-- 全屏转入账户选择器 -->
+    <FullScreenSelector
+      ref="toAccountSelectorRef"
+      type="account"
+      title="选择转入账户"
+      :show-search="true"
+      :show-account-types="true"
+      :account-types="['Assets', 'Liabilities']"
+      @confirm="onFullScreenToAccountConfirm"
+      @close="onFullScreenToAccountClose"
+    />
 
     <!-- 币种选择器 -->
     <van-popup v-model:show="showCurrencySelector" position="bottom">
@@ -119,6 +125,7 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { showToast } from 'vant'
 import { getAccountsByType } from '@/api/accounts'
+import FullScreenSelector from './FullScreenSelector.vue'
 
 interface Props {
   formData: {
@@ -145,10 +152,12 @@ const localFormData = ref({
 })
 
 // 弹窗状态
-const showFromAccountSelector = ref(false)
-const showToAccountSelector = ref(false)
 const showCurrencySelector = ref(false)
 const showDateCalendar = ref(false)
+
+// 全屏选择器引用
+const fromAccountSelectorRef = ref()
+const toAccountSelectorRef = ref()
 
 interface Option {
   text: string
@@ -377,10 +386,7 @@ const toAccountDisplayName = computed(() => {
   return formatAccountNameForDisplay(localFormData.value.toAccount)
 })
 
-const toAccountOptions = computed(() => {
-  // 排除已选择的转出账户
-  return accountOptions.value.filter(item => item.value !== localFormData.value.fromAccount)
-})
+
 
 
 
@@ -488,14 +494,33 @@ const onAmountInput = (value: string | number) => {
   localFormData.value.amount = parts.join('.')
 }
 
-const onFromAccountConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
-  localFormData.value.fromAccount = selectedValues[0]
-  showFromAccountSelector.value = false
+// 全屏账户选择器方法
+const showFullScreenFromAccountSelector = () => {
+  if (fromAccountSelectorRef.value) {
+    fromAccountSelectorRef.value.show()
+  }
 }
 
-const onToAccountConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
-  localFormData.value.toAccount = selectedValues[0]
-  showToAccountSelector.value = false
+const onFullScreenFromAccountConfirm = (accountName: string) => {
+  localFormData.value.fromAccount = accountName
+}
+
+const onFullScreenFromAccountClose = () => {
+  // 关闭回调
+}
+
+const showFullScreenToAccountSelector = () => {
+  if (toAccountSelectorRef.value) {
+    toAccountSelectorRef.value.show()
+  }
+}
+
+const onFullScreenToAccountConfirm = (accountName: string) => {
+  localFormData.value.toAccount = accountName
+}
+
+const onFullScreenToAccountClose = () => {
+  // 关闭回调
 }
 
 

@@ -1,16 +1,16 @@
 <template>
   <div class="transaction-form">
     <van-form @submit="onSubmit">
-      <!-- 账户选择卡片 -->
-      <div class="form-card account-card" @click="showAccountSelector = true">
-        <div class="card-icon">
-          <van-icon name="gold-coin-o" />
-        </div>
-        <div class="card-content">
-          <div class="card-label">{{ accountDisplayName || '选择账户' }}</div>
-          <van-icon name="arrow" />
-        </div>
+          <!-- 账户选择卡片 -->
+    <div class="form-card account-card" @click="showFullScreenAccountSelector">
+      <div class="card-icon">
+        <van-icon name="gold-coin-o" />
       </div>
+      <div class="card-content">
+        <div class="card-label">{{ accountDisplayName || '选择账户' }}</div>
+        <van-icon name="arrow" />
+      </div>
+    </div>
 
       <!-- 金额输入卡片 -->
       <div class="form-card amount-card">
@@ -34,7 +34,7 @@
       </div>
 
       <!-- 分类选择卡片 -->
-      <div class="form-card category-card" @click="showCategorySelector = true; currentCategoryIndex = 0">
+      <div class="form-card category-card" @click="() => showFullScreenCategorySelector()">
         <div class="card-icon">
           <van-icon name="apps-o" />
         </div>
@@ -136,23 +136,28 @@
       </div>
     </van-popup>
 
-    <!-- 账户选择器 -->
-    <van-popup v-model:show="showAccountSelector" position="bottom">
-      <van-picker
-        :columns="accountOptions"
-        @cancel="showAccountSelector = false"
-        @confirm="onAccountConfirm"
-      />
-    </van-popup>
+    <!-- 全屏账户选择器 -->
+    <FullScreenSelector
+      ref="accountSelectorRef"
+      type="account"
+      title="选择账户"
+      :show-search="true"
+      :show-account-types="true"
+      :account-types="getAccountTypesForTransaction()"
+      @confirm="onFullScreenAccountConfirm"
+      @close="onFullScreenAccountClose"
+    />
 
-    <!-- 分类选择器 -->
-    <van-popup v-model:show="showCategorySelector" position="bottom">
-      <van-picker
-        :columns="categoryOptions"
-        @cancel="showCategorySelector = false"
-        @confirm="onCategoryConfirm"
-      />
-    </van-popup>
+    <!-- 全屏分类选择器 -->
+    <FullScreenSelector
+      ref="categorySelectorRef"
+      type="category"
+      title="选择分类"
+      :show-search="true"
+      :categories="getCategoryHierarchy()"
+      @confirm="onFullScreenCategoryConfirm"
+      @close="onFullScreenCategoryClose"
+    />
 
     <!-- 币种选择器 -->
     <van-popup v-model:show="showCurrencySelector" position="bottom">
@@ -204,7 +209,7 @@
                 placeholder="选择分类"
                 readonly
                 class="category-field"
-                @click="showCategorySelector = true; currentCategoryIndex = index"
+                @click="() => showFullScreenCategorySelector(index)"
               />
               <van-field
                 :model-value="item.amount"
@@ -283,6 +288,7 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { showToast } from 'vant'
 import { getPayees } from '@/api/transactions'
 import { getAccountsByType } from '@/api/accounts'
+import FullScreenSelector from './FullScreenSelector.vue'
 
 interface CategoryItem {
   categoryName: string
@@ -323,8 +329,6 @@ const localFormData = ref({
 
 // 弹窗状态
 const showPayeeInput = ref(false)
-const showAccountSelector = ref(false)
-const showCategorySelector = ref(false)
 const showCurrencySelector = ref(false)
 const showMultiCategorySheet = ref(false)
 const showDateCalendar = ref(false)
@@ -336,6 +340,10 @@ const isEditingMultiCategory = ref(false)
 // 临时数据
 const tempPayee = ref('')
 const currentCategoryIndex = ref(0)
+
+// 全屏选择器引用
+const accountSelectorRef = ref()
+const categorySelectorRef = ref()
 
 interface Option {
   text: string
@@ -762,10 +770,19 @@ const selectPayeeFromHistory = (payee: string) => {
   tempPayee.value = ''
 }
 
-// 账户选择
-const onAccountConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
-  localFormData.value.account = selectedValues[0]
-  showAccountSelector.value = false
+// 全屏账户选择器方法
+const showFullScreenAccountSelector = () => {
+  if (accountSelectorRef.value) {
+    accountSelectorRef.value.show()
+  }
+}
+
+const onFullScreenAccountConfirm = (accountName: string) => {
+  localFormData.value.account = accountName
+}
+
+const onFullScreenAccountClose = () => {
+  // 关闭回调，可以在这里处理一些状态重置
 }
 
 // 日期处理
@@ -824,20 +841,137 @@ const confirmMultiCategory = () => {
   showMultiCategorySheet.value = false
 }
 
-const onCategoryConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
-  const index = currentCategoryIndex.value
-  const selectedCategory = categoryOptions.value.find(opt => opt.value === selectedValues[0])
-  
-  if (selectedCategory) {
-    // 获取当前编辑的分类数组
-    const targetCategories = isEditingMultiCategory.value ? tempCategories.value : localFormData.value.categories
-    
-    targetCategories[index].category = selectedCategory.value // 原始值用于提交
-    targetCategories[index].categoryName = selectedCategory.text // 保持兼容
-    targetCategories[index].categoryDisplayName = formatAccountNameForDisplay(selectedCategory.value) // 格式化显示值
+// 全屏分类选择器方法
+const showFullScreenCategorySelector = (index?: number) => {
+  if (index !== undefined) {
+    currentCategoryIndex.value = index
+  } else {
+    currentCategoryIndex.value = 0
   }
   
-  showCategorySelector.value = false
+  if (categorySelectorRef.value) {
+    categorySelectorRef.value.show()
+  }
+}
+
+const onFullScreenCategoryConfirm = (categoryName: string) => {
+  const index = currentCategoryIndex.value
+  
+  // 获取当前编辑的分类数组
+  const targetCategories = isEditingMultiCategory.value ? tempCategories.value : localFormData.value.categories
+  
+  targetCategories[index].category = categoryName // 原始值用于提交
+  targetCategories[index].categoryName = categoryName // 保持兼容
+  targetCategories[index].categoryDisplayName = formatAccountNameForDisplay(categoryName) // 格式化显示值
+}
+
+const onFullScreenCategoryClose = () => {
+  // 关闭回调，可以在这里处理一些状态重置
+}
+
+// 获取交易类型对应的账户类型
+const getAccountTypesForTransaction = () => {
+  switch (props.type) {
+    case 'expense':
+      return ['Assets', 'Liabilities']
+    case 'income':
+      return ['Assets', 'Liabilities']
+    case 'adjustment':
+      return ['Assets', 'Liabilities']
+    default:
+      return ['Assets', 'Liabilities', 'Income', 'Expenses']
+  }
+}
+
+// 构建分类层级数据
+const getCategoryHierarchy = () => {
+  // 根据交易类型确定分类账户类型
+  let targetAccountType = ''
+  switch (props.type) {
+    case 'expense':
+      targetAccountType = 'Expenses'
+      break
+    case 'income':
+      targetAccountType = 'Income'
+      break
+    case 'adjustment':
+      targetAccountType = 'Expenses' // 调整余额默认使用支出分类
+      break
+    default:
+      targetAccountType = 'Expenses'
+  }
+
+  // 从现有的分类选项中构建层级结构
+  const hierarchy: any[] = []
+  const pathMap = new Map()
+
+  // 首先收集所有路径
+  categoryOptions.value.forEach(option => {
+    if (option.disabled || !option.value.startsWith(`${targetAccountType}:`)) {
+      return
+    }
+
+    const parts = option.value.split(':')
+    if (parts.length < 2) return
+
+    // 为每个层级创建路径项
+    for (let i = 1; i <= parts.length; i++) {
+      const currentPath = parts.slice(0, i).join(':')
+      const currentPart = parts[i - 1]
+      
+      if (!pathMap.has(currentPath)) {
+        const isLeaf = i === parts.length
+        
+        pathMap.set(currentPath, {
+          name: currentPath,
+          displayName: i === 1 ? 
+            currentPart : // 第一级显示原始名称
+            formatAccountNameForDisplay(currentPath), // 其他级别格式化显示
+          hasChildren: !isLeaf,
+          children: [],
+          level: i - 1
+        })
+      }
+    }
+  })
+
+  // 构建层级关系
+  pathMap.forEach((category, path) => {
+    const parts = path.split(':')
+    
+    if (parts.length === 1) {
+      // 根级别（Expenses或Income），跳过
+      return
+    } else if (parts.length === 2) {
+      // 第一级分类，直接添加到hierarchy
+      hierarchy.push(category)
+    } else {
+      // 子级分类，添加到父级的children
+      const parentPath = parts.slice(0, -1).join(':')
+      const parent = pathMap.get(parentPath)
+      if (parent) {
+        parent.children.push(category)
+        parent.hasChildren = true
+      }
+    }
+  })
+
+  // 按名称排序
+  const sortCategories = (categories: any[]) => {
+    categories.sort((a, b) => a.displayName.localeCompare(b.displayName))
+    categories.forEach(cat => {
+      if (cat.children && cat.children.length > 0) {
+        sortCategories(cat.children)
+      }
+    })
+  }
+
+  sortCategories(hierarchy)
+  
+  console.log('TransactionForm - 构建的分类层级:', hierarchy)
+  console.log('TransactionForm - 分类层级数量:', hierarchy.length)
+  
+  return hierarchy
 }
 
 
