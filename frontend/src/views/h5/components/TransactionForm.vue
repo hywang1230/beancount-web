@@ -16,25 +16,26 @@
       </div>
 
       <!-- 金额输入卡片 -->
-      <div class="form-card amount-card">
+      <div class="form-card amount-card" @click="showAmountKeyboard">
         <div class="card-icon">
           <van-icon name="plus" />
         </div>
         <div class="amount-input-container">
-          <div class="currency-selector" @click="showCurrencySelector = true">
+          <div
+            class="currency-selector"
+            @click.stop="showCurrencySelector = true"
+          >
             <span class="currency-symbol">{{
               getCurrencySymbol(localFormData.currency)
             }}</span>
             <van-icon name="arrow-down" size="12" />
           </div>
-          <van-field
-            v-model="localFormData.amount"
-            type="number"
-            placeholder="0.00"
-            class="amount-field"
-            :border="false"
-            @input="onAmountInput"
-          />
+          <div
+            class="amount-display"
+            :class="{ placeholder: !localFormData.amount }"
+          >
+            {{ localFormData.amount || "0.00" }}
+          </div>
         </div>
       </div>
 
@@ -278,6 +279,17 @@
       @confirm="onDateConfirm"
       @close="showDateCalendar = false"
     />
+
+    <!-- 数字键盘 -->
+    <van-number-keyboard
+      v-model:show="showAmountKeyboardVisible"
+      theme="custom"
+      :extra-key="['.', '-']"
+      close-button-text="完成"
+      @input="onKeyboardInput"
+      @delete="onKeyboardDelete"
+      @close="hideAmountKeyboard"
+    />
   </div>
 </template>
 
@@ -313,6 +325,7 @@ interface Props {
 interface Emits {
   (e: "update", data: any): void;
   (e: "submit", data: any): void;
+  (e: "keyboard-visible", visible: boolean): void;
 }
 
 const props = defineProps<Props>();
@@ -327,10 +340,20 @@ const localFormData = ref({
   ],
 });
 
+// 调试：监听amount变化
+watch(
+  () => localFormData.value.amount,
+  (newVal, oldVal) => {
+    console.log("金额变化:", oldVal, "->", newVal, "新值类型:", typeof newVal);
+  },
+  { immediate: true }
+);
+
 // 弹窗状态
 const showCurrencySelector = ref(false);
 const showMultiCategorySheet = ref(false);
 const showDateCalendar = ref(false);
+const showAmountKeyboardVisible = ref(false);
 
 // 多类别编辑的临时数据
 const tempCategories = ref<CategoryItem[]>([]);
@@ -759,6 +782,50 @@ watch(
   { deep: true, immediate: false }
 );
 
+// 监听分类和金额变化，当只有一个分类时自动设置分类金额
+watch(
+  [
+    () => localFormData.value.amount,
+    () => localFormData.value.categories,
+    () => localFormData.value.categories?.[0]?.category,
+  ],
+  ([newAmount, newCategories]) => {
+    // 只有在非编辑模式且只有一个分类时处理
+    if (
+      !isEditingMultiCategory.value &&
+      newCategories &&
+      newCategories.length === 1 &&
+      newAmount &&
+      parseFloat(newAmount) > 0
+    ) {
+      const firstCategory = newCategories[0];
+      const amount = parseFloat(newAmount);
+
+      // 如果分类已选择但金额为空或为0，则自动设置金额
+      if (
+        firstCategory.category &&
+        (!firstCategory.amount || parseFloat(firstCategory.amount) === 0)
+      ) {
+        // 根据交易类型确定金额符号
+        let categoryAmount = amount;
+
+        // 对于支出类型，分类金额为正数
+        // 对于收入类型，分类金额为正数
+        // 对于调整类型，保持原金额符号
+        if (props.type === "expense" || props.type === "income") {
+          categoryAmount = Math.abs(amount);
+        }
+
+        firstCategory.amount = String(categoryAmount);
+        console.log(
+          `单分类自动设置金额: ${categoryAmount}, 交易类型: ${props.type}`
+        );
+      }
+    }
+  },
+  { deep: true, immediate: false }
+);
+
 // 币种相关方法
 const getCurrencySymbol = (currency: string) => {
   const symbols: Record<string, string> = {
@@ -789,6 +856,112 @@ const onCurrencyConfirm = ({
 const onAmountInput = (value: string | number) => {
   console.log("onAmountInput called with:", value, typeof value);
   // 去掉自动联动逻辑，只记录金额输入，不自动更新分类金额
+};
+
+// 数字键盘相关方法
+const showAmountKeyboard = () => {
+  showAmountKeyboardVisible.value = true;
+  emit("keyboard-visible", true);
+};
+
+const hideAmountKeyboard = () => {
+  showAmountKeyboardVisible.value = false;
+  emit("keyboard-visible", false);
+};
+
+const onKeyboardInput = (key: string | number) => {
+  console.log("键盘输入:", key, "类型:", typeof key);
+  const currentAmount = String(localFormData.value.amount || "0");
+  console.log("当前金额:", currentAmount, "类型:", typeof currentAmount);
+
+  // 确保key是字符串
+  const keyStr = String(key);
+
+  // 处理不同类型的输入
+  if (keyStr === ".") {
+    // 处理小数点
+    handleDecimalPoint();
+    return;
+  } else if (keyStr === "-") {
+    // 处理负号
+    handleMinusSign();
+    return;
+  } else {
+    // 处理数字输入
+    let newAmount = "";
+    if (currentAmount === "0" || currentAmount === "0.00") {
+      newAmount = keyStr;
+    } else {
+      newAmount = currentAmount + keyStr;
+    }
+
+    console.log("计算的新金额:", newAmount);
+    localFormData.value.amount = newAmount;
+    console.log("设置后的金额:", localFormData.value.amount);
+  }
+
+  // 触发原有的输入处理逻辑
+  onAmountInput(localFormData.value.amount);
+};
+
+const onKeyboardDelete = () => {
+  const currentAmount = localFormData.value.amount || "";
+  if (currentAmount.length > 0) {
+    if (currentAmount.length === 1) {
+      localFormData.value.amount = "0";
+    } else {
+      localFormData.value.amount = currentAmount.slice(0, -1);
+    }
+  }
+
+  // 触发原有的输入处理逻辑
+  onAmountInput(localFormData.value.amount);
+};
+
+const handleDecimalPoint = () => {
+  const currentAmount = String(localFormData.value.amount || "0");
+
+  // 检查是否已有小数点
+  if (currentAmount.includes(".")) {
+    return; // 已经有小数点了，不再添加
+  }
+
+  // 添加小数点
+  if (currentAmount === "0" || currentAmount === "") {
+    localFormData.value.amount = "0.";
+  } else {
+    localFormData.value.amount = currentAmount + ".";
+  }
+
+  console.log("添加小数点后:", localFormData.value.amount);
+
+  // 触发原有的输入处理逻辑
+  onAmountInput(localFormData.value.amount);
+};
+
+const handleMinusSign = () => {
+  const currentAmount = String(localFormData.value.amount || "0");
+
+  // 如果已经是负数，则转为正数
+  if (currentAmount.startsWith("-")) {
+    localFormData.value.amount = currentAmount.substring(1);
+  } else {
+    // 如果是正数或零，则转为负数
+    if (
+      currentAmount === "0" ||
+      currentAmount === "0.00" ||
+      currentAmount === ""
+    ) {
+      localFormData.value.amount = "-0";
+    } else {
+      localFormData.value.amount = "-" + currentAmount;
+    }
+  }
+
+  console.log("切换正负号后:", localFormData.value.amount);
+
+  // 触发原有的输入处理逻辑
+  onAmountInput(localFormData.value.amount);
 };
 
 const onCategoryAmountInput = (index: number, value: string | number) => {
@@ -908,8 +1081,20 @@ const openMultiCategorySheet = () => {
         firstCategory.category &&
         (!firstCategory.amount || parseFloat(firstCategory.amount) === 0)
       ) {
-        firstCategory.amount = String(totalAmount);
-        console.log("多类别模式：自动将总金额赋值给第一个分类:", totalAmount);
+        // 根据交易类型确定金额符号
+        let categoryAmount = totalAmount;
+
+        // 对于支出类型，分类金额为正数
+        // 对于收入类型，分类金额为正数
+        // 对于调整类型，保持原金额符号
+        if (props.type === "expense" || props.type === "income") {
+          categoryAmount = Math.abs(totalAmount);
+        }
+
+        firstCategory.amount = String(categoryAmount);
+        console.log(
+          `多类别模式：自动将总金额赋值给第一个分类: ${categoryAmount}, 交易类型: ${props.type}`
+        );
       }
     }
   }
@@ -961,7 +1146,32 @@ const onFullScreenCategoryConfirm = (categoryName: string) => {
   targetCategories[index].categoryDisplayName =
     formatAccountNameForDisplay(categoryName); // 格式化显示值
 
-  // 去掉分类选择时的自动联动逻辑
+  // 如果只有一个分类且有输入金额，自动设置分类金额
+  if (
+    !isEditingMultiCategory.value &&
+    targetCategories.length === 1 &&
+    localFormData.value.amount &&
+    (!targetCategories[0].amount ||
+      parseFloat(targetCategories[0].amount) === 0)
+  ) {
+    const amount = parseFloat(localFormData.value.amount);
+    if (!isNaN(amount) && amount > 0) {
+      // 根据交易类型确定金额符号
+      let categoryAmount = amount;
+
+      // 对于支出类型，分类金额为正数
+      // 对于收入类型，分类金额为正数
+      // 对于调整类型，保持原金额符号
+      if (props.type === "expense" || props.type === "income") {
+        categoryAmount = Math.abs(amount);
+      }
+
+      targetCategories[0].amount = String(categoryAmount);
+      console.log(
+        `分类选择后自动设置金额: ${categoryAmount}, 交易类型: ${props.type}`
+      );
+    }
+  }
 };
 
 const onFullScreenCategoryClose = () => {
@@ -993,8 +1203,20 @@ const onSubmit = () => {
       firstCategory.category &&
       (!firstCategory.amount || parseFloat(firstCategory.amount) === 0)
     ) {
-      firstCategory.amount = String(amount);
-      console.log("提交前单个分类自动赋值金额:", amount);
+      // 根据交易类型确定金额符号
+      let categoryAmount = amount;
+
+      // 对于支出类型，分类金额为正数
+      // 对于收入类型，分类金额为正数
+      // 对于调整类型，保持原金额符号
+      if (props.type === "expense" || props.type === "income") {
+        categoryAmount = Math.abs(amount);
+      }
+
+      firstCategory.amount = String(categoryAmount);
+      console.log(
+        `提交前单个分类自动赋值金额: ${categoryAmount}, 交易类型: ${props.type}`
+      );
     }
   }
 
@@ -1320,6 +1542,26 @@ onMounted(() => {
 }
 
 .amount-field :deep(.van-field__control::placeholder) {
+  color: #c8c9cc;
+}
+
+/* 金额显示区域样式 */
+.amount-display {
+  flex: 1;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: left;
+  color: #323233;
+  min-height: 32px;
+  line-height: 32px;
+  cursor: pointer;
+  padding: 0;
+  border: none;
+  background: transparent;
+  user-select: none;
+}
+
+.amount-display.placeholder {
   color: #c8c9cc;
 }
 
