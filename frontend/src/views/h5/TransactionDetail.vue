@@ -72,14 +72,14 @@
           size="large"
           @click="editTransaction"
         >
-          编辑交易
+          编辑
         </van-button>
         <van-button
           type="danger"
           size="large"
           @click="deleteTransaction"
         >
-          删除交易
+          删除
         </van-button>
       </div>
     </div>
@@ -281,8 +281,23 @@ onMounted(async () => {
 
 .edit-delete-buttons {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 12px;
+}
+
+.edit-delete-buttons :deep(.van-button--large) {
+  height: 46px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 375px) {
+  .edit-delete-buttons :deep(.van-button--large) {
+    height: 44px;
+    font-size: 15px;
+  }
 }
 
 :deep(.van-cell-group) {
