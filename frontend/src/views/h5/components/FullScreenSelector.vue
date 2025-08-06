@@ -1386,53 +1386,6 @@ onMounted(() => {
   }
 }
 
-/* 暗色主题 */
-@media (prefers-color-scheme: dark) {
-  .fullscreen-selector {
-    background-color: #1a1a1a;
-  }
-
-  .selector-header {
-    background: #2c2c2c;
-    border-bottom-color: #3a3a3a;
-  }
-
-  .search-section {
-    background: #2c2c2c;
-    border-bottom-color: #3a3a3a;
-  }
-
-  .type-tabs {
-    background: #2c2c2c;
-    border-bottom-color: #3a3a3a;
-  }
-
-  .breadcrumb {
-    background: #2c2c2c;
-    border-bottom-color: #3a3a3a;
-  }
-
-  .account-item,
-  .category-item {
-    background: #2c2c2c;
-  }
-
-  .account-item:hover,
-  .category-item:hover {
-    background: #3a3a3a;
-  }
-
-  .account-name,
-  .category-name {
-    color: #cccccc;
-  }
-
-  .category-item.back-item {
-    background: #1a1a1a;
-    border-color: #5a5a5a;
-  }
-}
-
 /* 交易对象选择样式 */
 .payee-content {
   flex: 1;
