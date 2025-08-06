@@ -131,15 +131,6 @@ export const recurringApi = {
       params: executionDate ? { execution_date: executionDate } : {},
     }),
 
-  // 执行单个周期记账
-  executeSingle: (
-    id: string,
-    executionDate?: string
-  ): Promise<{ success: boolean; message: string }> =>
-    api.post(`/recurring/${id}/execute`, null, {
-      params: executionDate ? { execution_date: executionDate } : {},
-    }),
-
   // 获取执行日志
   getLogs: (transactionId?: string, days = 30): Promise<ExecutionLog[]> =>
     api.get("/recurring/logs/execution", {

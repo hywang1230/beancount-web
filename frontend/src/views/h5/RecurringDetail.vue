@@ -91,17 +91,6 @@
         </van-button>
 
         <van-button
-          type="primary"
-          plain
-          size="large"
-          block
-          @click="executeNow"
-          :loading="executeLoading"
-        >
-          立即执行一次
-        </van-button>
-
-        <van-button
           type="danger"
           size="large"
           block
@@ -166,7 +155,7 @@ const router = useRouter();
 const loading = ref(true);
 const toggleLoading = ref(false);
 const deleteLoading = ref(false);
-const executeLoading = ref(false);
+
 const recurringData = ref<RecurringTransaction | null>(null);
 
 // 日志相关
@@ -315,38 +304,6 @@ const loadRecurringData = async () => {
     router.back();
   } finally {
     loading.value = false;
-  }
-};
-
-// 立即执行单个周期记账
-const executeNow = async () => {
-  if (!recurringData.value) return;
-
-  try {
-    await showConfirmDialog({
-      title: "确认执行",
-      message: "确定要立即执行这个周期记账吗？",
-    });
-
-    executeLoading.value = true;
-
-    // 调用单个周期记账执行API
-    const result = await recurringApi.executeSingle(recurringData.value.id);
-
-    if (result.success) {
-      showToast("执行成功");
-      // 刷新数据
-      await loadRecurringData();
-    } else {
-      showToast(result.message || "执行失败");
-    }
-  } catch (error) {
-    if (error !== "cancel") {
-      showToast("执行失败");
-      console.error("执行周期记账失败:", error);
-    }
-  } finally {
-    executeLoading.value = false;
   }
 };
 
