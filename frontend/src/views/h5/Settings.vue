@@ -38,6 +38,23 @@
       </van-cell>
     </van-cell-group>
 
+    <van-cell-group inset title="外观设置">
+      <van-cell title="主题模式" icon="diamond-o" :border="false">
+        <template #label>
+          <van-radio-group
+            v-model="themeSetting"
+            @change="handleThemeChange"
+            direction="horizontal"
+            class="theme-radio-group"
+          >
+            <van-radio name="light">亮色</van-radio>
+            <van-radio name="dark">暗色</van-radio>
+            <van-radio name="system">跟随系统</van-radio>
+          </van-radio-group>
+        </template>
+      </van-cell>
+    </van-cell-group>
+
     <van-cell-group inset title="应用信息">
       <van-cell
         title="版本信息"
@@ -72,23 +89,47 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { useThemeStore, type ThemeSetting } from "@/stores/theme";
+import { showToast } from "vant";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
+const themeStore = useThemeStore();
 const showAbout = ref(false);
 const version = ref("1.0.0");
 
+// 主题设置
+const themeSetting = computed({
+  get: () => themeStore.themeSetting,
+  set: (value: ThemeSetting) => {
+    themeStore.setThemeSetting(value);
+  },
+});
+
 const navigateTo = (path: string) => {
   router.push(path);
+};
+
+const handleThemeChange = (value: ThemeSetting) => {
+  const themeNames = {
+    light: "亮色模式",
+    dark: "暗黑模式",
+    system: "跟随系统",
+  };
+  showToast({
+    message: `已切换到${themeNames[value]}`,
+    duration: 1500,
+  });
 };
 </script>
 
 <style scoped>
 .settings-page {
   padding: 16px;
-  background-color: #f7f8fa;
+  background-color: var(--van-background);
   min-height: 100vh;
+  transition: background-color 0.3s ease;
 }
 
 .cell-desc {
@@ -112,6 +153,11 @@ const navigateTo = (path: string) => {
   margin-top: 16px;
   font-size: 12px;
   color: #969799;
+}
+
+.theme-radio-group {
+  margin-top: 8px;
+  gap: 16px;
 }
 
 :deep(.van-cell-group__title) {

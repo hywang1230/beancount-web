@@ -106,6 +106,7 @@
       :style="{ height: '90%' }"
       position="bottom"
       :close-on-click-overlay="false"
+      teleport="body"
     >
       <div class="file-dialog">
         <van-sticky>
@@ -546,14 +547,21 @@ onMounted(() => {
 
 <style scoped>
 .h5-files {
-  background-color: #f7f8fa;
+  background-color: var(--bg-color-secondary);
   min-height: 100vh;
+  transition: background-color 0.3s ease;
 }
 
 .search-section {
-  background-color: white;
+  background-color: var(--bg-color);
   padding: 8px 16px;
-  border-bottom: 1px solid #ebedf0;
+  border-bottom: 1px solid var(--border-color);
+}
+.search-section :deep(.van-search) {
+  background-color: var(--bg-color) !important;
+}
+.search-section :deep(.van-search__content) {
+  background-color: var(--bg-color-secondary);
 }
 
 .file-icon {
@@ -562,10 +570,13 @@ onMounted(() => {
   justify-content: center;
   width: 32px;
   height: 32px;
-  background-color: #f7f8fa;
+  background-color: var(--bg-color-tertiary);
   border-radius: 50%;
   margin-right: 12px;
-  color: #1989fa;
+  color: var(--color-primary);
+}
+.file-icon .van-icon {
+  color: var(--text-color);
 }
 
 :deep(.van-cell-group) {
@@ -597,12 +608,12 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: #fff;
+  background-color: var(--bg-color-secondary);
 }
 
 .dialog-nav {
-  background-color: #fff;
-  border-bottom: 1px solid #ebedf0;
+  background-color: var(--bg-color);
+  border-bottom: 1px solid var(--border-color);
   z-index: 1;
 }
 
@@ -616,10 +627,12 @@ onMounted(() => {
   font-family: "Monaco", "Menlo", "Ubuntu Mono", monospace;
   font-size: 13px;
   line-height: 1.5;
+  background-color: var(--bg-color);
+  color: var(--text-color);
 }
 
 .file-content :deep(.van-field__control--disabled) {
-  background-color: #f7f8fa;
-  color: #646566;
+  background-color: var(--bg-color-tertiary);
+  color: var(--text-color-secondary);
 }
 </style>

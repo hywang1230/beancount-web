@@ -974,44 +974,12 @@ onMounted(() => {
 
 <style scoped>
 .h5-accounts {
-  background-color: #f7f8fa;
+  background-color: var(--bg-color-secondary);
   min-height: 100vh;
   padding-bottom: 60px; /* 为底部导航留出空间 */
+  transition: background-color 0.3s ease;
 }
 
-.overview-section {
-  padding: 16px;
-}
-
-.total-card {
-  border-radius: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-}
-
-.total-card :deep(.van-card__header) {
-  padding: 16px;
-}
-
-.total-card :deep(.van-card__content) {
-  padding: 0 16px 16px;
-}
-
-.total-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 14px;
-  opacity: 0.8;
-}
-
-.total-amount {
-  font-size: 28px;
-  font-weight: bold;
-  margin-top: 8px;
-}
-
-/* 统计卡片样式 */
 .stats-section {
   padding: 16px;
 }
@@ -1025,24 +993,24 @@ onMounted(() => {
 }
 
 .stat-item {
-  background: white;
+  background: var(--bg-color);
   border-radius: 12px;
   padding: 16px 12px;
   text-align: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
 }
 
 .stat-value {
   font-size: 24px;
   font-weight: 600;
-  color: #409eff;
+  color: var(--color-primary);
   margin-bottom: 4px;
   line-height: 1;
 }
 
 .stat-label {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-color-secondary);
   font-weight: normal;
 }
 
@@ -1052,11 +1020,16 @@ onMounted(() => {
   align-items: center;
   gap: 12px;
   padding: 0 16px 16px;
+  background-color: var(--bg-color-secondary);
 }
 
 .action-bar :deep(.van-search) {
   flex: 1;
   border-radius: 20px;
+  background-color: var(--bg-color-secondary) !important;
+}
+.action-bar :deep(.van-search__content) {
+  background-color: var(--bg-color);
 }
 
 /* 账户列表样式 */
@@ -1074,13 +1047,16 @@ onMounted(() => {
   justify-content: center;
   width: 32px;
   height: 32px;
-  background-color: #f7f8fa;
+  background-color: var(--bg-color-tertiary);
   border-radius: 50%;
   margin-right: 12px;
 }
+.account-icon .van-icon {
+  color: var(--text-color);
+}
 
 .account-icon.archived {
-  background-color: #f0f0f0;
+  background-color: var(--bg-color-tertiary);
   opacity: 0.6;
 }
 
@@ -1105,7 +1081,7 @@ onMounted(() => {
 }
 
 .has-children {
-  background-color: #fafafa;
+  background-color: var(--bg-color-secondary);
 }
 
 .expand-icon {
@@ -1116,12 +1092,13 @@ onMounted(() => {
 /* 创建表单样式 */
 .create-form {
   padding: 20px;
+  background-color: var(--bg-color-secondary);
 }
 
 .form-title {
   font-size: 18px;
   font-weight: 600;
-  color: #303133;
+  color: var(--text-color);
   margin-bottom: 20px;
   text-align: center;
 }
@@ -1131,6 +1108,10 @@ onMounted(() => {
 }
 
 /* 归档对话框样式 */
+:deep(.van-dialog) {
+  background-color: var(--bg-color) !important;
+}
+
 :deep(.archive-dialog) {
   border-radius: 16px;
   overflow: hidden;
@@ -1155,7 +1136,7 @@ onMounted(() => {
   flex-direction: column;
   align-items: center;
   padding: 24px 20px 16px;
-  background: #fff;
+  background: var(--bg-color);
 }
 
 .warning-icon {
@@ -1167,25 +1148,25 @@ onMounted(() => {
 .dialog-title {
   font-size: 18px;
   font-weight: 600;
-  color: #323233;
+  color: var(--text-color);
   margin: 0;
 }
 
 .account-info {
   padding: 16px 20px;
   text-align: center;
-  background: #f7f8fa;
+  background: var(--bg-color-secondary);
 }
 
 .account-name {
   font-size: 16px;
   font-weight: 600;
-  color: #323233;
+  color: var(--text-color);
   margin: 0 0 8px 0;
   padding: 8px 16px;
-  background: white;
+  background: var(--bg-color);
   border-radius: 8px;
-  border: 1px solid #ebedf0;
+  border: 1px solid var(--border-color);
 }
 
 .warning-message {
@@ -1197,16 +1178,17 @@ onMounted(() => {
 
 .date-section {
   padding: 16px 20px;
+  background-color: var(--bg-color);
 }
 
 .date-cell {
   border-radius: 8px;
-  border: 1px solid #ebedf0;
+  border: 1px solid var(--border-color);
   overflow: hidden;
 }
 
 .calendar-icon {
-  color: #409eff;
+  color: var(--color-primary);
   margin-right: 8px;
 }
 
@@ -1214,15 +1196,15 @@ onMounted(() => {
   display: flex;
   gap: 12px;
   padding: 20px;
-  background: #f7f8fa;
+  background: var(--bg-color-secondary);
 }
 
 .cancel-btn {
   flex: 1;
   height: 44px;
-  border: 1px solid #ebedf0;
-  background: white;
-  color: #646566;
+  border: 1px solid var(--border-color);
+  background: var(--bg-color);
+  color: var(--text-color-secondary);
   border-radius: 8px;
 }
 
@@ -1288,27 +1270,27 @@ onMounted(() => {
 
 /* 标签页样式覆盖 */
 :deep(.van-tabs__nav) {
-  background: white;
+  background: var(--bg-color);
   margin: 0 16px;
   border-radius: 12px 12px 0 0;
 }
 
 :deep(.van-tabs__line) {
-  background-color: #409eff;
+  background-color: var(--color-primary);
 }
 
 :deep(.van-tab) {
   font-size: 14px;
-  color: #606266;
+  color: var(--text-color-secondary);
 }
 
 :deep(.van-tab--active) {
-  color: #409eff;
+  color: var(--color-primary);
   font-weight: 500;
 }
 
 :deep(.van-tabs__content) {
-  background: white;
+  background: var(--bg-color);
   margin: 0 16px;
   border-radius: 0 0 12px 12px;
   padding-top: 16px;
@@ -1317,10 +1299,10 @@ onMounted(() => {
 /* Cell 样式覆盖 */
 :deep(.van-cell) {
   padding: 16px;
-  background: white;
+  background: var(--bg-color);
   border-radius: 8px;
   margin-bottom: 8px;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--border-color-lighter);
 }
 
 :deep(.van-cell:last-child) {
@@ -1330,40 +1312,41 @@ onMounted(() => {
 :deep(.van-cell__title) {
   font-size: 14px;
   font-weight: 500;
-  color: #303133;
+  color: var(--text-color);
 }
 
 :deep(.van-cell__label) {
   font-size: 12px;
-  color: #909399;
+  color: var(--text-color-secondary);
   margin-top: 2px;
 }
 
 :deep(.van-cell__value) {
   font-size: 14px;
   font-weight: 500;
-  color: #606266;
+  color: var(--text-color-secondary);
 }
 
 /* 弹出层样式覆盖 */
 :deep(.van-popup) {
   border-radius: 16px 16px 0 0;
   z-index: 2001; /* 确保弹窗在最上层 */
+  background-color: var(--bg-color-secondary);
 }
 
 :deep(.van-picker__toolbar) {
   padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 :deep(.van-field__label) {
   width: 80px;
-  color: #606266;
+  color: var(--text-color-secondary);
   font-weight: 500;
 }
 
 :deep(.van-field__control) {
-  color: #303133;
+  color: var(--text-color);
 }
 
 /* 空状态样式 */
@@ -1372,7 +1355,7 @@ onMounted(() => {
 }
 
 :deep(.van-empty__description) {
-  color: #909399;
+  color: var(--text-color-placeholder);
   font-size: 14px;
 }
 

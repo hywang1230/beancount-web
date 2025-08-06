@@ -75,6 +75,7 @@
 
 <script setup lang="ts">
 import { getBalanceSheet, getMonthlySummary, getTrends } from "@/api/reports";
+import { useThemeStore } from "@/stores/theme";
 import { LineChart } from "echarts/charts";
 import {
   GridComponent,
@@ -85,7 +86,7 @@ import {
 import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { showToast } from "vant";
-import { nextTick, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 
 // 注册 ECharts 组件
@@ -99,6 +100,9 @@ echarts.use([
 ]);
 
 const router = useRouter();
+const themeStore = useThemeStore();
+
+const isDark = computed(() => themeStore.isDark);
 
 const showBalance = ref(true);
 const totalBalance = ref(0);
@@ -226,12 +230,18 @@ const generateTrendsOption = () => {
         });
         return result;
       },
+      backgroundColor: isDark.value ? "#262626" : "#ffffff",
+      borderColor: isDark.value ? "#434343" : "#dcdfe6",
+      textStyle: {
+        color: isDark.value ? "#e8e8e8" : "#303133",
+      },
     },
     legend: {
       data: ["收入", "支出"],
       bottom: 0,
       textStyle: {
         fontSize: 12,
+        color: isDark.value ? "#c9c9c9" : "#606266",
       },
     },
     grid: {
@@ -247,6 +257,12 @@ const generateTrendsOption = () => {
       axisLabel: {
         fontSize: 10,
         rotate: 45,
+        color: isDark.value ? "#8c8c8c" : "#909399",
+      },
+      axisLine: {
+        lineStyle: {
+          color: isDark.value ? "#434343" : "#dcdfe6",
+        },
       },
     },
     yAxis: {
@@ -258,6 +274,12 @@ const generateTrendsOption = () => {
             return (value / 10000).toFixed(1) + "w";
           }
           return value.toString();
+        },
+        color: isDark.value ? "#8c8c8c" : "#909399",
+      },
+      splitLine: {
+        lineStyle: {
+          color: isDark.value ? "#2d2d2d" : "#ebeef5",
         },
       },
     },
@@ -372,13 +394,19 @@ const loadDashboardData = async () => {
 onMounted(() => {
   loadDashboardData();
 });
+
+watch(isDark, () => {
+  // 当主题变化时，重新生成图表配置，ECharts实例会自动更新
+  generateTrendsOption();
+});
 </script>
 
 <style scoped>
 .h5-dashboard {
   padding: 16px;
-  background-color: #f7f8fa;
+  background-color: var(--van-background);
   min-height: 100vh;
+  transition: background-color 0.3s ease;
 }
 
 .balance-card {
@@ -412,9 +440,10 @@ onMounted(() => {
 
 .quick-actions {
   margin-bottom: 16px;
-  background-color: white;
+  background-color: var(--van-background-2);
   border-radius: 12px;
   padding: 16px;
+  transition: background-color 0.3s ease;
 }
 
 .quick-actions :deep(.van-grid-item__content) {
@@ -460,7 +489,8 @@ onMounted(() => {
 /* 趋势图表样式 */
 .trend-chart-container {
   padding: 16px;
-  background-color: white;
+  background-color: var(--van-background-2);
+  transition: background-color 0.3s ease;
 }
 
 .chart-wrapper {

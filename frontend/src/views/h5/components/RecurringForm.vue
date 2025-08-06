@@ -871,12 +871,12 @@ const loadPayees = async () => {
 <style scoped>
 .recurring-form {
   padding: 16px;
-  background-color: #f7f8fa;
+  background-color: var(--bg-color-secondary);
   min-height: 100vh;
 }
 
 .posting-item {
-  border-bottom: 1px solid #ebedf0;
+  border-bottom: 1px solid var(--border-color);
   margin-bottom: 8px;
   padding-bottom: 8px;
 }
@@ -895,7 +895,7 @@ const loadPayees = async () => {
 }
 
 .balance-label {
-  color: #646566;
+  color: var(--text-color-secondary);
 }
 
 .balance-amount {
@@ -903,11 +903,17 @@ const loadPayees = async () => {
 }
 
 .balance-amount.balanced {
-  color: #07c160;
+  color: var(--color-success);
+}
+html[data-theme="dark"] .balance-amount.balanced {
+  color: #95d475;
 }
 
 .balance-amount.unbalanced {
-  color: #ee0a24;
+  color: var(--color-danger);
+}
+html[data-theme="dark"] .balance-amount.unbalanced {
+  color: #ff7875;
 }
 
 .submit-section {
@@ -937,7 +943,7 @@ const loadPayees = async () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #f7f8fa;
+  background: var(--bg-color-secondary);
 }
 
 .selector-content {
@@ -951,7 +957,7 @@ const loadPayees = async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
+  background: var(--bg-color);
 }
 
 /* 周期选择器样式 */
@@ -960,17 +966,17 @@ const loadPayees = async () => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #f7f8fa;
+  background: var(--bg-color-secondary);
 }
 
 .selector-header {
-  background: white;
-  border-bottom: 1px solid #ebedf0;
+  background: var(--bg-color);
+  border-bottom: 1px solid var(--border-color);
   flex-shrink: 0;
 }
 
 .selector-header .van-nav-bar {
-  background: white;
+  background: var(--bg-color);
 }
 
 .weekly-content,
@@ -990,7 +996,8 @@ const loadPayees = async () => {
 .monthly-day-item {
   margin: 0;
   padding: 8px;
-  border: 1px solid #ebedf0;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-color);
   border-radius: 4px;
   text-align: center;
   font-size: 12px;
@@ -1006,7 +1013,7 @@ const loadPayees = async () => {
 .monthly-day-item .day-label {
   margin-top: 4px;
   font-size: 12px;
-  color: #323233;
+  color: var(--text-color);
   font-weight: 500;
 }
 
@@ -1020,12 +1027,13 @@ const loadPayees = async () => {
 
 .selector-footer {
   padding: 16px;
-  border-top: 1px solid #ebedf0;
+  border-top: 1px solid var(--border-color);
+  background-color: var(--bg-color);
   flex-shrink: 0;
 }
 
 .clear-icon {
-  color: #969799;
+  color: var(--text-color-placeholder);
   margin-left: 8px;
 }
 </style>
