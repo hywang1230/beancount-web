@@ -80,13 +80,21 @@
 
       <!-- 交易信息 -->
       <van-cell-group inset title="交易信息">
-        <van-field
-          v-model="form.payee"
-          name="payee"
-          label="收付方"
-          placeholder="可选的收付方"
-          clearable
-        />
+        <!-- 交易对象 -->
+        <van-cell
+          title="交易对象"
+          :value="form.payee || '选择交易对象（可选）'"
+          is-link
+          @click="showPayeeSelector"
+        >
+          <template #right-icon v-if="form.payee">
+            <van-icon
+              name="close"
+              class="clear-icon"
+              @click.stop="clearPayee"
+            />
+          </template>
+        </van-cell>
       </van-cell-group>
 
       <!-- 记账分录 -->
@@ -107,7 +115,7 @@
             :rules="[{ required: true, message: '请选择账户' }]"
           />
           <van-field
-            v-model.number="posting.amount"
+            v-model="posting.amount"
             :name="`posting-${index}-amount`"
             label="金额"
             type="number"
@@ -232,6 +240,17 @@
       @close="onAccountSelectorClose"
     />
 
+    <!-- 交易对象选择器 -->
+    <FullScreenSelector
+      ref="payeeSelectorRef"
+      type="payee"
+      title="选择交易对象"
+      :show-search="true"
+      :payees="payeeList"
+      @confirm="onPayeeSelected"
+      @close="onPayeeSelectorClose"
+    />
+
     <!-- 每周选择器 -->
     <van-popup
       v-model:show="showWeeklyDaysSelector"
@@ -311,7 +330,8 @@
 </template>
 
 <script setup lang="ts">
-import { recurringApi, type RecurringTransactionCreate } from "@/api/recurring";
+import { recurringApi } from "@/api/recurring";
+import { getPayees } from "@/api/transactions";
 import { showToast } from "vant";
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
@@ -329,8 +349,30 @@ const props = withDefaults(defineProps<Props>(), {
 
 const router = useRouter();
 
+// 本地表单数据类型（amount使用string便于输入）
+interface LocalFormData {
+  name: string;
+  description?: string;
+  recurrence_type: "daily" | "weekly" | "weekdays" | "monthly";
+  start_date: string;
+  end_date?: string;
+  weekly_days?: number[];
+  monthly_days?: number[];
+  flag?: string;
+  payee?: string;
+  narration: string;
+  tags?: string[];
+  links?: string[];
+  postings: Array<{
+    account: string;
+    amount?: string | number; // 表单中使用string，提交时转换为number
+    currency?: string;
+  }>;
+  is_active?: boolean;
+}
+
 // 表单数据
-const form = ref<RecurringTransactionCreate>({
+const form = ref<LocalFormData>({
   name: "",
   description: "",
   recurrence_type: "daily" as "daily" | "weekly" | "weekdays" | "monthly", // 初始为每日
@@ -344,8 +386,8 @@ const form = ref<RecurringTransactionCreate>({
   tags: [],
   links: [],
   postings: [
-    { account: "", amount: 0, currency: "CNY" },
-    { account: "", amount: 0, currency: "CNY" },
+    { account: "", amount: "", currency: "CNY" },
+    { account: "", amount: "", currency: "CNY" },
   ],
   is_active: true,
 });
@@ -361,6 +403,8 @@ const showMonthlyDaysSelector = ref(false);
 const currentAccountIndex = ref(-1);
 const currentCurrencyIndex = ref(-1);
 const accountSelectorRef = ref();
+const payeeSelectorRef = ref();
+const payeeList = ref<string[]>([]);
 
 const recurrenceTypeColumns = [
   { text: "每日", value: "daily" },
@@ -498,6 +542,24 @@ const onAccountSelectorClose = () => {
   // 账户选择器关闭时的处理
 };
 
+const showPayeeSelector = () => {
+  if (payeeSelectorRef.value) {
+    payeeSelectorRef.value.show();
+  }
+};
+
+const onPayeeSelected = (payee: string) => {
+  form.value.payee = payee;
+};
+
+const onPayeeSelectorClose = () => {
+  // 交易对象选择器关闭时的处理
+};
+
+const clearPayee = () => {
+  form.value.payee = "";
+};
+
 const selectCurrency = (index: number) => {
   currentCurrencyIndex.value = index;
   showCurrencyPicker.value = true;
@@ -511,7 +573,7 @@ const onCurrencyConfirm = (option: any) => {
 };
 
 const addPosting = () => {
-  form.value.postings.push({ account: "", amount: 0, currency: "CNY" });
+  form.value.postings.push({ account: "", amount: "", currency: "CNY" });
 };
 
 const removePosting = (index: number) => {
@@ -570,10 +632,14 @@ const validateForm = () => {
   }
 
   // 检验分录金额
-  const zeroAmounts = form.value.postings.filter(
-    (p) => !p.amount || p.amount === 0
-  );
-  if (zeroAmounts.length > 0) {
+  const emptyAmounts = form.value.postings.filter((p) => {
+    if (!p.amount) return true;
+    const amountStr = p.amount.toString().trim();
+    if (amountStr === "") return true;
+    const amountNum = parseFloat(amountStr);
+    return isNaN(amountNum) || amountNum === 0;
+  });
+  if (emptyAmounts.length > 0) {
     showToast("所有分录都必须输入金额");
     return false;
   }
@@ -645,7 +711,7 @@ const loadEditData = async () => {
   }
 };
 
-onMounted(() => {
+onMounted(async () => {
   // 设置默认开始日期为今天
   if (!props.isEdit) {
     const today = new Date();
@@ -657,7 +723,32 @@ onMounted(() => {
   } else {
     loadEditData();
   }
+
+  // 加载交易对象列表
+  await loadPayees();
 });
+
+// 加载交易对象列表
+const loadPayees = async () => {
+  try {
+    console.log("正在加载交易对象列表...");
+    const payeeData = await getPayees();
+    console.log("交易对象API原始响应:", payeeData);
+
+    if (Array.isArray(payeeData)) {
+      payeeList.value = payeeData;
+    } else if (payeeData && Array.isArray(payeeData.data)) {
+      payeeList.value = payeeData.data;
+    } else {
+      payeeList.value = [];
+    }
+    console.log("处理后的交易对象列表:", payeeList.value);
+  } catch (error) {
+    console.error("获取交易对象列表失败:", error);
+    payeeList.value = [];
+    showToast("获取交易对象列表失败");
+  }
+};
 </script>
 
 <style scoped>
@@ -794,5 +885,10 @@ onMounted(() => {
   padding: 16px;
   border-top: 1px solid #ebedf0;
   flex-shrink: 0;
+}
+
+.clear-icon {
+  color: #969799;
+  margin-left: 8px;
 }
 </style>
