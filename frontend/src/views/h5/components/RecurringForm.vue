@@ -118,16 +118,20 @@
             v-model="posting.amount"
             :name="`posting-${index}-amount`"
             label="金额"
-            type="number"
+            type="text"
             placeholder="请输入金额"
-            :rules="[{ required: true, message: '请输入金额' }]"
+            :formatter="formatNumberInput"
+            :rules="[
+              { required: true, message: '请输入金额' },
+              { validator: validateNumberInput, message: '请输入合法数字' },
+            ]"
           />
           <van-field :name="`posting-${index}-currency`" label="货币">
             <template #input>
               <van-cell
                 :value="posting.currency"
                 is-link
-                @click="selectCurrency(index)"
+                @click="showCurrencySelector(index)"
               />
             </template>
           </van-field>
@@ -182,13 +186,44 @@
     </van-form>
 
     <!-- 周期类型选择器 -->
-    <van-popup v-model:show="showRecurrenceTypePicker" position="bottom">
-      <van-picker
-        title="选择周期类型"
-        :columns="recurrenceTypeColumns"
-        @confirm="onRecurrenceTypeConfirm"
-        @cancel="showRecurrenceTypePicker = false"
-      />
+    <van-popup
+      v-model:show="showRecurrenceTypePicker"
+      position="right"
+      :style="{ width: '100%', height: '100%' }"
+      :teleport="'body'"
+      :overlay="false"
+      class="fullscreen-popup"
+    >
+      <div class="fullscreen-selector">
+        <div class="selector-header">
+          <van-nav-bar
+            title="选择周期类型"
+            left-text="取消"
+            left-arrow
+            @click-left="showRecurrenceTypePicker = false"
+          />
+        </div>
+        <div class="selector-content">
+          <van-cell-group inset>
+            <van-cell
+              v-for="option in recurrenceTypeColumns"
+              :key="option.value"
+              :title="option.text"
+              clickable
+              :is-link="false"
+              @click="selectRecurrenceType(option)"
+            >
+              <template #right-icon>
+                <van-icon
+                  v-if="form.recurrence_type === option.value"
+                  name="success"
+                  color="#1989fa"
+                />
+              </template>
+            </van-cell>
+          </van-cell-group>
+        </div>
+      </div>
     </van-popup>
 
     <!-- 开始日期日历 -->
@@ -220,12 +255,44 @@
     />
 
     <!-- 货币选择器 -->
-    <van-popup v-model:show="showCurrencyPicker" position="bottom">
-      <van-picker
-        :columns="currencyColumns"
-        @confirm="onCurrencyConfirm"
-        @cancel="showCurrencyPicker = false"
-      />
+    <van-popup
+      v-model:show="showCurrencyPicker"
+      position="right"
+      :style="{ width: '100%', height: '100%' }"
+      :teleport="'body'"
+      :overlay="false"
+      class="fullscreen-popup"
+    >
+      <div class="fullscreen-selector">
+        <div class="selector-header">
+          <van-nav-bar
+            title="选择货币"
+            left-text="取消"
+            left-arrow
+            @click-left="showCurrencyPicker = false"
+          />
+        </div>
+        <div class="selector-content">
+          <van-cell-group inset>
+            <van-cell
+              v-for="option in currencyColumns"
+              :key="option.value"
+              :title="option.text"
+              clickable
+              :is-link="false"
+              @click="selectCurrency(option)"
+            >
+              <template #right-icon>
+                <van-icon
+                  v-if="getCurrentCurrency() === option.value"
+                  name="success"
+                  color="#1989fa"
+                />
+              </template>
+            </van-cell>
+          </van-cell-group>
+        </div>
+      </div>
     </van-popup>
 
     <!-- 账户选择器 -->
@@ -254,13 +321,20 @@
     <!-- 每周选择器 -->
     <van-popup
       v-model:show="showWeeklyDaysSelector"
-      position="bottom"
-      :style="{ height: '60%' }"
+      position="right"
+      :style="{ width: '100%', height: '100%' }"
+      :teleport="'body'"
+      :overlay="false"
+      class="fullscreen-popup"
     >
       <div class="weekly-selector">
         <div class="selector-header">
-          <h3>选择执行星期</h3>
-          <van-icon name="cross" @click="showWeeklyDaysSelector = false" />
+          <van-nav-bar
+            title="选择执行星期"
+            left-text="取消"
+            left-arrow
+            @click-left="showWeeklyDaysSelector = false"
+          />
         </div>
         <div class="weekly-content">
           <van-checkbox-group v-model="form.weekly_days">
@@ -292,13 +366,20 @@
     <!-- 每月选择器 -->
     <van-popup
       v-model:show="showMonthlyDaysSelector"
-      position="bottom"
-      :style="{ height: '70%' }"
+      position="right"
+      :style="{ width: '100%', height: '100%' }"
+      :teleport="'body'"
+      :overlay="false"
+      class="fullscreen-popup"
     >
       <div class="monthly-selector">
         <div class="selector-header">
-          <h3>选择执行日期</h3>
-          <van-icon name="cross" @click="showMonthlyDaysSelector = false" />
+          <van-nav-bar
+            title="选择执行日期"
+            left-text="取消"
+            left-arrow
+            @click-left="showMonthlyDaysSelector = false"
+          />
         </div>
         <div class="monthly-content">
           <van-checkbox-group v-model="form.monthly_days">
@@ -433,6 +514,44 @@ const isBalanced = computed(() => {
   return Math.abs(totalAmount.value) < 0.01;
 });
 
+// 输入格式化函数：只允许输入数字、负号和小数点，限制最多两位小数
+const formatNumberInput = (value: string) => {
+  if (!value) return value;
+
+  // 先清除非数字、非负号、非小数点字符
+  let formatted = value.replace(/[^\d.-]/g, "");
+
+  // 处理负号：只允许在开头有一个负号
+  if (formatted.includes("-")) {
+    const isNegative = formatted.charAt(0) === "-";
+    // 移除所有负号，然后在开头添加负号（如果原来是负数）
+    formatted = formatted.replace(/-/g, "");
+    if (isNegative) {
+      formatted = "-" + formatted;
+    }
+  }
+
+  // 处理小数点：只允许一个小数点，且限制最多两位小数
+  const parts = formatted.split(".");
+  if (parts.length > 2) {
+    // 如果有多个小数点，只保留第一个
+    formatted = parts[0] + "." + parts.slice(1).join("");
+  } else if (parts.length === 2) {
+    // 如果有小数部分，限制最多两位小数
+    const decimalPart = parts[1].slice(0, 2);
+    formatted = parts[0] + "." + decimalPart;
+  }
+
+  return formatted;
+};
+
+// 输入验证函数
+const validateNumberInput = (value: string) => {
+  if (!value) return true; // 允许空值
+  // 验证格式：可选负号 + 数字 + 可选小数部分（最多两位小数）
+  return /^-?\d*(\.\d{0,2})?$/.test(value);
+};
+
 // 方法
 const getRecurrenceTypeText = (type: string) => {
   const item = recurrenceTypeColumns.find((col) => col.value === type);
@@ -450,14 +569,11 @@ const formatDateDisplay = (dateStr: string) => {
   });
 };
 
-const onRecurrenceTypeConfirm = (option: any) => {
-  // van-picker 传递的是 {selectedValues: [], selectedOptions: [], selectedIndexes: []}
-  if (option && option.selectedValues && option.selectedValues.length > 0) {
-    form.value.recurrence_type = option.selectedValues[0];
-    // 重置相关字段
-    form.value.weekly_days = [];
-    form.value.monthly_days = [];
-  }
+const selectRecurrenceType = (option: any) => {
+  form.value.recurrence_type = option.value;
+  // 重置相关字段
+  form.value.weekly_days = [];
+  form.value.monthly_days = [];
   showRecurrenceTypePicker.value = false;
 };
 
@@ -560,16 +676,23 @@ const clearPayee = () => {
   form.value.payee = "";
 };
 
-const selectCurrency = (index: number) => {
-  currentCurrencyIndex.value = index;
-  showCurrencyPicker.value = true;
-};
-
-const onCurrencyConfirm = (option: any) => {
+const selectCurrency = (option: any) => {
   if (currentCurrencyIndex.value >= 0) {
     form.value.postings[currentCurrencyIndex.value].currency = option.value;
   }
   showCurrencyPicker.value = false;
+};
+
+const getCurrentCurrency = () => {
+  if (currentCurrencyIndex.value >= 0) {
+    return form.value.postings[currentCurrencyIndex.value]?.currency || "CNY";
+  }
+  return "CNY";
+};
+
+const showCurrencySelector = (index: number) => {
+  currentCurrencyIndex.value = index;
+  showCurrencyPicker.value = true;
 };
 
 const addPosting = () => {
@@ -807,36 +930,56 @@ const loadPayees = async () => {
   font-size: 12px;
 }
 
+/* 全屏弹窗样式 */
+.fullscreen-popup {
+  z-index: 3000;
+}
+
+.fullscreen-selector {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: #f7f8fa;
+}
+
+.selector-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 0;
+}
+
+.picker-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+}
+
 /* 周期选择器样式 */
 .weekly-selector,
 .monthly-selector {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background-color: white;
+  background: #f7f8fa;
 }
 
 .selector-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
+  background: white;
   border-bottom: 1px solid #ebedf0;
   flex-shrink: 0;
 }
 
-.selector-header h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 500;
-  color: #323233;
+.selector-header .van-nav-bar {
+  background: white;
 }
 
 .weekly-content,
 .monthly-content {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 0;
+  padding: 16px;
 }
 
 .monthly-grid {
