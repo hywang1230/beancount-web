@@ -75,19 +75,19 @@ const tabbarItems = [
     path: "/h5/transactions",
   },
   { name: "add", title: "记账", icon: "plus", path: "/h5/add-transaction" },
-  // { name: 'recurring', title: '周期', icon: 'replay', path: '/h5/recurring' },
   { name: "reports", title: "报表", icon: "bar-chart-o", path: "/h5/reports" },
-  { name: "accounts", title: "账户", icon: "manager-o", path: "/h5/accounts" },
+  { name: "settings", title: "设置", icon: "setting-o", path: "/h5/settings" },
 ];
 
 const allMenuItems = [
   { path: "/h5/dashboard", title: "首页", icon: "home-o" },
   { path: "/h5/transactions", title: "交易流水", icon: "bill-o" },
   { path: "/h5/add-transaction", title: "新增交易", icon: "plus" },
-  { path: "/h5/recurring", title: "周期记账", icon: "replay" },
   { path: "/h5/reports", title: "报表分析", icon: "bar-chart-o" },
-  { path: "/h5/accounts", title: "账户管理", icon: "manager-o" },
+  { path: "/h5/settings", title: "设置", icon: "setting-o" },
+  { path: "/h5/recurring", title: "周期记账", icon: "replay" },
   { path: "/h5/files", title: "文件管理", icon: "folder-o" },
+  { path: "/h5/accounts", title: "账户管理", icon: "manager-o" },
 ];
 
 // 监听路由变化，更新当前激活的标签
@@ -113,16 +113,41 @@ const currentPageTitle = computed(() => {
     return "交易详情";
   }
 
+  if (route.path.startsWith("/h5/recurring/")) {
+    if (route.path.includes("/add")) {
+      return "新增周期记账";
+    } else if (route.path.includes("/edit")) {
+      return "编辑周期记账";
+    } else {
+      return "周期记账详情";
+    }
+  }
+
   return "首页";
 });
 
 const showMenu = computed(() => {
-  // 在非主要标签页面显示菜单按钮
-  // 但排除交易详情页面
-  if (route.path.startsWith("/h5/transactions/")) {
+  // 底部导航栏的页面不显示菜单按钮
+  const isTabbarPage = tabbarItems.some((item) => item.path === route.path);
+  if (isTabbarPage) {
     return false;
   }
-  return !tabbarItems.some((item) => item.path === route.path);
+
+  // 设置页面的子页面不显示菜单按钮
+  const settingsSubPages = ["/h5/recurring", "/h5/files", "/h5/accounts"];
+  if (settingsSubPages.includes(route.path)) {
+    return false;
+  }
+
+  // 动态路由页面不显示菜单按钮
+  if (
+    route.path.startsWith("/h5/transactions/") ||
+    route.path.startsWith("/h5/recurring/")
+  ) {
+    return false;
+  }
+
+  return false; // 默认不显示菜单按钮
 });
 
 const onBack = () => {
