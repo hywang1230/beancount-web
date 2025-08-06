@@ -1013,6 +1013,8 @@ watch(
     console.log("FullScreenSelector - 交易对象数据变化:", newPayees);
     if (props.type === "payee") {
       currentPayees.value = newPayees || [];
+      loading.value = false;
+      finished.value = true;
       console.log(
         "FullScreenSelector - 更新交易对象数据:",
         currentPayees.value
