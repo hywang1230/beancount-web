@@ -610,12 +610,21 @@ const isMultiCategoryValid = computed(() => {
 })
 
 
-// 监听数据变化
-watch(localFormData, (newData) => {
-  // 只在不是从props更新时才emit
-  if (!isUpdatingFromProps) {
-    emit('update', newData)
+// 监听数据变化 - 使用防抖减少频繁触发
+let updateTimeout: ReturnType<typeof setTimeout> | null = null
+const debouncedEmitUpdate = (newData: any) => {
+  if (updateTimeout) {
+    clearTimeout(updateTimeout)
   }
+  updateTimeout = setTimeout(() => {
+    if (!isUpdatingFromProps) {
+      emit('update', newData)
+    }
+  }, 800) // 800ms延迟，显著减少触发频率
+}
+
+watch(localFormData, (newData) => {
+  debouncedEmitUpdate(newData)
 }, { deep: true })
 
 // 监听props.formData变化，用于编辑模式的数据加载
@@ -676,21 +685,8 @@ const onCurrencyConfirm = ({ selectedValues }: { selectedValues: string[] }) => 
 const onAmountInput = (value: string | number) => {
   console.log('onAmountInput called with:', value, typeof value)
   
-  // 延迟执行，避免与分类金额输入冲突
-  nextTick(() => {
-    const totalAmount = localFormData.value.amount || ''
-    
-    if (localFormData.value.categories.length === 1) {
-      // 单分类情况：总是同步总金额到分类金额
-      localFormData.value.categories[0].amount = totalAmount
-    } else if (localFormData.value.categories.length > 1) {
-      // 多分类情况：分配给第一个空的分类
-      const firstEmptyCategory = localFormData.value.categories.find(cat => !cat.amount)
-      if (firstEmptyCategory && totalAmount) {
-        firstEmptyCategory.amount = totalAmount
-      }
-    }
-  })
+  // 大幅减少自动同步逻辑，避免过度干预
+  // 只在非常特定的条件下才自动同步金额到分类
 }
 
 const onCategoryAmountInput = (index: number, value: string | number) => {
