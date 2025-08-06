@@ -9,11 +9,8 @@ export function useKeyboard() {
   const viewportHeight = ref(0);
   const initialViewportHeight = ref(0);
 
-  // 检测是否为iOS设备
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-
   // 键盘检测阈值（像素）
-  const KEYBOARD_THRESHOLD = isIOS ? 100 : 150;
+  const KEYBOARD_THRESHOLD = 150;
 
   const detectKeyboard = () => {
     const currentHeight = window.innerHeight;
@@ -43,34 +40,12 @@ export function useKeyboard() {
     if (!window.visualViewport) return;
 
     const viewport = window.visualViewport;
+    const heightDiff = window.screen.height - viewport.height;
 
-    if (isIOS) {
-      // iOS 特殊处理：使用 visualViewport 的高度变化
-      const heightDiff = initialViewportHeight.value - viewport.height;
-
-      console.log("iOS键盘检测:", {
-        initialHeight: initialViewportHeight.value,
-        currentViewportHeight: viewport.height,
-        heightDiff,
-        threshold: KEYBOARD_THRESHOLD,
-      });
-
-      if (heightDiff > KEYBOARD_THRESHOLD) {
-        isKeyboardVisible.value = true;
-        console.log("iOS检测到键盘显示");
-      } else {
-        isKeyboardVisible.value = false;
-        console.log("iOS检测到键盘隐藏");
-      }
+    if (heightDiff > KEYBOARD_THRESHOLD * 2) {
+      isKeyboardVisible.value = true;
     } else {
-      // 其他设备的处理逻辑
-      const heightDiff = window.screen.height - viewport.height;
-
-      if (heightDiff > KEYBOARD_THRESHOLD * 2) {
-        isKeyboardVisible.value = true;
-      } else {
-        isKeyboardVisible.value = false;
-      }
+      isKeyboardVisible.value = false;
     }
   };
 
@@ -86,9 +61,7 @@ export function useKeyboard() {
     }
 
     console.log("键盘检测初始化:", {
-      isIOS,
       initialHeight: initialViewportHeight.value,
-      userAgent: navigator.userAgent,
     });
 
     // 监听窗口大小变化
@@ -102,54 +75,14 @@ export function useKeyboard() {
       );
     }
 
-    // 针对iOS的特殊处理
-    if (isIOS) {
-      // iOS上，输入框获得焦点时立即检测
-      document.addEventListener("focusin", (event) => {
-        const target = event.target as HTMLElement;
-        if (
-          target &&
-          (target.tagName === "INPUT" || target.tagName === "TEXTAREA")
-        ) {
-          console.log("iOS输入框获得焦点:", target);
-          // 短延迟等待键盘弹出
-          setTimeout(() => {
-            if (window.visualViewport) {
-              detectKeyboardWithVisualViewport();
-            } else {
-              detectKeyboard();
-            }
-          }, 150);
-        }
-      });
+    // 焦点事件处理
+    document.addEventListener("focusin", () => {
+      setTimeout(detectKeyboard, 300);
+    });
 
-      document.addEventListener("focusout", (event) => {
-        const target = event.target as HTMLElement;
-        if (
-          target &&
-          (target.tagName === "INPUT" || target.tagName === "TEXTAREA")
-        ) {
-          console.log("iOS输入框失去焦点:", target);
-          // 短延迟等待键盘隐藏
-          setTimeout(() => {
-            if (window.visualViewport) {
-              detectKeyboardWithVisualViewport();
-            } else {
-              detectKeyboard();
-            }
-          }, 150);
-        }
-      });
-    } else {
-      // 非iOS设备的焦点事件处理
-      document.addEventListener("focusin", () => {
-        setTimeout(detectKeyboard, 300);
-      });
-
-      document.addEventListener("focusout", () => {
-        setTimeout(detectKeyboard, 300);
-      });
-    }
+    document.addEventListener("focusout", () => {
+      setTimeout(detectKeyboard, 300);
+    });
   };
 
   const cleanupKeyboardDetection = () => {

@@ -23,103 +23,78 @@
           name="narration"
           label="摘要"
           placeholder="请输入交易摘要"
-          :rules="[{ required: true, message: '请输入摘要' }]"
+          :rules="[{ required: false, message: '请输入摘要' }]"
         />
       </van-cell-group>
 
       <!-- 周期设置 -->
       <van-cell-group inset title="周期设置">
-        <van-field name="recurrence_type" label="周期类型">
-          <template #input>
-            <van-picker
-              v-model="recurrenceTypeValue"
-              :columns="recurrenceTypeColumns"
-              @confirm="onRecurrenceTypeConfirm"
-            >
-              <template #default>
-                <van-cell
-                  :value="getRecurrenceTypeText(form.recurrence_type)"
-                  is-link
-                  @click="showRecurrenceTypePicker = true"
-                />
-              </template>
-            </van-picker>
-          </template>
-        </van-field>
+        <van-field
+          name="recurrence_type"
+          label="周期类型"
+          :model-value="getRecurrenceTypeText(form.recurrence_type)"
+          readonly
+          is-link
+          @click="showRecurrenceTypePicker = true"
+        />
 
         <!-- 每周特定几天 -->
-        <van-field
+        <van-cell
           v-if="form.recurrence_type === 'weekly'"
-          name="weekly_days"
-          label="星期"
-        >
-          <template #input>
-            <van-checkbox-group
-              v-model="form.weekly_days"
-              direction="horizontal"
-            >
-              <van-checkbox
-                v-for="(day, index) in weekDays"
-                :key="index"
-                :name="index"
-                :label="day"
-                icon-size="14px"
-              />
-            </van-checkbox-group>
-          </template>
-        </van-field>
+          title="执行星期"
+          :value="getWeeklyDaysText(form.weekly_days)"
+          is-link
+          @click="showWeeklyDaysSelector = true"
+        />
 
         <!-- 每月特定几日 -->
-        <van-field
+        <van-cell
           v-if="form.recurrence_type === 'monthly'"
-          name="monthly_days"
-          label="日期"
-        >
-          <template #input>
-            <div class="monthly-days-grid">
-              <van-checkbox-group v-model="form.monthly_days">
-                <van-checkbox
-                  v-for="day in 31"
-                  :key="day"
-                  :name="day"
-                  :label="day + '日'"
-                  icon-size="12px"
-                />
-              </van-checkbox-group>
-            </div>
-          </template>
-        </van-field>
+          title="执行日期"
+          :value="getMonthlyDaysText(form.monthly_days)"
+          is-link
+          @click="showMonthlyDaysSelector = true"
+        />
 
-        <van-field
-          v-model="form.start_date"
-          name="start_date"
-          label="开始日期"
-          placeholder="选择开始日期"
-          readonly
+        <van-cell
+          title="开始日期"
+          :value="formatDateDisplay(form.start_date)"
           is-link
-          @click="showStartDatePicker = true"
-          :rules="[{ required: true, message: '请选择开始日期' }]"
+          @click="showStartDateCalendar = true"
         />
-        <van-field
-          v-model="form.end_date"
-          name="end_date"
-          label="结束日期"
-          placeholder="可选的结束日期"
-          readonly
+        <van-cell
+          title="结束日期"
+          :value="form.end_date ? formatDateDisplay(form.end_date) : '无期限'"
           is-link
-          @click="showEndDatePicker = true"
-        />
+          @click="showEndDateCalendar = true"
+        >
+          <template #right-icon v-if="form.end_date">
+            <van-icon
+              name="clear"
+              @click.stop="clearEndDate"
+              style="margin-left: 8px; color: #969799"
+            />
+          </template>
+        </van-cell>
       </van-cell-group>
 
       <!-- 交易信息 -->
       <van-cell-group inset title="交易信息">
-        <van-field
-          v-model="form.payee"
-          name="payee"
-          label="收付方"
-          placeholder="可选的收付方"
-          clearable
-        />
+        <!-- 交易对象 -->
+        <van-cell
+          title="交易对象"
+          :value="form.payee || '选择交易对象（可选）'"
+          is-link
+          @click="showPayeeSelector"
+        >
+          <template #right-icon v-if="form.payee">
+            <van-icon
+              name="close"
+              class="clear-icon"
+              @click.stop="clearPayee"
+            />
+          </template>
+        </van-cell>
       </van-cell-group>
 
       <!-- 记账分录 -->
@@ -140,7 +115,7 @@
             :rules="[{ required: true, message: '请选择账户' }]"
           />
           <van-field
-            v-model.number="posting.amount"
+            v-model="posting.amount"
             :name="`posting-${index}-amount`"
             label="金额"
             type="number"
@@ -209,29 +184,40 @@
     <!-- 周期类型选择器 -->
     <van-popup v-model:show="showRecurrenceTypePicker" position="bottom">
       <van-picker
+        title="选择周期类型"
         :columns="recurrenceTypeColumns"
         @confirm="onRecurrenceTypeConfirm"
         @cancel="showRecurrenceTypePicker = false"
       />
     </van-popup>
 
-    <!-- 开始日期选择器 -->
-    <van-popup v-model:show="showStartDatePicker" position="bottom">
-      <van-date-picker
-        :v-model="startDateValue"
-        @confirm="onStartDateConfirm"
-        @cancel="showStartDatePicker = false"
-      />
-    </van-popup>
+    <!-- 开始日期日历 -->
+    <van-calendar
+      v-model:show="showStartDateCalendar"
+      title="选择开始日期"
+      :default-date="form.start_date ? new Date(form.start_date) : new Date()"
+      :min-date="new Date(2020, 0, 1)"
+      :max-date="new Date(2030, 11, 31)"
+      switch-mode="year-month"
+      :show-confirm="false"
+      @confirm="onStartDateConfirm"
+      @close="showStartDateCalendar = false"
+    />
 
-    <!-- 结束日期选择器 -->
-    <van-popup v-model:show="showEndDatePicker" position="bottom">
-      <van-date-picker
-        :v-model="endDateValue"
-        @confirm="onEndDateConfirm"
-        @cancel="showEndDatePicker = false"
-      />
-    </van-popup>
+    <!-- 结束日期日历 -->
+    <van-calendar
+      v-model:show="showEndDateCalendar"
+      title="选择结束日期"
+      :default-date="form.end_date ? new Date(form.end_date) : new Date()"
+      :min-date="
+        form.start_date ? new Date(form.start_date) : new Date(2020, 0, 1)
+      "
+      :max-date="new Date(2030, 11, 31)"
+      switch-mode="year-month"
+      :show-confirm="false"
+      @confirm="onEndDateConfirm"
+      @close="showEndDateCalendar = false"
+    />
 
     <!-- 货币选择器 -->
     <van-popup v-model:show="showCurrencyPicker" position="bottom">
@@ -243,16 +229,113 @@
     </van-popup>
 
     <!-- 账户选择器 -->
-    <H5AccountSelector ref="accountSelectorRef" @confirm="onAccountSelected" />
+    <FullScreenSelector
+      ref="accountSelectorRef"
+      type="account"
+      title="选择账户"
+      :show-search="true"
+      :show-account-types="true"
+      :account-types="['Assets', 'Liabilities', 'Income', 'Expenses']"
+      @confirm="onAccountSelected"
+      @close="onAccountSelectorClose"
+    />
+
+    <!-- 交易对象选择器 -->
+    <FullScreenSelector
+      ref="payeeSelectorRef"
+      type="payee"
+      title="选择交易对象"
+      :show-search="true"
+      :payees="payeeList"
+      @confirm="onPayeeSelected"
+      @close="onPayeeSelectorClose"
+    />
+
+    <!-- 每周选择器 -->
+    <van-popup
+      v-model:show="showWeeklyDaysSelector"
+      position="bottom"
+      :style="{ height: '60%' }"
+    >
+      <div class="weekly-selector">
+        <div class="selector-header">
+          <h3>选择执行星期</h3>
+          <van-icon name="cross" @click="showWeeklyDaysSelector = false" />
+        </div>
+        <div class="weekly-content">
+          <van-checkbox-group v-model="form.weekly_days">
+            <van-cell
+              v-for="(day, index) in weekDays"
+              :key="index"
+              :title="day"
+              clickable
+              @click="toggleWeekDay(index)"
+            >
+              <template #right-icon>
+                <van-checkbox
+                  :name="index"
+                  :checked="(form.weekly_days || []).includes(index)"
+                  @click.stop
+                />
+              </template>
+            </van-cell>
+          </van-checkbox-group>
+        </div>
+        <div class="selector-footer">
+          <van-button block type="primary" @click="confirmWeeklyDays">
+            确定
+          </van-button>
+        </div>
+      </div>
+    </van-popup>
+
+    <!-- 每月选择器 -->
+    <van-popup
+      v-model:show="showMonthlyDaysSelector"
+      position="bottom"
+      :style="{ height: '70%' }"
+    >
+      <div class="monthly-selector">
+        <div class="selector-header">
+          <h3>选择执行日期</h3>
+          <van-icon name="cross" @click="showMonthlyDaysSelector = false" />
+        </div>
+        <div class="monthly-content">
+          <van-checkbox-group v-model="form.monthly_days">
+            <div class="monthly-grid">
+              <div
+                v-for="day in 31"
+                :key="day"
+                class="monthly-day-item"
+                @click="toggleMonthDay(day)"
+              >
+                <van-checkbox
+                  :name="day"
+                  :checked="(form.monthly_days || []).includes(day)"
+                  @click.stop
+                />
+                <span class="day-label">{{ day }}</span>
+              </div>
+            </div>
+          </van-checkbox-group>
+        </div>
+        <div class="selector-footer">
+          <van-button block type="primary" @click="confirmMonthlyDays">
+            确定
+          </van-button>
+        </div>
+      </div>
+    </van-popup>
   </div>
 </template>
 
 <script setup lang="ts">
-import { recurringApi, type RecurringTransactionCreate } from "@/api/recurring";
+import { recurringApi } from "@/api/recurring";
+import { getPayees } from "@/api/transactions";
 import { showToast } from "vant";
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
-import H5AccountSelector from "./H5AccountSelector.vue";
+import FullScreenSelector from "./FullScreenSelector.vue";
 
 interface Props {
   isEdit?: boolean;
@@ -266,11 +349,33 @@ const props = withDefaults(defineProps<Props>(), {
 
 const router = useRouter();
 
+// 本地表单数据类型（amount使用string便于输入）
+interface LocalFormData {
+  name: string;
+  description?: string;
+  recurrence_type: "daily" | "weekly" | "weekdays" | "monthly";
+  start_date: string;
+  end_date?: string;
+  weekly_days?: number[];
+  monthly_days?: number[];
+  flag?: string;
+  payee?: string;
+  narration: string;
+  tags?: string[];
+  links?: string[];
+  postings: Array<{
+    account: string;
+    amount?: string | number; // 表单中使用string，提交时转换为number
+    currency?: string;
+  }>;
+  is_active?: boolean;
+}
+
 // 表单数据
-const form = ref<RecurringTransactionCreate>({
+const form = ref<LocalFormData>({
   name: "",
   description: "",
-  recurrence_type: "daily",
+  recurrence_type: "daily" as "daily" | "weekly" | "weekdays" | "monthly", // 初始为每日
   start_date: "",
   end_date: "",
   weekly_days: [],
@@ -281,8 +386,8 @@ const form = ref<RecurringTransactionCreate>({
   tags: [],
   links: [],
   postings: [
-    { account: "", amount: 0, currency: "CNY" },
-    { account: "", amount: 0, currency: "CNY" },
+    { account: "", amount: "", currency: "CNY" },
+    { account: "", amount: "", currency: "CNY" },
   ],
   is_active: true,
 });
@@ -290,25 +395,16 @@ const form = ref<RecurringTransactionCreate>({
 // 界面状态
 const submitLoading = ref(false);
 const showRecurrenceTypePicker = ref(false);
-const showStartDatePicker = ref(false);
-const showEndDatePicker = ref(false);
+const showStartDateCalendar = ref(false);
+const showEndDateCalendar = ref(false);
 const showCurrencyPicker = ref(false);
+const showWeeklyDaysSelector = ref(false);
+const showMonthlyDaysSelector = ref(false);
 const currentAccountIndex = ref(-1);
 const currentCurrencyIndex = ref(-1);
 const accountSelectorRef = ref();
-
-// 选择器数据
-const recurrenceTypeValue = ref(["daily"]);
-const startDateValue = ref([
-  new Date().getFullYear(),
-  new Date().getMonth() + 1,
-  new Date().getDate(),
-]);
-const endDateValue = ref([
-  new Date().getFullYear(),
-  new Date().getMonth() + 1,
-  new Date().getDate(),
-]);
+const payeeSelectorRef = ref();
+const payeeList = ref<string[]>([]);
 
 const recurrenceTypeColumns = [
   { text: "每日", value: "daily" },
@@ -340,32 +436,95 @@ const isBalanced = computed(() => {
 // 方法
 const getRecurrenceTypeText = (type: string) => {
   const item = recurrenceTypeColumns.find((col) => col.value === type);
-  return item?.text || type;
+  return item?.text || "请选择周期类型";
+};
+
+// 格式化日期显示
+const formatDateDisplay = (dateStr: string) => {
+  if (!dateStr) return "请选择日期";
+  const date = new Date(dateStr);
+  return date.toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
 };
 
 const onRecurrenceTypeConfirm = (option: any) => {
-  form.value.recurrence_type = option.value;
-  form.value.weekly_days = [];
-  form.value.monthly_days = [];
+  // van-picker 传递的是 {selectedValues: [], selectedOptions: [], selectedIndexes: []}
+  if (option && option.selectedValues && option.selectedValues.length > 0) {
+    form.value.recurrence_type = option.selectedValues[0];
+    // 重置相关字段
+    form.value.weekly_days = [];
+    form.value.monthly_days = [];
+  }
   showRecurrenceTypePicker.value = false;
 };
 
-const onStartDateConfirm = (values: number[]) => {
-  const [year, month, day] = values;
-  form.value.start_date = `${year}-${month.toString().padStart(2, "0")}-${day
-    .toString()
-    .padStart(2, "0")}`;
-  startDateValue.value = values;
-  showStartDatePicker.value = false;
+const onStartDateConfirm = (date: Date) => {
+  form.value.start_date = date.toLocaleDateString("en-CA"); // 格式: YYYY-MM-DD
+  showStartDateCalendar.value = false;
 };
 
-const onEndDateConfirm = (values: number[]) => {
-  const [year, month, day] = values;
-  form.value.end_date = `${year}-${month.toString().padStart(2, "0")}-${day
-    .toString()
-    .padStart(2, "0")}`;
-  endDateValue.value = values;
-  showEndDatePicker.value = false;
+const onEndDateConfirm = (date: Date) => {
+  form.value.end_date = date.toLocaleDateString("en-CA"); // 格式: YYYY-MM-DD
+  showEndDateCalendar.value = false;
+};
+
+const clearEndDate = () => {
+  form.value.end_date = "";
+};
+
+// 周期选择相关方法
+const getWeeklyDaysText = (days?: number[]) => {
+  if (!days || days.length === 0) return "请选择星期";
+  const dayNames = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"];
+  return days.map((day) => dayNames[day]).join("、");
+};
+
+const getMonthlyDaysText = (days?: number[]) => {
+  if (!days || days.length === 0) return "请选择日期";
+  return days.map((day) => `${day}日`).join("、");
+};
+
+const toggleWeekDay = (index: number) => {
+  if (!form.value.weekly_days) {
+    form.value.weekly_days = [];
+  }
+  if (form.value.weekly_days.includes(index)) {
+    form.value.weekly_days = form.value.weekly_days.filter(
+      (day) => day !== index
+    );
+  } else {
+    form.value.weekly_days.push(index);
+  }
+};
+
+const confirmWeeklyDays = () => {
+  if (!form.value.weekly_days || form.value.weekly_days.length === 0) {
+    showToast("请至少选择一个星期");
+    return;
+  }
+  showWeeklyDaysSelector.value = false;
+};
+
+const toggleMonthDay = (day: number) => {
+  if (!form.value.monthly_days) {
+    form.value.monthly_days = [];
+  }
+  if (form.value.monthly_days.includes(day)) {
+    form.value.monthly_days = form.value.monthly_days.filter((d) => d !== day);
+  } else {
+    form.value.monthly_days.push(day);
+  }
+};
+
+const confirmMonthlyDays = () => {
+  if (!form.value.monthly_days || form.value.monthly_days.length === 0) {
+    showToast("请至少选择一个日期");
+    return;
+  }
+  showMonthlyDaysSelector.value = false;
 };
 
 const selectAccount = (index: number) => {
@@ -377,6 +536,28 @@ const onAccountSelected = (account: string) => {
   if (currentAccountIndex.value >= 0) {
     form.value.postings[currentAccountIndex.value].account = account;
   }
+};
+
+const onAccountSelectorClose = () => {
+  // 账户选择器关闭时的处理
+};
+
+const showPayeeSelector = () => {
+  if (payeeSelectorRef.value) {
+    payeeSelectorRef.value.show();
+  }
+};
+
+const onPayeeSelected = (payee: string) => {
+  form.value.payee = payee;
+};
+
+const onPayeeSelectorClose = () => {
+  // 交易对象选择器关闭时的处理
+};
+
+const clearPayee = () => {
+  form.value.payee = "";
 };
 
 const selectCurrency = (index: number) => {
@@ -392,7 +573,7 @@ const onCurrencyConfirm = (option: any) => {
 };
 
 const addPosting = () => {
-  form.value.postings.push({ account: "", amount: 0, currency: "CNY" });
+  form.value.postings.push({ account: "", amount: "", currency: "CNY" });
 };
 
 const removePosting = (index: number) => {
@@ -402,9 +583,33 @@ const removePosting = (index: number) => {
 };
 
 const validateForm = () => {
-  // 检验分录平衡
-  if (!isBalanced.value) {
-    showToast(`分录金额之和必须为0，当前和为：${totalAmount.value.toFixed(2)}`);
+  // 检验基本信息
+  if (!form.value.name?.trim()) {
+    showToast("请输入周期记账名称");
+    return false;
+  }
+
+  if (!form.value.start_date) {
+    showToast("请选择开始日期");
+    return false;
+  }
+
+  // 周期类型现在有默认值，无需检验
+
+  // 检验周期设置
+  if (
+    form.value.recurrence_type === "weekly" &&
+    (!form.value.weekly_days || form.value.weekly_days.length === 0)
+  ) {
+    showToast("请选择执行的星期");
+    return false;
+  }
+
+  if (
+    form.value.recurrence_type === "monthly" &&
+    (!form.value.monthly_days || form.value.monthly_days.length === 0)
+  ) {
+    showToast("请选择执行的日期");
     return false;
   }
 
@@ -421,6 +626,25 @@ const validateForm = () => {
     return false;
   }
 
+  // 检验分录金额
+  const emptyAmounts = form.value.postings.filter((p) => {
+    if (!p.amount) return true;
+    const amountStr = p.amount.toString().trim();
+    if (amountStr === "") return true;
+    const amountNum = parseFloat(amountStr);
+    return isNaN(amountNum) || amountNum === 0;
+  });
+  if (emptyAmounts.length > 0) {
+    showToast("所有分录都必须输入金额");
+    return false;
+  }
+
+  // 检验分录平衡
+  if (!isBalanced.value) {
+    showToast(`分录金额之和必须为0，当前和为：${totalAmount.value.toFixed(2)}`);
+    return false;
+  }
+
   return true;
 };
 
@@ -434,6 +658,7 @@ const onSubmit = async () => {
 
     const dataToSend = {
       ...form.value,
+      end_date: form.value.end_date || null, // 空字符串转为null，避免422错误
       postings: form.value.postings.map((p) => ({
         account: p.account,
         amount: parseFloat(p.amount?.toString() || "0") || 0,
@@ -482,11 +707,44 @@ const loadEditData = async () => {
   }
 };
 
-onMounted(() => {
-  if (props.isEdit) {
+onMounted(async () => {
+  // 设置默认开始日期为今天
+  if (!props.isEdit) {
+    const today = new Date();
+    form.value.start_date = `${today.getFullYear()}-${String(
+      today.getMonth() + 1
+    ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    // 设置默认周期类型
+    form.value.recurrence_type = "daily";
+  } else {
     loadEditData();
   }
+
+  // 加载交易对象列表
+  await loadPayees();
 });
+
+// 加载交易对象列表
+const loadPayees = async () => {
+  try {
+    console.log("正在加载交易对象列表...");
+    const payeeData = await getPayees();
+    console.log("交易对象API原始响应:", payeeData);
+
+    if (Array.isArray(payeeData)) {
+      payeeList.value = payeeData;
+    } else if (payeeData && Array.isArray(payeeData.data)) {
+      payeeList.value = payeeData.data;
+    } else {
+      payeeList.value = [];
+    }
+    console.log("处理后的交易对象列表:", payeeList.value);
+  } catch (error) {
+    console.error("获取交易对象列表失败:", error);
+    payeeList.value = [];
+    showToast("获取交易对象列表失败");
+  }
+};
 </script>
 
 <style scoped>
@@ -505,13 +763,6 @@ onMounted(() => {
 .posting-item:last-child {
   border-bottom: none;
   margin-bottom: 0;
-}
-
-.monthly-days-grid {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 8px;
-  padding: 8px 0;
 }
 
 .balance-info {
@@ -554,5 +805,86 @@ onMounted(() => {
 
 :deep(.van-checkbox__label) {
   font-size: 12px;
+}
+
+/* 周期选择器样式 */
+.weekly-selector,
+.monthly-selector {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background-color: white;
+}
+
+.selector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #ebedf0;
+  flex-shrink: 0;
+}
+
+.selector-header h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 500;
+  color: #323233;
+}
+
+.weekly-content,
+.monthly-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 0;
+}
+
+.monthly-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  padding: 0 16px;
+}
+
+.monthly-day-item {
+  margin: 0;
+  padding: 8px;
+  border: 1px solid #ebedf0;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  position: relative;
+  min-height: 48px;
+  justify-content: center;
+}
+
+.monthly-day-item .day-label {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #323233;
+  font-weight: 500;
+}
+
+.monthly-day-item:deep(.van-checkbox) {
+  margin-bottom: 0;
+}
+
+.monthly-day-item:deep(.van-checkbox__label) {
+  font-size: 12px;
+}
+
+.selector-footer {
+  padding: 16px;
+  border-top: 1px solid #ebedf0;
+  flex-shrink: 0;
+}
+
+.clear-icon {
+  color: #969799;
+  margin-left: 8px;
 }
 </style>

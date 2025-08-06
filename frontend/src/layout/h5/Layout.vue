@@ -1,5 +1,5 @@
 <template>
-  <div class="h5-layout" :class="{ 'keyboard-active': finalKeyboardVisible }">
+  <div class="h5-layout">
     <!-- 头部导航 -->
     <van-nav-bar
       :title="currentPageTitle"
@@ -18,11 +18,7 @@
     </div>
 
     <!-- 底部导航 -->
-    <van-tabbar
-      v-model="activeTab"
-      @change="onTabChange"
-      :class="{ 'tabbar-hidden': finalKeyboardVisible }"
-    >
+    <van-tabbar v-model="activeTab" @change="onTabChange" class="bottom-tabbar">
       <van-tabbar-item
         v-for="item in tabbarItems"
         :key="item.name"
@@ -61,9 +57,7 @@
 </template>
 
 <script setup lang="ts">
-import { getGlobalIOSKeyboard, isIOSDevice } from "@/utils/iosKeyboard";
-import { useKeyboard } from "@/utils/useKeyboard";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
@@ -71,18 +65,6 @@ const router = useRouter();
 
 const showMenuPopup = ref(false);
 const activeTab = ref("dashboard");
-
-// 使用键盘管理工具
-const { isKeyboardVisible } = useKeyboard();
-
-// iOS设备使用专用的键盘检测
-const iosKeyboard = isIOSDevice() ? getGlobalIOSKeyboard() : null;
-const finalKeyboardVisible = computed(() => {
-  if (iosKeyboard) {
-    return iosKeyboard.isKeyboardVisible.value;
-  }
-  return isKeyboardVisible.value;
-});
 
 const tabbarItems = [
   { name: "dashboard", title: "首页", icon: "home-o", path: "/h5/dashboard" },
@@ -93,19 +75,19 @@ const tabbarItems = [
     path: "/h5/transactions",
   },
   { name: "add", title: "记账", icon: "plus", path: "/h5/add-transaction" },
-  // { name: 'recurring', title: '周期', icon: 'replay', path: '/h5/recurring' },
   { name: "reports", title: "报表", icon: "bar-chart-o", path: "/h5/reports" },
-  { name: "accounts", title: "账户", icon: "manager-o", path: "/h5/accounts" },
+  { name: "settings", title: "设置", icon: "setting-o", path: "/h5/settings" },
 ];
 
 const allMenuItems = [
   { path: "/h5/dashboard", title: "首页", icon: "home-o" },
   { path: "/h5/transactions", title: "交易流水", icon: "bill-o" },
   { path: "/h5/add-transaction", title: "新增交易", icon: "plus" },
-  { path: "/h5/recurring", title: "周期记账", icon: "replay" },
   { path: "/h5/reports", title: "报表分析", icon: "bar-chart-o" },
-  { path: "/h5/accounts", title: "账户管理", icon: "manager-o" },
+  { path: "/h5/settings", title: "设置", icon: "setting-o" },
+  { path: "/h5/recurring", title: "周期记账", icon: "replay" },
   { path: "/h5/files", title: "文件管理", icon: "folder-o" },
+  { path: "/h5/accounts", title: "账户管理", icon: "manager-o" },
 ];
 
 // 监听路由变化，更新当前激活的标签
@@ -131,16 +113,41 @@ const currentPageTitle = computed(() => {
     return "交易详情";
   }
 
+  if (route.path.startsWith("/h5/recurring/")) {
+    if (route.path.includes("/add")) {
+      return "新增周期记账";
+    } else if (route.path.includes("/edit")) {
+      return "编辑周期记账";
+    } else {
+      return "周期记账详情";
+    }
+  }
+
   return "首页";
 });
 
 const showMenu = computed(() => {
-  // 在非主要标签页面显示菜单按钮
-  // 但排除交易详情页面
-  if (route.path.startsWith("/h5/transactions/")) {
+  // 底部导航栏的页面不显示菜单按钮
+  const isTabbarPage = tabbarItems.some((item) => item.path === route.path);
+  if (isTabbarPage) {
     return false;
   }
-  return !tabbarItems.some((item) => item.path === route.path);
+
+  // 设置页面的子页面不显示菜单按钮
+  const settingsSubPages = ["/h5/recurring", "/h5/files", "/h5/accounts"];
+  if (settingsSubPages.includes(route.path)) {
+    return false;
+  }
+
+  // 动态路由页面不显示菜单按钮
+  if (
+    route.path.startsWith("/h5/transactions/") ||
+    route.path.startsWith("/h5/recurring/")
+  ) {
+    return false;
+  }
+
+  return false; // 默认不显示菜单按钮
 });
 
 const onBack = () => {
@@ -162,14 +169,6 @@ const navigateTo = (path: string) => {
   showMenuPopup.value = false;
   router.push(path);
 };
-
-// 初始化iOS键盘检测
-onMounted(() => {
-  if (iosKeyboard) {
-    iosKeyboard.setupIOSKeyboardDetection();
-    console.log("iOS键盘检测已初始化");
-  }
-});
 </script>
 
 <style scoped>
@@ -193,16 +192,13 @@ onMounted(() => {
   transition: padding-bottom 0.3s ease; /* 添加过渡动画 */
 }
 
-/* 键盘弹出时隐藏底部导航栏 */
-.tabbar-hidden {
-  transform: translateY(100%);
-  transition: transform 0.3s ease;
-}
-
-/* 键盘弹出时调整主内容区域 */
-.h5-layout:has(.tabbar-hidden) .main-content,
-.keyboard-active .main-content {
-  padding-bottom: 0; /* 键盘弹出时移除底部内边距 */
+/* 底部导航栏样式 */
+.bottom-tabbar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 1000;
 }
 
 .menu-popup {

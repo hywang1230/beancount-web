@@ -590,53 +590,14 @@ html, body {
   }
 }
 
-/* 键盘适配样式 */
-@media (max-width: 768px) {
-  /* 键盘弹出时的通用样式 */
-  .keyboard-active {
-    /* 可以添加键盘激活时的全局样式 */
-  }
-  
-  /* 针对小屏设备的键盘优化 */
-  @media (max-height: 650px) {
-    .van-tabbar {
-      transition: transform 0.3s ease;
-    }
-    
-    /* 当屏幕高度很小时（可能是键盘弹出），隐藏一些非必要的固定元素 */
-    .fixed-bottom-actions {
-      transform: translateY(100%);
-      transition: transform 0.3s ease;
-    }
-  }
-  
-  /* 超小屏设备（可能是键盘弹出状态） */
-  @media (max-height: 500px) {
-    .van-tabbar {
-      transform: translateY(100%);
-    }
-  }
+/* 数字键盘样式 */
+.van-number-keyboard {
+  /* 确保数字键盘显示在底部导航上方 */
+  z-index: 999 !important;
+  bottom: 30px !important; /* 减少间隙，让数字键盘更贴近底部导航 */
+}
 
-  /* iOS Safari 特殊处理 */
-  @supports (-webkit-touch-callout: none) {
-    /* iOS设备的特殊处理 */
-    @media (max-height: 600px) {
-      .van-tabbar {
-        transform: translateY(100%);
-        transition: transform 0.3s ease;
-      }
-      
-      .action-buttons {
-        bottom: 0 !important;
-        transition: bottom 0.3s ease;
-      }
-    }
-    
-    /* 针对iPhone的更激进处理 */
-    @media (max-height: 550px) {
-      .van-tabbar {
-        display: none !important;
-      }
-    }
-  }
+/* 当数字键盘显示时，确保底部导航始终可见 */
+.van-tabbar {
+  z-index: 1000 !important;
 } 
