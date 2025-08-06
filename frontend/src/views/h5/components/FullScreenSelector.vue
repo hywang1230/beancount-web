@@ -1061,29 +1061,37 @@ onMounted(() => {
 .content-area {
   flex: 1;
   overflow-y: auto;
+  /* 确保内容不被底部遮挡 */
+  padding-bottom: max(60px, calc(20px + env(safe-area-inset-bottom)));
+  /* 增强移动端滚动体验 */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 /* 账户类型标签 */
 .type-tabs {
   background: white;
   border-bottom: 1px solid #ebedf0;
-  padding: 8px 0;
+  padding: 6px 16px;
 }
 
 .tab-container {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .tab-item {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  padding: 8px 12px;
+  padding: 6px 12px;
   cursor: pointer;
   transition: all 0.3s ease;
-  border-radius: 8px;
-  margin: 0 4px;
+  border-radius: 6px;
+  flex: 1;
+  justify-content: center;
+  min-height: 32px;
 }
 
 .tab-item.active {
@@ -1092,12 +1100,13 @@ onMounted(() => {
 }
 
 .tab-item .van-icon {
-  font-size: 20px;
-  margin-bottom: 4px;
+  font-size: 16px;
+  margin-right: 4px;
 }
 
 .tab-item span {
   font-size: 12px;
+  font-weight: 500;
 }
 
 /* 面包屑导航 */
@@ -1132,18 +1141,20 @@ onMounted(() => {
 .account-tree,
 .category-tree {
   padding: 8px 0;
+  /* 确保最后一个项目不被遮挡 */
+  padding-bottom: max(80px, calc(40px + env(safe-area-inset-bottom)));
 }
 
 .tree-node {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 8px 16px;
   background: white;
-  margin: 0 16px 4px;
-  border-radius: 8px;
+  margin: 0 16px 2px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-height: 48px;
+  min-height: 36px;
 }
 
 .tree-node:hover {
@@ -1237,13 +1248,13 @@ onMounted(() => {
 .account-item {
   display: flex;
   align-items: center;
-  padding: 16px;
+  padding: 12px 16px;
   background: white;
-  margin-bottom: 8px;
-  margin: 0 16px 8px;
-  border-radius: 12px;
+  margin: 0 16px 6px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
+  min-height: 52px;
 }
 
 .account-item:hover {
@@ -1396,16 +1407,22 @@ onMounted(() => {
 .payee-list {
   flex: 1;
   overflow-y: auto;
+  /* 确保最后一个项目不被遮挡 */
+  padding-bottom: max(80px, calc(40px + env(safe-area-inset-bottom)));
+  /* 增强移动端滚动体验 */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 .payee-item {
   display: flex;
   align-items: center;
-  padding: 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid #f0f0f0;
   background: white;
   cursor: pointer;
   transition: background-color 0.2s;
+  min-height: 42px;
 }
 
 .payee-item:hover {
