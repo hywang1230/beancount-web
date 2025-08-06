@@ -1038,31 +1038,38 @@ onMounted(() => {
   align-items: center;
   background: white;
   border-radius: 16px;
-  padding: 16px;
-  margin: 12px 16px;
-  margin-bottom: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 12px; /* 进一步减小内边距 */
+  margin: 10px 16px; /* 进一步减小上下间距 */
+  margin-bottom: 6px; /* 进一步减小底部间距 */
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   cursor: pointer;
-  min-height: 64px; /* 确保足够的触摸目标大小 */
+  min-height: 50px; /* 进一步减小最小高度 */
+  position: relative;
 }
 
 .form-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.form-card:active {
+  transform: scale(0.98);
+  transition: all 0.1s ease;
 }
 
 .card-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px; /* 进一步减小图标容器 */
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #f7f8fa;
-  border-radius: 12px;
-  margin-right: 16px;
+  border-radius: 10px; /* 进一步减小圆角 */
+  margin-right: 12px; /* 进一步减小右边距 */
   color: #646566;
-  font-size: 20px;
+  font-size: 16px; /* 进一步减小图标 */
+  flex-shrink: 0;
 }
 
 .card-content {
@@ -1073,13 +1080,13 @@ onMounted(() => {
 }
 
 .card-label {
-  font-size: 16px;
+  font-size: 16px; /* 适中字体大小 */
   color: #323233;
   font-weight: 500;
   flex: 1;
-  margin-right: 8px;
-  line-height: 1.4;
-  max-height: 2.8em;
+  margin-right: 10px; /* 减小右边距 */
+  line-height: 1.4; /* 减小行高 */
+  max-height: 2.8em; /* 减小最大高度 */
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -1114,19 +1121,25 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 8px 12px;
+  padding: 6px 10px; /* 进一步减小内边距 */
   background: #f7f8fa;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  min-height: 32px; /* 进一步减小最小高度 */
 }
 
 .currency-selector:hover {
   background: #ebedf0;
+  transform: scale(1.02);
+}
+
+.currency-selector:active {
+  transform: scale(0.98);
 }
 
 .currency-symbol {
-  font-size: 24px;
+  font-size: 20px; /* 进一步减小字体 */
   font-weight: bold;
   color: #323233;
 }
@@ -1136,10 +1149,12 @@ onMounted(() => {
 }
 
 .amount-field :deep(.van-field__control) {
-  font-size: 24px;
+  font-size: 20px; /* 进一步减小字体 */
   font-weight: bold;
   text-align: left;
   color: #323233;
+  min-height: 32px; /* 进一步减小最小高度 */
+  line-height: 1.2; /* 减小行高 */
 }
 
 .amount-field :deep(.van-field__control::placeholder) {
@@ -1155,13 +1170,24 @@ onMounted(() => {
 .multi-category-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  background: #f7f8fa;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #646566;
+  gap: 3px; /* 进一步减小间距 */
+  padding: 5px 10px; /* 进一步减小内边距 */
+  background: rgba(238, 90, 82, 0.1);
+  border-radius: 14px; /* 进一步减小圆角 */
+  font-size: 11px; /* 进一步减小字体大小 */
+  color: #ee5a52;
   cursor: pointer;
+  min-height: 28px; /* 进一步减小最小高度 */
+  transition: all 0.2s ease;
+}
+
+.multi-category-btn:hover {
+  background: rgba(238, 90, 82, 0.15);
+  transform: scale(1.02);
+}
+
+.multi-category-btn:active {
+  transform: scale(0.98);
 }
 
 /* 多类别面板样式 */
@@ -1352,47 +1378,106 @@ onMounted(() => {
 
 /* 使用标准 van-cell-group 样式 */
 :deep(.van-cell-group--inset) {
-  margin: 12px 16px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  margin: 12px 16px; /* 减小上下间距 */
+  border-radius: 16px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+
+:deep(.van-cell) {
+  min-height: 46px; /* 减小单元格最小高度 */
+  padding: 10px 16px; /* 减小内边距 */
+}
+
+:deep(.van-field__label) {
+  font-size: 16px; /* 增大标签字体 */
+  font-weight: 600; /* 增加字体粗细，与其他标签保持一致 */
+}
+
+/* 专门为日期单元格添加样式 */
+:deep(.van-cell__title) {
+  font-weight: 600; /* 为日期标题添加加粗 */
+}
+
+/* 为交易状态标题添加样式 */
+:deep(.van-cell__title) {
+  font-weight: 600; /* 确保所有cell标题都加粗 */
+}
+
+:deep(.van-field__control) {
+  font-size: 16px; /* 增大输入框字体 */
 }
 
 :deep(.van-button--mini) {
-  min-width: 60px;
-  height: 32px; /* 增加按钮高度以便触摸 */
-  font-size: 12px;
+  min-width: 65px; /* 减小最小宽度 */
+  height: 34px; /* 减小按钮高度 */
+  font-size: 12px; /* 减小字体 */
+  border-radius: 18px; /* 减小圆角 */
 }
 
 /* 移动端响应式优化 */
 @media (max-width: 375px) {
   .form-card {
-    margin: 8px 12px;
-    padding: 12px;
+    margin: 10px 12px; /* 减小间距 */
+    padding: 14px; /* 减小内边距 */
+    min-height: 56px; /* 减小最小高度 */
+  }
+  
+  .card-icon {
+    width: 38px; /* 减小图标 */
+    height: 38px;
+    margin-right: 12px; /* 减小右边距 */
+    font-size: 16px;
   }
   
   .card-label {
-    font-size: 14px;
+    font-size: 15px; /* 减小字体 */
   }
   
   .currency-symbol {
-    font-size: 20px;
+    font-size: 20px; /* 减小字体 */
   }
   
   .amount-field :deep(.van-field__control) {
-    font-size: 20px;
+    font-size: 20px; /* 减小字体 */
+    min-height: 32px;
+  }
+  
+  :deep(.van-cell) {
+    min-height: 42px; /* 减小单元格高度 */
+    padding: 8px 16px; /* 减小内边距 */
   }
 }
 
 @media (max-width: 320px) {
   .form-card {
-    margin: 6px 8px;
-    padding: 10px;
+    margin: 8px 10px; /* 减小间距 */
+    padding: 12px; /* 减小内边距 */
+    min-height: 52px; /* 减小最小高度 */
   }
   
   .card-icon {
-    width: 36px;
+    width: 36px; /* 减小图标 */
     height: 36px;
     margin-right: 12px;
+    font-size: 14px;
+  }
+  
+  .card-label {
+    font-size: 14px; /* 减小字体 */
+  }
+  
+  .currency-symbol {
+    font-size: 18px; /* 减小字体 */
+  }
+  
+  .amount-field :deep(.van-field__control) {
+    font-size: 18px; /* 减小字体 */
+    min-height: 30px;
+  }
+  
+  :deep(.van-cell) {
+    min-height: 40px; /* 减小单元格高度 */
+    padding: 6px 16px; /* 减小内边距 */
   }
 }
 </style>

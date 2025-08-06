@@ -535,6 +535,7 @@ const loadTransactionData = async () => {
   position: sticky;
   top: 0;
   z-index: 99;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .tab-container {
@@ -545,20 +546,24 @@ const loadTransactionData = async () => {
 .tab-item {
   flex: 1;
   text-align: center;
-  padding: 12px 8px;
-  font-size: 16px;
+  padding: 12px 8px; /* 减小垂直内边距 */
+  font-size: 15px; /* 减小字体 */
   color: #646566;
   cursor: pointer;
   position: relative;
   transition: all 0.3s ease;
   border-bottom: 3px solid transparent;
+  min-height: 44px; /* 减小最小高度 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tab-item.active {
   color: #ee5a52;
   font-weight: 600;
   border-bottom-color: #ee5a52;
-  background: rgba(238, 90, 82, 0.05);
+  background: rgba(238, 90, 82, 0.08);
 }
 
 .tab-item:hover {
@@ -574,7 +579,8 @@ const loadTransactionData = async () => {
 .tab-content {
   height: 100%;
   background: #f7f8fa;
-  padding-bottom: 120px; /* 为底部按钮和导航留出更多空间 */
+  padding-bottom: 140px; /* 为底部按钮和导航留出更多空间 */
+  padding-top: 8px; /* 增加顶部间距 */
 }
 
 /* 操作按钮 */
@@ -583,22 +589,35 @@ const loadTransactionData = async () => {
   bottom: 60px; /* 为底部导航栏留出更多空间 */
   left: 0;
   right: 0;
-  padding: 12px 16px;
+  padding: 12px 16px; /* 增加内边距 */
   background-color: white;
   border-top: 1px solid #ebedf0;
   z-index: 998; /* 确保在内容之上，但在导航栏之下 */
-  box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.1); /* 添加阴影效果 */
+  box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15); /* 增强阴影效果 */
+}
+
+.action-buttons :deep(.van-button--large) {
+  height: 46px; /* 减小按钮高度 */
+  font-size: 16px; /* 减小字体 */
+  font-weight: 600;
+  border-radius: 12px;
 }
 
 /* 响应式设计 */
 @media (max-width: 375px) {
   .tab-item {
-    padding: 12px 6px;
-    font-size: 14px;
+    padding: 14px 8px; /* 增加小屏幕的内边距 */
+    font-size: 15px; /* 保持较大的字体 */
+    min-height: 48px;
   }
 
   .action-buttons {
-    padding: 10px 16px;
+    padding: 14px 16px; /* 增加小屏幕的内边距 */
+  }
+  
+  .action-buttons :deep(.van-button--large) {
+    height: 44px; /* 小屏幕按钮高度 */
+    font-size: 15px; /* 减小字体 */
   }
 }
 
