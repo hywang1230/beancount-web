@@ -116,7 +116,7 @@
       title="选择账户"
       :show-search="true"
       :show-account-types="true"
-      :account-types="getAccountTypesForTransaction()"
+      :account-types="accountTypesForTransaction"
       @confirm="onFullScreenAccountConfirm"
       @close="onFullScreenAccountClose"
     />
@@ -127,7 +127,7 @@
       type="category"
       title="选择分类"
       :show-search="true"
-      :categories="getCategoryHierarchy()"
+      :categories="categoryHierarchy"
       @confirm="onFullScreenCategoryConfirm"
       @close="onFullScreenCategoryClose"
     />
@@ -138,7 +138,7 @@
       type="payee"
       title="选择交易对象"
       :show-search="true"
-      :payees="getPayeeList()"
+      :payees="payeeList"
       @confirm="onFullScreenPayeeConfirm"
       @close="onFullScreenPayeeClose"
     />
@@ -644,6 +644,59 @@ const isMultiCategoryValid = computed(() => {
   return hasValidCategories && amountsMatch;
 });
 
+// 构建分类层级数据 - 改为计算属性
+const categoryHierarchy = computed(() => {
+  // 根据交易类型确定分类账户类型
+  let targetAccountType = "";
+  switch (props.type) {
+    case "expense":
+      targetAccountType = "Expenses";
+      break;
+    case "income":
+      targetAccountType = "Income";
+      break;
+    case "adjustment":
+      targetAccountType = "Expenses"; // 调整余额默认使用支出分类
+      break;
+    default:
+      targetAccountType = "Expenses";
+  }
+
+  // 从现有的分类选项中构建扁平数组，供新的树形结构使用
+  const flatCategories: any[] = [];
+
+  categoryOptions.value.forEach((option) => {
+    if (option.disabled || !option.value.startsWith(`${targetAccountType}:`)) {
+      return;
+    }
+
+    flatCategories.push({
+      name: option.value,
+    });
+  });
+
+  return flatCategories;
+});
+
+// 构建交易对象列表 - 改为计算属性
+const payeeList = computed(() => {
+  return payeeOptions.value.map((option) => option.value);
+});
+
+// 获取交易类型对应的账户类型 - 改为计算属性
+const accountTypesForTransaction = computed(() => {
+  switch (props.type) {
+    case "expense":
+      return ["Assets", "Liabilities"];
+    case "income":
+      return ["Assets", "Liabilities"];
+    case "adjustment":
+      return ["Assets", "Liabilities"];
+    default:
+      return ["Assets", "Liabilities", "Income", "Expenses"];
+  }
+});
+
 // 监听数据变化 - 使用防抖减少频繁触发
 let updateTimeout: ReturnType<typeof setTimeout> | null = null;
 const debouncedEmitUpdate = (newData: any) => {
@@ -735,22 +788,7 @@ const onCurrencyConfirm = ({
 // 方法
 const onAmountInput = (value: string | number) => {
   console.log("onAmountInput called with:", value, typeof value);
-
-  // 单个分类时，自动将分类金额设置为总金额
-  if (localFormData.value.categories.length === 1 && value) {
-    const numericValue = parseFloat(String(value));
-    if (!isNaN(numericValue) && numericValue > 0) {
-      // 如果第一个分类已有分类选择但金额为空，则自动赋值
-      const firstCategory = localFormData.value.categories[0];
-      if (
-        firstCategory.category &&
-        (!firstCategory.amount || parseFloat(firstCategory.amount) === 0)
-      ) {
-        firstCategory.amount = String(numericValue);
-        console.log("单个分类自动赋值金额:", numericValue);
-      }
-    }
-  }
+  // 去掉自动联动逻辑，只记录金额输入，不自动更新分类金额
 };
 
 const onCategoryAmountInput = (index: number, value: string | number) => {
@@ -860,6 +898,22 @@ const openMultiCategorySheet = () => {
   tempCategories.value = JSON.parse(
     JSON.stringify(localFormData.value.categories)
   );
+
+  // 在打开多类别时，如果有输入的总金额且第一个分类没有金额，则自动赋值
+  if (localFormData.value.amount && tempCategories.value.length > 0) {
+    const totalAmount = parseFloat(localFormData.value.amount);
+    if (!isNaN(totalAmount) && totalAmount > 0) {
+      const firstCategory = tempCategories.value[0];
+      if (
+        firstCategory.category &&
+        (!firstCategory.amount || parseFloat(firstCategory.amount) === 0)
+      ) {
+        firstCategory.amount = String(totalAmount);
+        console.log("多类别模式：自动将总金额赋值给第一个分类:", totalAmount);
+      }
+    }
+  }
+
   isEditingMultiCategory.value = true;
   showMultiCategorySheet.value = true;
 };
@@ -907,102 +961,11 @@ const onFullScreenCategoryConfirm = (categoryName: string) => {
   targetCategories[index].categoryDisplayName =
     formatAccountNameForDisplay(categoryName); // 格式化显示值
 
-  // 单个分类时，自动将分类金额设置为总金额
-  if (
-    !isEditingMultiCategory.value &&
-    targetCategories.length === 1 &&
-    index === 0
-  ) {
-    const totalAmount = parseFloat(localFormData.value.amount || "0");
-    if (
-      totalAmount > 0 &&
-      (!targetCategories[0].amount ||
-        parseFloat(targetCategories[0].amount) === 0)
-    ) {
-      targetCategories[0].amount = String(totalAmount);
-      console.log("分类选择后自动赋值金额:", totalAmount);
-    }
-  }
+  // 去掉分类选择时的自动联动逻辑
 };
 
 const onFullScreenCategoryClose = () => {
   // 关闭回调，可以在这里处理一些状态重置
-};
-
-// 获取交易类型对应的账户类型
-const getAccountTypesForTransaction = () => {
-  switch (props.type) {
-    case "expense":
-      return ["Assets", "Liabilities"];
-    case "income":
-      return ["Assets", "Liabilities"];
-    case "adjustment":
-      return ["Assets", "Liabilities"];
-    default:
-      return ["Assets", "Liabilities", "Income", "Expenses"];
-  }
-};
-
-// 构建分类层级数据
-const getCategoryHierarchy = () => {
-  // 根据交易类型确定分类账户类型
-  let targetAccountType = "";
-  switch (props.type) {
-    case "expense":
-      targetAccountType = "Expenses";
-      break;
-    case "income":
-      targetAccountType = "Income";
-      break;
-    case "adjustment":
-      targetAccountType = "Expenses"; // 调整余额默认使用支出分类
-      break;
-    default:
-      targetAccountType = "Expenses";
-  }
-
-  // 从现有的分类选项中构建扁平数组，供新的树形结构使用
-  const flatCategories: any[] = [];
-
-  console.log(
-    "TransactionForm - categoryOptions.value:",
-    categoryOptions.value
-  );
-  console.log("TransactionForm - targetAccountType:", targetAccountType);
-
-  categoryOptions.value.forEach((option) => {
-    if (option.disabled || !option.value.startsWith(`${targetAccountType}:`)) {
-      return;
-    }
-
-    console.log("TransactionForm - 处理分类选项:", option.value);
-    flatCategories.push({
-      name: option.value,
-    });
-  });
-
-  console.log("TransactionForm - 构建的扁平分类数组:", flatCategories);
-  console.log("TransactionForm - 分类数量:", flatCategories.length);
-
-  // 检查是否有多层级的数据
-  const hasMultiLevel = flatCategories.some(
-    (cat) => cat.name.split(":").length > 2
-  );
-  console.log("TransactionForm - 是否有多层级数据:", hasMultiLevel);
-
-  return flatCategories;
-};
-
-// 构建交易对象列表
-const getPayeeList = () => {
-  console.log("TransactionForm - payeeOptions.value:", payeeOptions.value);
-
-  const payeeList = payeeOptions.value.map((option) => option.value);
-
-  console.log("TransactionForm - 构建的交易对象列表:", payeeList);
-  console.log("TransactionForm - 交易对象数量:", payeeList.length);
-
-  return payeeList;
 };
 
 const onSubmit = () => {
