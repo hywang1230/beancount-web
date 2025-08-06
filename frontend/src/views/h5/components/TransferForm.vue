@@ -24,7 +24,7 @@
           </div>
           <van-field
             v-model="localFormData.amount"
-            type="digit"
+            type="number"
             placeholder="0.00"
             class="amount-field"
             :border="false"

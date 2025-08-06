@@ -24,7 +24,7 @@
           </div>
           <van-field
             v-model="localFormData.amount"
-            type="digit"
+            type="number"
             placeholder="0.00"
             class="amount-field"
             :border="false"
@@ -191,7 +191,7 @@
               />
               <van-field
                 :model-value="item.amount"
-                type="digit"
+                type="number"
                 placeholder="0.00"
                 class="amount-field-small"
                 @update:model-value="(value) => onCategoryAmountInput(index, value)"
