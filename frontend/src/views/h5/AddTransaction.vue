@@ -128,7 +128,20 @@ const canSave = computed(() => {
       transferFormData.value.toAccount
     );
   } else {
-    return formData.value.amount && formData.value.account;
+    // 检查基本字段
+    if (!formData.value.amount || !formData.value.account) {
+      return false;
+    }
+
+    // 检查分类：至少有一个有效的分类
+    const hasValidCategory =
+      formData.value.categories &&
+      formData.value.categories.length > 0 &&
+      formData.value.categories.some(
+        (cat) => cat.category && cat.categoryDisplayName
+      );
+
+    return hasValidCategory;
   }
 });
 
@@ -671,45 +684,6 @@ const loadTransactionData = async () => {
   .action-buttons :deep(.van-button--large) {
     height: 44px; /* 小屏幕按钮高度 */
     font-size: 15px; /* 减小字体 */
-  }
-}
-
-/* 暗色主题支持 */
-@media (prefers-color-scheme: dark) {
-  .h5-add-transaction {
-    background-color: #1a1a1a;
-  }
-
-  .header-title {
-    background: #2c2c2c;
-    color: #cccccc;
-    border-bottom-color: #3a3a3a;
-  }
-
-  .type-tabs {
-    background: #2c2c2c;
-    border-bottom-color: #3a3a3a;
-  }
-
-  .tab-container {
-    background: #2c2c2c;
-  }
-
-  .tab-item {
-    color: #cccccc;
-  }
-
-  .tab-item.active {
-    background: rgba(238, 90, 82, 0.15);
-  }
-
-  .tab-content {
-    background: #1a1a1a;
-  }
-
-  .action-buttons {
-    background-color: #2c2c2c;
-    border-top-color: #3a3a3a;
   }
 }
 </style>

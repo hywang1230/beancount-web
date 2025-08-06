@@ -84,25 +84,19 @@
       </van-cell-group>
     </van-form>
 
-    <!-- 全屏转出账户选择器 -->
-    <FullScreenSelector
+    <!-- TreeSelect转出账户选择器 -->
+    <AccountTreeSelector
       ref="fromAccountSelectorRef"
-      type="account"
       title="选择转出账户"
-      :show-search="true"
-      :show-account-types="true"
       :account-types="['Assets', 'Liabilities']"
       @confirm="onFullScreenFromAccountConfirm"
       @close="onFullScreenFromAccountClose"
     />
 
-    <!-- 全屏转入账户选择器 -->
-    <FullScreenSelector
+    <!-- TreeSelect转入账户选择器 -->
+    <AccountTreeSelector
       ref="toAccountSelectorRef"
-      type="account"
       title="选择转入账户"
-      :show-search="true"
-      :show-account-types="true"
       :account-types="['Assets', 'Liabilities']"
       @confirm="onFullScreenToAccountConfirm"
       @close="onFullScreenToAccountClose"
@@ -136,7 +130,7 @@
 import { getAccountsByType } from "@/api/accounts";
 import { showToast } from "vant";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import FullScreenSelector from "./FullScreenSelector.vue";
+import AccountTreeSelector from "./AccountTreeSelector.vue";
 
 interface Props {
   formData: {

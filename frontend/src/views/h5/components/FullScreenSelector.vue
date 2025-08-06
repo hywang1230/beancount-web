@@ -560,12 +560,12 @@ const buildTreeFromAccounts = (accountList: Account[]) => {
   // 构建层级关系和可见性
   const allNodes = Array.from(nodeMap.values());
 
-  // 默认展开所有父节点
-  allNodes.forEach((node) => {
-    if (node.hasChildren) {
-      expandedNodes.value.add(node.path);
-    }
-  });
+  // 默认折叠所有父节点，不再自动展开
+  // allNodes.forEach((node) => {
+  //   if (node.hasChildren) {
+  //     expandedNodes.value.add(node.path);
+  //   }
+  // });
 
   // 第二级作为根节点（level = 0）默认可见
   allNodes.forEach((node) => {
@@ -675,12 +675,12 @@ const buildTreeFromCategories = (categoryList: Category[]) => {
   const allNodes = Array.from(nodeMap.values());
   console.log("buildTreeFromCategories - 所有节点:", allNodes);
 
-  // 默认展开所有父节点
-  allNodes.forEach((node) => {
-    if (node.hasChildren) {
-      expandedNodes.value.add(node.path);
-    }
-  });
+  // 默认折叠所有父节点，不再自动展开
+  // allNodes.forEach((node) => {
+  //   if (node.hasChildren) {
+  //     expandedNodes.value.add(node.path);
+  //   }
+  // });
 
   // 第二级作为根节点（level = 0）默认可见
   allNodes.forEach((node) => {
@@ -1061,29 +1061,37 @@ onMounted(() => {
 .content-area {
   flex: 1;
   overflow-y: auto;
+  /* 确保内容不被底部遮挡 */
+  padding-bottom: max(60px, calc(20px + env(safe-area-inset-bottom)));
+  /* 增强移动端滚动体验 */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 /* 账户类型标签 */
 .type-tabs {
   background: white;
   border-bottom: 1px solid #ebedf0;
-  padding: 8px 0;
+  padding: 6px 16px;
 }
 
 .tab-container {
   display: flex;
-  justify-content: space-around;
+  justify-content: space-between;
+  gap: 8px;
 }
 
 .tab-item {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  padding: 8px 12px;
+  padding: 6px 12px;
   cursor: pointer;
   transition: all 0.3s ease;
-  border-radius: 8px;
-  margin: 0 4px;
+  border-radius: 6px;
+  flex: 1;
+  justify-content: center;
+  min-height: 32px;
 }
 
 .tab-item.active {
@@ -1092,12 +1100,13 @@ onMounted(() => {
 }
 
 .tab-item .van-icon {
-  font-size: 20px;
-  margin-bottom: 4px;
+  font-size: 16px;
+  margin-right: 4px;
 }
 
 .tab-item span {
   font-size: 12px;
+  font-weight: 500;
 }
 
 /* 面包屑导航 */
@@ -1132,18 +1141,20 @@ onMounted(() => {
 .account-tree,
 .category-tree {
   padding: 8px 0;
+  /* 确保最后一个项目不被遮挡 */
+  padding-bottom: max(80px, calc(40px + env(safe-area-inset-bottom)));
 }
 
 .tree-node {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
+  padding: 8px 16px;
   background: white;
-  margin: 0 16px 4px;
-  border-radius: 8px;
+  margin: 0 16px 2px;
+  border-radius: 6px;
   cursor: pointer;
   transition: all 0.3s ease;
-  min-height: 48px;
+  min-height: 36px;
 }
 
 .tree-node:hover {
@@ -1237,13 +1248,13 @@ onMounted(() => {
 .account-item {
   display: flex;
   align-items: center;
-  padding: 16px;
+  padding: 12px 16px;
   background: white;
-  margin-bottom: 8px;
-  margin: 0 16px 8px;
-  border-radius: 12px;
+  margin: 0 16px 6px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
+  min-height: 52px;
 }
 
 .account-item:hover {
@@ -1386,53 +1397,6 @@ onMounted(() => {
   }
 }
 
-/* 暗色主题 */
-@media (prefers-color-scheme: dark) {
-  .fullscreen-selector {
-    background-color: #1a1a1a;
-  }
-
-  .selector-header {
-    background: #2c2c2c;
-    border-bottom-color: #3a3a3a;
-  }
-
-  .search-section {
-    background: #2c2c2c;
-    border-bottom-color: #3a3a3a;
-  }
-
-  .type-tabs {
-    background: #2c2c2c;
-    border-bottom-color: #3a3a3a;
-  }
-
-  .breadcrumb {
-    background: #2c2c2c;
-    border-bottom-color: #3a3a3a;
-  }
-
-  .account-item,
-  .category-item {
-    background: #2c2c2c;
-  }
-
-  .account-item:hover,
-  .category-item:hover {
-    background: #3a3a3a;
-  }
-
-  .account-name,
-  .category-name {
-    color: #cccccc;
-  }
-
-  .category-item.back-item {
-    background: #1a1a1a;
-    border-color: #5a5a5a;
-  }
-}
-
 /* 交易对象选择样式 */
 .payee-content {
   flex: 1;
@@ -1443,16 +1407,22 @@ onMounted(() => {
 .payee-list {
   flex: 1;
   overflow-y: auto;
+  /* 确保最后一个项目不被遮挡 */
+  padding-bottom: max(80px, calc(40px + env(safe-area-inset-bottom)));
+  /* 增强移动端滚动体验 */
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 .payee-item {
   display: flex;
   align-items: center;
-  padding: 16px;
+  padding: 12px 16px;
   border-bottom: 1px solid #f0f0f0;
   background: white;
   cursor: pointer;
   transition: background-color 0.2s;
+  min-height: 42px;
 }
 
 .payee-item:hover {

@@ -296,12 +296,9 @@
     </van-popup>
 
     <!-- 账户选择器 -->
-    <FullScreenSelector
+    <AccountTreeSelector
       ref="accountSelectorRef"
-      type="account"
       title="选择账户"
-      :show-search="true"
-      :show-account-types="true"
       :account-types="['Assets', 'Liabilities', 'Income', 'Expenses']"
       @confirm="onAccountSelected"
       @close="onAccountSelectorClose"
@@ -416,6 +413,7 @@ import { getPayees } from "@/api/transactions";
 import { showToast } from "vant";
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
+import AccountTreeSelector from "./AccountTreeSelector.vue";
 import FullScreenSelector from "./FullScreenSelector.vue";
 
 interface Props {

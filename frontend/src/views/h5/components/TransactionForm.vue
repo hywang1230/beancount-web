@@ -124,24 +124,19 @@
       </van-cell-group>
     </van-form>
 
-    <!-- 全屏账户选择器 -->
-    <FullScreenSelector
+    <!-- TreeSelect账户选择器 -->
+    <AccountTreeSelector
       ref="accountSelectorRef"
-      type="account"
       title="选择账户"
-      :show-search="true"
-      :show-account-types="true"
       :account-types="accountTypesForTransaction"
       @confirm="onFullScreenAccountConfirm"
       @close="onFullScreenAccountClose"
     />
 
-    <!-- 全屏分类选择器 -->
-    <FullScreenSelector
+    <!-- TreeSelect分类选择器 -->
+    <CategoryTreeSelector
       ref="categorySelectorRef"
-      type="category"
       title="选择分类"
-      :show-search="true"
       :categories="categoryHierarchy"
       @confirm="onFullScreenCategoryConfirm"
       @close="onFullScreenCategoryClose"
@@ -225,7 +220,7 @@
                   { validator: validateNumberInput, message: '请输入合法数字' },
                 ]"
                 @update:model-value="
-                  (value) => onCategoryAmountInput(index, value)
+                  (value: string) => onCategoryAmountInput(index, value)
                 "
               />
               <van-button
@@ -312,6 +307,8 @@ import { getAccountsByType } from "@/api/accounts";
 import { getPayees } from "@/api/transactions";
 import { showToast } from "vant";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
+import AccountTreeSelector from "./AccountTreeSelector.vue";
+import CategoryTreeSelector from "./CategoryTreeSelector.vue";
 import FullScreenSelector from "./FullScreenSelector.vue";
 
 interface CategoryItem {
