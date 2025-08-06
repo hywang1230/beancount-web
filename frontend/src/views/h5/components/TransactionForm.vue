@@ -74,7 +74,15 @@
           :value="localFormData.payee || '选择交易对象（可选）'"
           is-link
           @click="showFullScreenPayeeSelector"
-        />
+        >
+          <template #right-icon v-if="localFormData.payee">
+            <van-icon
+              name="close"
+              class="clear-icon"
+              @click.stop="clearPayee"
+            />
+          </template>
+        </van-cell>
 
         <!-- 状态选择 -->
         <van-cell title="交易状态">
@@ -106,6 +114,7 @@
           type="textarea"
           rows="2"
           autosize
+          clearable
         />
       </van-cell-group>
     </van-form>
@@ -297,6 +306,7 @@
 <script setup lang="ts">
 import { getAccountsByType } from "@/api/accounts";
 import { getPayees } from "@/api/transactions";
+import { useKeyboard } from "@/utils/useKeyboard";
 import { showToast } from "vant";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import FullScreenSelector from "./FullScreenSelector.vue";
@@ -331,6 +341,9 @@ interface Emits {
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
+
+// 使用键盘管理工具
+const { isKeyboardVisible } = useKeyboard();
 
 const localFormData = ref({
   ...props.formData,
@@ -870,6 +883,11 @@ const hideAmountKeyboard = () => {
   emit("keyboard-visible", false);
 };
 
+// 监听全局键盘状态变化
+watch(isKeyboardVisible, (visible) => {
+  emit("keyboard-visible", visible);
+});
+
 const onKeyboardInput = (key: string | number) => {
   console.log("键盘输入:", key, "类型:", typeof key);
   const currentAmount = String(localFormData.value.amount || "0");
@@ -1006,6 +1024,12 @@ const onFullScreenPayeeConfirm = (payee: string) => {
 
 const onFullScreenPayeeClose = () => {
   console.log("交易对象选择器已关闭");
+};
+
+// 清除交易对象
+const clearPayee = () => {
+  localFormData.value.payee = "";
+  console.log("已清除交易对象");
 };
 
 // 全屏账户选择器方法
@@ -1766,6 +1790,22 @@ onMounted(() => {
 /* 专门为日期单元格添加样式 */
 :deep(.van-cell__title) {
   font-weight: 600; /* 为日期标题添加加粗 */
+}
+
+/* 清除图标样式 */
+.clear-icon {
+  color: #969799;
+  font-size: 16px;
+  padding: 4px;
+  transition: color 0.2s ease;
+}
+
+.clear-icon:hover {
+  color: #323233;
+}
+
+.clear-icon:active {
+  color: #ee0a24;
 }
 
 /* 为交易状态标题添加样式 */

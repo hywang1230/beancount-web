@@ -1,7 +1,7 @@
 <template>
-  <div class="h5-layout">
+  <div class="h5-layout" :class="{ 'keyboard-active': isKeyboardVisible }">
     <!-- 头部导航 -->
-    <van-nav-bar 
+    <van-nav-bar
       :title="currentPageTitle"
       left-arrow
       @click-left="onBack"
@@ -18,9 +18,13 @@
     </div>
 
     <!-- 底部导航 -->
-    <van-tabbar v-model="activeTab" @change="onTabChange">
-      <van-tabbar-item 
-        v-for="item in tabbarItems" 
+    <van-tabbar
+      v-model="activeTab"
+      @change="onTabChange"
+      :class="{ 'tabbar-hidden': isKeyboardVisible }"
+    >
+      <van-tabbar-item
+        v-for="item in tabbarItems"
         :key="item.name"
         :name="item.name"
         :icon="item.icon"
@@ -31,9 +35,9 @@
     </van-tabbar>
 
     <!-- 菜单弹窗 -->
-    <van-popup 
-      v-model:show="showMenuPopup" 
-      position="right" 
+    <van-popup
+      v-model:show="showMenuPopup"
+      position="right"
       :style="{ width: '80%', height: '100%' }"
     >
       <div class="menu-popup">
@@ -42,7 +46,7 @@
           <van-icon name="cross" @click="showMenuPopup = false" />
         </div>
         <van-cell-group>
-          <van-cell 
+          <van-cell
             v-for="item in allMenuItems"
             :key="item.path"
             :title="item.title"
@@ -57,84 +61,97 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useKeyboard } from "@/utils/useKeyboard";
+import { computed, ref, watch } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
-const route = useRoute()
-const router = useRouter()
+const route = useRoute();
+const router = useRouter();
 
-const showMenuPopup = ref(false)
-const activeTab = ref('dashboard')
+const showMenuPopup = ref(false);
+const activeTab = ref("dashboard");
+
+// 使用键盘管理工具
+const { isKeyboardVisible } = useKeyboard();
 
 const tabbarItems = [
-  { name: 'dashboard', title: '首页', icon: 'home-o', path: '/h5/dashboard' },
-  { name: 'transactions', title: '流水', icon: 'bill-o', path: '/h5/transactions' },
-  { name: 'add', title: '记账', icon: 'plus', path: '/h5/add-transaction' },
+  { name: "dashboard", title: "首页", icon: "home-o", path: "/h5/dashboard" },
+  {
+    name: "transactions",
+    title: "流水",
+    icon: "bill-o",
+    path: "/h5/transactions",
+  },
+  { name: "add", title: "记账", icon: "plus", path: "/h5/add-transaction" },
   // { name: 'recurring', title: '周期', icon: 'replay', path: '/h5/recurring' },
-  { name: 'reports', title: '报表', icon: 'bar-chart-o', path: '/h5/reports' },
-  { name: 'accounts', title: '账户', icon: 'manager-o', path: '/h5/accounts' }
-]
+  { name: "reports", title: "报表", icon: "bar-chart-o", path: "/h5/reports" },
+  { name: "accounts", title: "账户", icon: "manager-o", path: "/h5/accounts" },
+];
 
 const allMenuItems = [
-  { path: '/h5/dashboard', title: '首页', icon: 'home-o' },
-  { path: '/h5/transactions', title: '交易流水', icon: 'bill-o' },
-  { path: '/h5/add-transaction', title: '新增交易', icon: 'plus' },
-  { path: '/h5/recurring', title: '周期记账', icon: 'replay' },
-  { path: '/h5/reports', title: '报表分析', icon: 'bar-chart-o' },
-  { path: '/h5/accounts', title: '账户管理', icon: 'manager-o' },
-  { path: '/h5/files', title: '文件管理', icon: 'folder-o' }
-]
+  { path: "/h5/dashboard", title: "首页", icon: "home-o" },
+  { path: "/h5/transactions", title: "交易流水", icon: "bill-o" },
+  { path: "/h5/add-transaction", title: "新增交易", icon: "plus" },
+  { path: "/h5/recurring", title: "周期记账", icon: "replay" },
+  { path: "/h5/reports", title: "报表分析", icon: "bar-chart-o" },
+  { path: "/h5/accounts", title: "账户管理", icon: "manager-o" },
+  { path: "/h5/files", title: "文件管理", icon: "folder-o" },
+];
 
 // 监听路由变化，更新当前激活的标签
-watch(() => route.path, (newPath) => {
-  const currentItem = tabbarItems.find(item => item.path === newPath)
-  if (currentItem) {
-    activeTab.value = currentItem.name
-  }
-}, { immediate: true })
+watch(
+  () => route.path,
+  (newPath) => {
+    const currentItem = tabbarItems.find((item) => item.path === newPath);
+    if (currentItem) {
+      activeTab.value = currentItem.name;
+    }
+  },
+  { immediate: true }
+);
 
 const currentPageTitle = computed(() => {
-  const currentItem = allMenuItems.find(item => item.path === route.path)
+  const currentItem = allMenuItems.find((item) => item.path === route.path);
   if (currentItem) {
-    return currentItem.title
+    return currentItem.title;
   }
-  
+
   // 处理动态路由
-  if (route.path.startsWith('/h5/transactions/')) {
-    return '交易详情'
+  if (route.path.startsWith("/h5/transactions/")) {
+    return "交易详情";
   }
-  
-  return '首页'
-})
+
+  return "首页";
+});
 
 const showMenu = computed(() => {
   // 在非主要标签页面显示菜单按钮
   // 但排除交易详情页面
-  if (route.path.startsWith('/h5/transactions/')) {
-    return false
+  if (route.path.startsWith("/h5/transactions/")) {
+    return false;
   }
-  return !tabbarItems.some(item => item.path === route.path)
-})
+  return !tabbarItems.some((item) => item.path === route.path);
+});
 
 const onBack = () => {
   if (window.history.length > 1) {
-    router.back()
+    router.back();
   } else {
-    router.push('/h5/dashboard')
+    router.push("/h5/dashboard");
   }
-}
+};
 
 const onTabChange = (name: string) => {
-  const item = tabbarItems.find(tab => tab.name === name)
+  const item = tabbarItems.find((tab) => tab.name === name);
   if (item) {
-    router.push(item.path)
+    router.push(item.path);
   }
-}
+};
 
 const navigateTo = (path: string) => {
-  showMenuPopup.value = false
-  router.push(path)
-}
+  showMenuPopup.value = false;
+  router.push(path);
+};
 </script>
 
 <style scoped>
@@ -155,6 +172,19 @@ const navigateTo = (path: string) => {
   overflow-y: auto;
   padding-bottom: 60px; /* 为底部导航留出更多空间 */
   -webkit-overflow-scrolling: touch; /* 启用iOS平滑滚动 */
+  transition: padding-bottom 0.3s ease; /* 添加过渡动画 */
+}
+
+/* 键盘弹出时隐藏底部导航栏 */
+.tabbar-hidden {
+  transform: translateY(100%);
+  transition: transform 0.3s ease;
+}
+
+/* 键盘弹出时调整主内容区域 */
+.h5-layout:has(.tabbar-hidden) .main-content,
+.keyboard-active .main-content {
+  padding-bottom: 0; /* 键盘弹出时移除底部内边距 */
 }
 
 .menu-popup {
