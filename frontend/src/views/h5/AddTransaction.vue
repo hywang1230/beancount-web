@@ -128,7 +128,20 @@ const canSave = computed(() => {
       transferFormData.value.toAccount
     );
   } else {
-    return formData.value.amount && formData.value.account;
+    // 检查基本字段
+    if (!formData.value.amount || !formData.value.account) {
+      return false;
+    }
+
+    // 检查分类：至少有一个有效的分类
+    const hasValidCategory =
+      formData.value.categories &&
+      formData.value.categories.length > 0 &&
+      formData.value.categories.some(
+        (cat) => cat.category && cat.categoryDisplayName
+      );
+
+    return hasValidCategory;
   }
 });
 
