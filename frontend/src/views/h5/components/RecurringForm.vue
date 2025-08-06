@@ -104,7 +104,7 @@
           v-model="form.end_date"
           name="end_date"
           label="结束日期"
-          placeholder="可选的结束日期"
+          placeholder="可选的结束日期（不填表示无期限）"
           readonly
           is-link
           @click="showEndDatePicker = true"
@@ -218,7 +218,7 @@
     <!-- 开始日期选择器 -->
     <van-popup v-model:show="showStartDatePicker" position="bottom">
       <van-date-picker
-        :v-model="startDateValue"
+        v-model="startDateValue"
         @confirm="onStartDateConfirm"
         @cancel="showStartDatePicker = false"
       />
@@ -227,7 +227,7 @@
     <!-- 结束日期选择器 -->
     <van-popup v-model:show="showEndDatePicker" position="bottom">
       <van-date-picker
-        :v-model="endDateValue"
+        v-model="endDateValue"
         @confirm="onEndDateConfirm"
         @cancel="showEndDatePicker = false"
       />
@@ -300,14 +300,14 @@ const accountSelectorRef = ref();
 // 选择器数据
 const recurrenceTypeValue = ref(["daily"]);
 const startDateValue = ref([
-  new Date().getFullYear(),
-  new Date().getMonth() + 1,
-  new Date().getDate(),
+  new Date().getFullYear().toString(),
+  (new Date().getMonth() + 1).toString(),
+  new Date().getDate().toString(),
 ]);
 const endDateValue = ref([
-  new Date().getFullYear(),
-  new Date().getMonth() + 1,
-  new Date().getDate(),
+  new Date().getFullYear().toString(),
+  (new Date().getMonth() + 1).toString(),
+  new Date().getDate().toString(),
 ]);
 
 const recurrenceTypeColumns = [
@@ -350,20 +350,22 @@ const onRecurrenceTypeConfirm = (option: any) => {
   showRecurrenceTypePicker.value = false;
 };
 
-const onStartDateConfirm = (values: number[]) => {
+const onStartDateConfirm = (values: string[]) => {
   const [year, month, day] = values;
-  form.value.start_date = `${year}-${month.toString().padStart(2, "0")}-${day
-    .toString()
-    .padStart(2, "0")}`;
+  form.value.start_date = `${year}-${month.padStart(2, "0")}-${day.padStart(
+    2,
+    "0"
+  )}`;
   startDateValue.value = values;
   showStartDatePicker.value = false;
 };
 
-const onEndDateConfirm = (values: number[]) => {
+const onEndDateConfirm = (values: string[]) => {
   const [year, month, day] = values;
-  form.value.end_date = `${year}-${month.toString().padStart(2, "0")}-${day
-    .toString()
-    .padStart(2, "0")}`;
+  form.value.end_date = `${year}-${month.padStart(2, "0")}-${day.padStart(
+    2,
+    "0"
+  )}`;
   endDateValue.value = values;
   showEndDatePicker.value = false;
 };
@@ -483,7 +485,13 @@ const loadEditData = async () => {
 };
 
 onMounted(() => {
-  if (props.isEdit) {
+  // 设置默认开始日期为今天
+  if (!props.isEdit) {
+    const today = new Date();
+    form.value.start_date = `${today.getFullYear()}-${String(
+      today.getMonth() + 1
+    ).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  } else {
     loadEditData();
   }
 });
