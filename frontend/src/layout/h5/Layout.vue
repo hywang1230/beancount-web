@@ -174,9 +174,11 @@ const navigateTo = (path: string) => {
 <style scoped>
 .h5-layout {
   height: 100vh;
+  height: 100dvh; /* 使用动态视口高度，避免移动端地址栏影响 */
   display: flex;
   flex-direction: column;
   background-color: #f7f8fa;
+  position: relative; /* 确保子元素正确定位 */
 }
 
 .top-nav {
@@ -198,7 +200,9 @@ const navigateTo = (path: string) => {
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 1000;
+  z-index: 1000; /* 确保在内容之上，但在弹窗之下 */
+  /* 适配安全区域 */
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 .menu-popup {

@@ -255,6 +255,94 @@ html, body {
     margin-top: 5vh !important;
   }
   
+  /* Vant对话框优化 - 确保H5页面弹窗完全显示 */
+  .van-dialog {
+    max-height: 80vh !important; /* 限制最大高度为视口的80% */
+    margin: auto !important; /* 确保垂直居中 */
+    position: fixed !important; /* 确保固定定位 */
+    top: 50% !important; /* 垂直居中 */
+    left: 50% !important; /* 水平居中 */
+    transform: translate(-50%, -50%) !important; /* 完全居中 */
+    overflow: hidden !important; /* 防止内容溢出 */
+    border-radius: 12px !important; /* 圆角美化 */
+  }
+  
+  .van-dialog__content {
+    max-height: 60vh !important; /* 内容区域最大高度 */
+    overflow-y: auto !important; /* 内容过多时可滚动 */
+    -webkit-overflow-scrolling: touch !important; /* iOS平滑滚动 */
+  }
+  
+  /* 确保对话框在所有其他元素之上 */
+  .van-overlay,
+  .van-dialog {
+    z-index: 2000 !important; /* 高于底部导航栏 */
+  }
+  
+  /* Vant Toast 优化 - 确保H5页面Toast完全显示且居中 */
+  .van-toast {
+    position: fixed !important; /* 确保固定定位 */
+    z-index: 2100 !important; /* 高于对话框 */
+    max-width: calc(100vw - 40px) !important; /* 限制最大宽度，留出边距 */
+    min-width: auto !important; /* 重置最小宽度 */
+    word-wrap: break-word !important; /* 长文本换行 */
+    white-space: pre-wrap !important; /* 保持换行格式 */
+    border-radius: 8px !important; /* 圆角美化 */
+    box-sizing: border-box !important; /* 盒模型计算 */
+    
+    /* 使用更精确的居中定位 */
+    top: 50% !important;
+    left: 50% !important;
+    right: auto !important; /* 重置right属性 */
+    bottom: auto !important; /* 重置bottom属性 */
+    margin: 0 !important; /* 重置外边距 */
+    padding: 12px 16px !important; /* 设置内边距 */
+    transform: translate(-50%, -50%) !important; /* 完全居中 */
+    
+    /* 强制覆盖任何可能的偏移 */
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  
+  /* 确保Toast文本内容也居中 */
+  .van-toast .van-toast__text {
+    text-align: center !important;
+  }
+  
+  /* Toast 加载状态优化 */
+  .van-toast--loading {
+    padding: 16px !important; /* 增加内边距 */
+    text-align: center !important; /* 文本居中 */
+  }
+  
+  /* Toast 文本样式优化 */
+  .van-toast__text {
+    line-height: 1.4 !important; /* 改善行高 */
+    font-size: 14px !important; /* 适当的字体大小 */
+  }
+  
+  /* 其他Vant组件定位优化 */
+  .van-action-sheet,
+  .van-picker {
+    z-index: 2000 !important; /* 确保在底部导航栏之上 */
+  }
+  
+  .van-notify {
+    z-index: 2100 !important; /* 通知在最上层 */
+    position: fixed !important;
+    top: 20px !important; /* 距离顶部20px */
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    max-width: calc(100vw - 40px) !important;
+  }
+  
+  /* 确保Loading Toast在页面中央显示 */
+  .van-toast--loading .van-loading {
+    margin-bottom: 8px !important;
+  }
+  
   /* 抽屉优化 */
   .el-drawer {
     width: 90% !important;
