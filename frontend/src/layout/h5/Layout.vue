@@ -1,5 +1,5 @@
 <template>
-  <div class="h5-layout" :class="{ 'keyboard-active': isKeyboardVisible }">
+  <div class="h5-layout" :class="{ 'keyboard-active': finalKeyboardVisible }">
     <!-- 头部导航 -->
     <van-nav-bar
       :title="currentPageTitle"
@@ -21,7 +21,7 @@
     <van-tabbar
       v-model="activeTab"
       @change="onTabChange"
-      :class="{ 'tabbar-hidden': isKeyboardVisible }"
+      :class="{ 'tabbar-hidden': finalKeyboardVisible }"
     >
       <van-tabbar-item
         v-for="item in tabbarItems"
@@ -61,8 +61,9 @@
 </template>
 
 <script setup lang="ts">
+import { getGlobalIOSKeyboard, isIOSDevice } from "@/utils/iosKeyboard";
 import { useKeyboard } from "@/utils/useKeyboard";
-import { computed, ref, watch } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
@@ -73,6 +74,15 @@ const activeTab = ref("dashboard");
 
 // 使用键盘管理工具
 const { isKeyboardVisible } = useKeyboard();
+
+// iOS设备使用专用的键盘检测
+const iosKeyboard = isIOSDevice() ? getGlobalIOSKeyboard() : null;
+const finalKeyboardVisible = computed(() => {
+  if (iosKeyboard) {
+    return iosKeyboard.isKeyboardVisible.value;
+  }
+  return isKeyboardVisible.value;
+});
 
 const tabbarItems = [
   { name: "dashboard", title: "首页", icon: "home-o", path: "/h5/dashboard" },
@@ -152,6 +162,14 @@ const navigateTo = (path: string) => {
   showMenuPopup.value = false;
   router.push(path);
 };
+
+// 初始化iOS键盘检测
+onMounted(() => {
+  if (iosKeyboard) {
+    iosKeyboard.setupIOSKeyboardDetection();
+    console.log("iOS键盘检测已初始化");
+  }
+});
 </script>
 
 <style scoped>

@@ -299,6 +299,8 @@
       @input="onKeyboardInput"
       @delete="onKeyboardDelete"
       @close="hideAmountKeyboard"
+      @show="onNumberKeyboardShow"
+      @hide="onNumberKeyboardHide"
     />
   </div>
 </template>
@@ -883,9 +885,24 @@ const hideAmountKeyboard = () => {
   emit("keyboard-visible", false);
 };
 
-// 监听全局键盘状态变化
+// Vant数字键盘显示事件
+const onNumberKeyboardShow = () => {
+  console.log("Vant数字键盘显示");
+  emit("keyboard-visible", true);
+};
+
+// Vant数字键盘隐藏事件
+const onNumberKeyboardHide = () => {
+  console.log("Vant数字键盘隐藏");
+  emit("keyboard-visible", false);
+};
+
+// 监听全局键盘状态变化（但优先使用Vant的事件）
 watch(isKeyboardVisible, (visible) => {
-  emit("keyboard-visible", visible);
+  // 只有在数字键盘没有显示时才响应全局键盘检测
+  if (!showAmountKeyboardVisible.value) {
+    emit("keyboard-visible", visible);
+  }
 });
 
 const onKeyboardInput = (key: string | number) => {
