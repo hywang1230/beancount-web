@@ -154,12 +154,44 @@
     />
 
     <!-- 币种选择器 -->
-    <van-popup v-model:show="showCurrencySelector" position="bottom">
-      <van-picker
-        :columns="currencyOptions"
-        @cancel="showCurrencySelector = false"
-        @confirm="onCurrencyConfirm"
-      />
+    <van-popup
+      v-model:show="showCurrencySelector"
+      position="right"
+      :style="{ width: '100%', height: '100%' }"
+      :teleport="'body'"
+      :overlay="false"
+      class="fullscreen-popup"
+    >
+      <div class="fullscreen-selector">
+        <div class="selector-header">
+          <van-nav-bar
+            title="选择货币"
+            left-text="取消"
+            left-arrow
+            @click-left="showCurrencySelector = false"
+          />
+        </div>
+        <div class="selector-content">
+          <van-cell-group inset>
+            <van-cell
+              v-for="option in currencyOptions"
+              :key="option.value"
+              :title="option.text"
+              clickable
+              :is-link="false"
+              @click="onCurrencyConfirm(option)"
+            >
+              <template #right-icon>
+                <van-icon
+                  v-if="localFormData.currency === option.value"
+                  name="success"
+                  color="#1989fa"
+                />
+              </template>
+            </van-cell>
+          </van-cell-group>
+        </div>
+      </div>
     </van-popup>
 
     <!-- 多类别分配面板 -->
@@ -852,12 +884,8 @@ const getCurrencySymbol = (currency: string) => {
   return symbols[currency] || currency;
 };
 
-const onCurrencyConfirm = ({
-  selectedValues,
-}: {
-  selectedValues: string[];
-}) => {
-  localFormData.value.currency = selectedValues[0];
+const onCurrencyConfirm = (option: { value: string }) => {
+  localFormData.value.currency = option.value;
   showCurrencySelector.value = false;
 };
 
@@ -1541,6 +1569,29 @@ onMounted(() => {
 /* 全屏弹窗样式 */
 .fullscreen-popup {
   z-index: 3000;
+}
+
+.fullscreen-selector {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-color-secondary);
+}
+
+.selector-header {
+  background: var(--bg-color);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.selector-header .van-nav-bar {
+  background: var(--bg-color);
+}
+
+.selector-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 0;
 }
 
 /* 多类别面板样式 */
