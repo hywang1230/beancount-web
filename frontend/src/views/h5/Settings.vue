@@ -38,6 +38,21 @@
       </van-cell>
     </van-cell-group>
 
+    <van-cell-group inset title="外观设置">
+      <van-cell title="暗黑模式" icon="diamond-o" :border="false">
+        <template #label>
+          <span class="cell-desc">开启暗黑模式以保护眼睛</span>
+        </template>
+        <template #right-icon>
+          <van-switch
+            v-model="isDarkMode"
+            @change="handleThemeChange"
+            size="20px"
+          />
+        </template>
+      </van-cell>
+    </van-cell-group>
+
     <van-cell-group inset title="应用信息">
       <van-cell
         title="版本信息"
@@ -72,23 +87,44 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from "vue";
+import { useThemeStore } from "@/stores/theme";
+import { showToast } from "vant";
+import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
+const themeStore = useThemeStore();
 const showAbout = ref(false);
 const version = ref("1.0.0");
 
+// 暗黑模式状态
+const isDarkMode = computed({
+  get: () => themeStore.isDark,
+  set: (value: boolean) => {
+    themeStore.setTheme(value ? "dark" : "light");
+  },
+});
+
 const navigateTo = (path: string) => {
   router.push(path);
+};
+
+const handleThemeChange = (value: boolean) => {
+  const themeName = value ? "暗黑模式" : "浅色模式";
+  showToast({
+    message: `已切换到${themeName}`,
+    duration: 1500,
+    icon: value ? "moon-o" : "sun-o",
+  });
 };
 </script>
 
 <style scoped>
 .settings-page {
   padding: 16px;
-  background-color: #f7f8fa;
+  background-color: var(--van-background);
   min-height: 100vh;
+  transition: background-color 0.3s ease;
 }
 
 .cell-desc {

@@ -166,6 +166,7 @@
       v-model:show="showLogsPopup"
       position="bottom"
       :style="{ height: '60%' }"
+      teleport="body"
     >
       <div class="logs-popup">
         <div class="logs-header">
@@ -193,7 +194,9 @@
             <template #icon>
               <van-icon
                 :name="log.success ? 'success' : 'warning'"
-                :color="log.success ? '#07c160' : '#ee0a24'"
+                :color="
+                  log.success ? 'var(--color-success)' : 'var(--color-danger)'
+                "
               />
             </template>
           </van-cell>
@@ -206,6 +209,7 @@
       v-model:show="showJobsPopup"
       position="bottom"
       :style="{ height: '70%' }"
+      teleport="body"
     >
       <div class="jobs-popup">
         <div class="jobs-header">
@@ -226,7 +230,7 @@
             :value="job.next_run ? formatDateTime(job.next_run) : '未安排'"
           >
             <template #icon>
-              <van-icon name="clock-o" color="#1989fa" />
+              <van-icon name="clock-o" color="var(--color-primary)" />
             </template>
           </van-cell>
         </van-list>
@@ -648,19 +652,24 @@ onMounted(() => {
 
 <style scoped>
 .h5-recurring {
-  background-color: #f7f8fa;
+  background-color: var(--bg-color-secondary);
   min-height: 100vh;
 }
 
 .header-actions {
-  background-color: white;
+  background-color: var(--bg-color);
   padding: 12px 16px;
   display: flex;
   gap: 8px;
-  border-bottom: 1px solid #ebedf0;
+  border-bottom: 1px solid var(--border-color);
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+}
+.header-actions :deep(.van-button--default) {
+  background-color: var(--bg-color-tertiary) !important;
+  color: var(--text-color) !important;
+  border-color: var(--border-color) !important;
 }
 
 .header-actions::-webkit-scrollbar {
@@ -668,12 +677,23 @@ onMounted(() => {
 }
 
 .filter-section {
-  background-color: white;
-  border-bottom: 1px solid #ebedf0;
+  background-color: var(--bg-color);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .filter-section :deep(.van-search) {
   padding: 8px 16px;
+  background-color: var(--bg-color) !important;
+}
+.filter-section :deep(.van-search__content) {
+  background-color: var(--bg-color-secondary);
+}
+.filter-section :deep(.van-dropdown-menu__bar) {
+  background-color: var(--bg-color);
+  box-shadow: none;
+}
+.filter-section :deep(.van-dropdown-menu__title) {
+  color: var(--text-color);
 }
 
 .quick-filter {
@@ -681,14 +701,14 @@ onMounted(() => {
   align-items: center;
   justify-content: flex-start;
   padding: 8px 16px;
-  background-color: #f7f8fa;
-  border-top: 1px solid #ebedf0;
+  background-color: var(--bg-color);
+  border-top: 1px solid var(--border-color);
 }
 
 .filter-label {
   margin-left: 8px;
   font-size: 14px;
-  color: #646566;
+  color: var(--text-color-secondary);
 }
 
 .recurring-icon {
@@ -697,17 +717,20 @@ onMounted(() => {
   justify-content: center;
   width: 32px;
   height: 32px;
-  background-color: #f7f8fa;
+  background-color: var(--bg-color-tertiary);
   border-radius: 50%;
   margin-right: 12px;
 }
-
-:deep(.positive) {
-  color: #07c160;
+.recurring-icon .van-icon {
+  color: var(--text-color);
 }
 
-:deep(.negative) {
-  color: #ee0a24;
+html[data-theme="dark"] .amount.positive {
+  color: #95d475 !important;
+}
+
+html[data-theme="dark"] .amount.negative {
+  color: #ff7875 !important;
 }
 
 :deep(.van-cell-group) {
@@ -739,27 +762,32 @@ onMounted(() => {
 }
 
 /* 日志弹窗样式 */
-.logs-popup {
+.logs-popup,
+.jobs-popup {
   padding: 16px;
   height: 100%;
   display: flex;
   flex-direction: column;
+  background-color: var(--bg-color-secondary);
+  color: var(--text-color);
 }
 
-.logs-header {
+.logs-header,
+.jobs-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #ebedf0;
+  border-bottom: 1px solid var(--border-color);
 }
 
-.logs-header h3 {
+.logs-header h3,
+.jobs-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 500;
-  color: #323233;
+  color: var(--text-color);
 }
 
 /* 空状态样式 */
@@ -769,7 +797,7 @@ onMounted(() => {
 
 .empty-description p {
   margin: 4px 0;
-  color: #969799;
+  color: var(--text-color-placeholder);
   font-size: 14px;
   line-height: 20px;
 }
@@ -795,19 +823,19 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #ebedf0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .jobs-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 500;
-  color: #323233;
+  color: var(--text-color);
 }
 
 .jobs-actions {
   margin-top: 16px;
   padding: 16px 0;
-  border-top: 1px solid #ebedf0;
+  border-top: 1px solid var(--border-color);
 }
 </style>

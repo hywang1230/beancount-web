@@ -1359,15 +1359,16 @@ onMounted(() => {
 <style scoped>
 .transaction-form {
   padding: 0;
-  background: #f7f8fa;
+  background: var(--van-background);
   min-height: 100vh;
+  transition: background-color 0.3s ease;
 }
 
 /* 表单卡片基础样式 */
 .form-card {
   display: flex;
   align-items: center;
-  background: white;
+  background: var(--van-background-2);
   border-radius: 16px;
   padding: 12px; /* 进一步减小内边距 */
   margin: 10px 16px; /* 进一步减小上下间距 */
@@ -1395,12 +1396,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f7f8fa;
+  background: var(--van-background);
   border-radius: 10px; /* 进一步减小圆角 */
   margin-right: 12px; /* 进一步减小右边距 */
-  color: #646566;
+  color: var(--van-text-color-2);
   font-size: 16px; /* 进一步减小图标 */
   flex-shrink: 0;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .card-content {
@@ -1412,7 +1414,7 @@ onMounted(() => {
 
 .card-label {
   font-size: 16px; /* 适中字体大小 */
-  color: #323233;
+  color: var(--van-text-color);
   font-weight: 500;
   flex: 1;
   margin-right: 10px; /* 减小右边距 */
@@ -1423,6 +1425,7 @@ onMounted(() => {
   -webkit-line-clamp: 2;
   line-clamp: 2;
   -webkit-box-orient: vertical;
+  transition: color 0.3s ease;
 }
 
 /* 账户卡片 */
@@ -1433,7 +1436,7 @@ onMounted(() => {
 
 /* 金额卡片 */
 .amount-card {
-  background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%);
+  background: var(--van-background-2);
 }
 
 .amount-card .card-icon {
@@ -1453,7 +1456,7 @@ onMounted(() => {
   align-items: center;
   gap: 4px;
   padding: 6px 10px; /* 进一步减小内边距 */
-  background: #f7f8fa;
+  background: var(--van-background);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -1472,7 +1475,8 @@ onMounted(() => {
 .currency-symbol {
   font-size: 20px; /* 进一步减小字体 */
   font-weight: bold;
-  color: #323233;
+  color: var(--van-text-color);
+  transition: color 0.3s ease;
 }
 
 .amount-field {
@@ -1483,16 +1487,18 @@ onMounted(() => {
   font-size: 20px;
   font-weight: bold;
   text-align: left;
-  color: #323233;
+  color: var(--van-text-color);
   min-height: 32px;
   line-height: 1.2;
   border: none;
   background: transparent;
   padding: 0;
+  transition: color 0.3s ease;
 }
 
 .amount-field :deep(.van-field__control::placeholder) {
-  color: #c8c9cc;
+  color: var(--van-text-color-3);
+  transition: color 0.3s ease;
 }
 
 .amount-field :deep(.van-field__body) {
@@ -1542,16 +1548,19 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
-  background: #f7f8fa;
+  background: var(--van-background);
+  transition: background-color 0.3s ease;
 }
 
 .multi-category-header {
-  background: white;
-  border-bottom: 1px solid #ebedf0;
+  background: var(--van-background-2);
+  border-bottom: 1px solid var(--van-border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .multi-category-header .van-nav-bar {
-  background: white;
+  background: var(--van-background-2);
+  transition: background-color 0.3s ease;
 }
 
 .category-items {
@@ -1564,14 +1573,14 @@ onMounted(() => {
 .category-item {
   margin-bottom: 12px;
   padding: 12px;
-  background: #f7f8fa;
+  background: var(--van-background-2);
   border-radius: 12px;
   transition: all 0.3s ease;
 }
 
 .category-item--incomplete {
-  background: #fff2f0;
-  border: 1px solid #ffccc7;
+  background: var(--van-red-light);
+  border: 1px solid var(--van-red);
 }
 
 .category-row {
@@ -1592,28 +1601,29 @@ onMounted(() => {
 .category-actions {
   text-align: center;
   padding: 8px 16px;
-  border-top: 1px solid #ebedf0;
-  background: white;
+  border-top: 1px solid var(--van-border-color);
+  background: var(--van-background-2);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .amount-summary {
   padding: 16px;
-  background: #f7f8fa;
+  background: var(--van-background-2);
   border-radius: 12px 12px 0 0;
-  border-top: 1px solid #ebedf0;
+  border-top: 1px solid var(--van-border-color);
   font-size: 14px;
-  color: #646566;
+  color: var(--van-text-color-2);
   transition: all 0.3s ease;
 }
 
 .amount-summary--balanced {
-  background: #f6ffed;
-  border: 1px solid #b7eb8f;
+  background: var(--van-green-light);
+  border: 1px solid var(--van-green);
 }
 
 .amount-summary--unbalanced {
-  background: #fff2f0;
-  border: 1px solid #ffccc7;
+  background: var(--van-red-light);
+  border: 1px solid var(--van-red);
 }
 
 .summary-row {
@@ -1645,24 +1655,25 @@ onMounted(() => {
 .balance-hint {
   text-align: center;
   font-size: 13px;
-  color: #fa8c16;
+  color: var(--van-orange);
   padding: 8px;
-  background: #fff7e6;
+  background: var(--van-orange-light);
   border-radius: 8px;
-  border: 1px solid #ffd591;
+  border: 1px solid var(--van-orange);
 }
 
 .balance-hint--success {
-  color: #52c41a;
-  background: #f6ffed;
-  border-color: #b7eb8f;
+  color: var(--van-green);
+  background: var(--van-green-light);
+  border-color: var(--van-green);
 }
 
 .history-title {
   padding: 16px;
   font-size: 14px;
-  color: #646566;
-  background: #f7f8fa;
+  color: var(--van-text-color-2);
+  background: var(--van-background);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* 状态按钮样式 */

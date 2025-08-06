@@ -1041,21 +1041,24 @@ onMounted(() => {
 
 .fullscreen-selector {
   height: 100vh;
-  background-color: #f7f8fa;
+  background-color: var(--van-background);
   display: flex;
   flex-direction: column;
+  transition: background-color 0.3s ease;
 }
 
 .selector-header {
   flex-shrink: 0;
-  background: white;
-  border-bottom: 1px solid #ebedf0;
+  background: var(--van-background-2);
+  border-bottom: 1px solid var(--van-border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .search-section {
   flex-shrink: 0;
-  background: white;
-  border-bottom: 1px solid #ebedf0;
+  background: var(--van-background-2);
+  border-bottom: 1px solid var(--van-border-color);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .content-area {
@@ -1418,15 +1421,15 @@ onMounted(() => {
   display: flex;
   align-items: center;
   padding: 12px 16px;
-  border-bottom: 1px solid #f0f0f0;
-  background: white;
+  border-bottom: 1px solid var(--van-border-color);
+  background: var(--van-background-2);
   cursor: pointer;
   transition: background-color 0.2s;
   min-height: 42px;
 }
 
 .payee-item:hover {
-  background-color: #f5f5f5;
+  background-color: var(--van-active-color);
 }
 
 .payee-item:last-child {
@@ -1434,13 +1437,13 @@ onMounted(() => {
 }
 
 .new-payee-item {
-  background-color: #f8f9fa;
-  border: 1px dashed #ddd;
-  color: #666;
+  background-color: var(--van-background-2);
+  border: 1px dashed var(--van-border-color);
+  color: var(--van-text-color-2);
 }
 
 .new-payee-item:hover {
-  background-color: #e9ecef;
+  background-color: var(--van-active-color);
 }
 
 .add-icon,
@@ -1452,18 +1455,21 @@ onMounted(() => {
 
 .payee-name {
   font-size: 16px;
-  color: #323233;
+  color: var(--van-text-color);
+  transition: color 0.3s ease;
 }
 
 .new-payee-item .payee-name {
-  color: #666;
+  color: var(--van-text-color-2);
+  transition: color 0.3s ease;
 }
 
 /* 新增交易对象弹窗样式 */
 .new-payee-popup {
-  background: white;
+  background: var(--van-background-2);
   border-radius: 8px 8px 0 0;
   overflow: hidden;
+  transition: background-color 0.3s ease;
 }
 
 .popup-header {
@@ -1471,14 +1477,16 @@ onMounted(() => {
   align-items: center;
   justify-content: space-between;
   padding: 16px;
-  border-bottom: 1px solid #f0f0f0;
-  background: #fafafa;
+  border-bottom: 1px solid var(--van-border-color);
+  background: var(--van-background);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .popup-title {
   font-size: 16px;
   font-weight: 500;
-  color: #323233;
+  color: var(--van-text-color);
+  transition: color 0.3s ease;
 }
 
 .payee-input-section {

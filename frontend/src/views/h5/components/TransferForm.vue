@@ -643,20 +643,21 @@ onMounted(() => {
 <style scoped>
 .transfer-form {
   padding: 0;
-  background: #f7f8fa;
+  background: var(--van-background);
   min-height: 100vh;
+  transition: background-color 0.3s ease;
 }
 
 /* 表单卡片基础样式 */
 .form-card {
   display: flex;
   align-items: center;
-  background: white;
+  background: var(--van-background-2);
   border-radius: 16px;
   padding: 14px; /* 进一步减小内边距 */
   margin: 10px 16px; /* 进一步减尊上下间距 */
   margin-bottom: 6px; /* 进一步减小底部间距 */
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 3px 12px var(--shadow-color-lighter);
   transition: all 0.3s ease;
   cursor: pointer;
   min-height: 54px; /* 进一步减小最小高度 */
@@ -664,7 +665,7 @@ onMounted(() => {
 }
 
 .form-card:hover {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 6px 20px var(--shadow-color-darker);
   transform: translateY(-2px);
 }
 
@@ -679,12 +680,13 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #f7f8fa;
+  background: var(--van-background);
   border-radius: 10px; /* 进一步减小圆角 */
   margin-right: 12px; /* 进一步减小右边距 */
-  color: #646566;
+  color: var(--van-text-color-2);
   font-size: 16px; /* 进一步减小图标 */
   flex-shrink: 0;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .card-content {
@@ -696,27 +698,28 @@ onMounted(() => {
 
 .card-label {
   font-size: 16px; /* 适中字体大小 */
-  color: #323233;
+  color: var(--van-text-color);
   font-weight: 500;
   flex: 1;
   margin-right: 10px; /* 减小右边距 */
   line-height: 1.4; /* 减小行高 */
+  transition: color 0.3s ease;
 }
 
 /* 转出账户卡片 */
 .from-account-card .card-icon {
-  background: rgba(255, 193, 7, 0.1);
-  color: #ffc107;
+  background: var(--van-orange-light);
+  color: var(--van-orange);
 }
 
 /* 金额卡片 */
 .amount-card {
-  background: linear-gradient(135deg, #fff 0%, #f9f9f9 100%);
+  background: var(--van-background-2);
 }
 
 .amount-card .card-icon {
-  background: rgba(52, 168, 83, 0.1);
-  color: #34a853;
+  background: var(--van-green-light);
+  color: var(--van-green);
 }
 
 .amount-input-container {
@@ -731,7 +734,7 @@ onMounted(() => {
   align-items: center;
   gap: 4px;
   padding: 6px 10px; /* 进一步减小内边距 */
-  background: #f7f8fa;
+  background: var(--van-background);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s;
@@ -739,7 +742,7 @@ onMounted(() => {
 }
 
 .currency-selector:hover {
-  background: #ebedf0;
+  background: var(--van-active-color);
   transform: scale(1.02);
 }
 
@@ -750,7 +753,8 @@ onMounted(() => {
 .currency-symbol {
   font-size: 20px; /* 进一步减小字体 */
   font-weight: bold;
-  color: #323233;
+  color: var(--van-text-color);
+  transition: color 0.3s ease;
 }
 
 .amount-field {
@@ -761,13 +765,14 @@ onMounted(() => {
   font-size: 20px; /* 进一步减小字体 */
   font-weight: bold;
   text-align: left;
-  color: #323233;
+  color: var(--van-text-color);
   min-height: 32px; /* 进一步减小最小高度 */
   line-height: 1.2; /* 减小行高 */
+  transition: color 0.3s ease;
 }
 
 .amount-field :deep(.van-field__control::placeholder) {
-  color: #c8c9cc;
+  color: var(--van-text-color-3);
 }
 
 /* 转账箭头 */
@@ -799,15 +804,15 @@ onMounted(() => {
 
 /* 转入账户卡片 */
 .to-account-card .card-icon {
-  background: rgba(255, 193, 7, 0.1);
-  color: #ffc107;
+  background: var(--van-orange-light);
+  color: var(--van-orange);
 }
 
 /* 使用标准 van-cell-group 样式 */
 :deep(.van-cell-group--inset) {
   margin: 12px 16px; /* 减小上下间距 */
   border-radius: 16px;
-  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 3px 12px var(--shadow-color-lighter);
 }
 
 :deep(.van-cell) {

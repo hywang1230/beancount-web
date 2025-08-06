@@ -576,9 +576,10 @@ const loadTransactionData = async () => {
 <style scoped>
 .h5-add-transaction {
   height: 100vh;
-  background-color: #f7f8fa;
+  background-color: var(--van-background);
   display: flex;
   flex-direction: column;
+  transition: background-color 0.3s ease;
 }
 
 /* 头部标题 */
@@ -587,25 +588,29 @@ const loadTransactionData = async () => {
   padding: 16px;
   font-size: 18px;
   font-weight: 600;
-  color: #323233;
-  background: white;
-  border-bottom: 1px solid #ebedf0;
+  color: var(--van-text-color);
+  background: var(--van-background-2);
+  border-bottom: 1px solid var(--van-border-color);
+  transition: background-color 0.3s ease, color 0.3s ease,
+    border-color 0.3s ease;
 }
 
 /* 类型选择标签 */
 .type-tabs {
-  background: white;
+  background: var(--van-background-2);
   padding: 0;
-  border-bottom: 1px solid #ebedf0;
+  border-bottom: 1px solid var(--van-border-color);
   position: sticky;
   top: 0;
   z-index: 99;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .tab-container {
   display: flex;
-  background: white;
+  background: var(--van-background-2);
+  transition: background-color 0.3s ease;
 }
 
 .tab-item {
@@ -643,9 +648,10 @@ const loadTransactionData = async () => {
 
 .tab-content {
   height: 100%;
-  background: #f7f8fa;
+  background: var(--van-background);
   padding-bottom: 140px; /* 为底部按钮和导航留出更多空间 */
   padding-top: 8px; /* 增加顶部间距 */
+  transition: background-color 0.3s ease;
 }
 
 /* 操作按钮 */
@@ -655,11 +661,12 @@ const loadTransactionData = async () => {
   left: 0;
   right: 0;
   padding: 12px 16px; /* 增加内边距 */
-  background-color: white;
-  border-top: 1px solid #ebedf0;
+  background-color: var(--van-background-2);
+  border-top: 1px solid var(--van-border-color);
   z-index: 998; /* 确保在内容之上，但在导航栏之下 */
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15); /* 增强阴影效果 */
-  transition: bottom 0.3s ease; /* 添加过渡动画 */
+  transition: background-color 0.3s ease, border-color 0.3s ease,
+    bottom 0.3s ease; /* 添加过渡动画 */
 }
 
 .action-buttons :deep(.van-button--large) {

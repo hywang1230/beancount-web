@@ -268,8 +268,9 @@ onMounted(async () => {
 
 <style scoped>
 .h5-transaction-detail {
-  background-color: #f7f8fa;
-  min-height: 100%;
+  background-color: var(--van-background);
+  min-height: 100vh;
+  transition: background-color 0.3s ease;
 }
 
 .loading-container {
@@ -296,10 +297,11 @@ onMounted(async () => {
   left: 0;
   right: 0;
   padding: 16px;
-  background-color: white;
-  border-top: 1px solid #ebedf0;
+  background-color: var(--van-background-2);
+  border-top: 1px solid var(--van-border-color);
   z-index: 999; /* 确保在内容之上，但在导航栏之下 */
-  transition: bottom 0.3s ease, transform 0.3s ease; /* 添加过渡动画 */
+  transition: background-color 0.3s ease, border-color 0.3s ease,
+    bottom 0.3s ease, transform 0.3s ease; /* 添加过渡动画 */
 }
 
 /* 检测到键盘弹出时隐藏固定按钮（通过CSS媒体查询） */

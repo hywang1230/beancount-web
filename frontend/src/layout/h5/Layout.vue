@@ -177,8 +177,9 @@ const navigateTo = (path: string) => {
   height: 100dvh; /* 使用动态视口高度，避免移动端地址栏影响 */
   display: flex;
   flex-direction: column;
-  background-color: #f7f8fa;
+  background-color: var(--van-background);
   position: relative; /* 确保子元素正确定位 */
+  transition: background-color 0.3s ease;
 }
 
 .top-nav {
@@ -207,9 +208,10 @@ const navigateTo = (path: string) => {
 
 .menu-popup {
   height: 100%;
-  background-color: #fff;
+  background-color: var(--van-background-2);
   display: flex;
   flex-direction: column;
+  transition: background-color 0.3s ease;
 }
 
 .menu-header {
@@ -217,13 +219,15 @@ const navigateTo = (path: string) => {
   justify-content: space-between;
   align-items: center;
   padding: 20px;
-  border-bottom: 1px solid #ebedf0;
+  border-bottom: 1px solid var(--van-border-color);
+  transition: border-color 0.3s ease;
 }
 
 .menu-header h3 {
   margin: 0;
-  color: #323233;
+  color: var(--van-text-color);
   font-size: 18px;
   font-weight: 500;
+  transition: color 0.3s ease;
 }
 </style>

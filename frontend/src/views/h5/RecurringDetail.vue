@@ -107,6 +107,7 @@
       v-model:show="showLogsPopup"
       position="bottom"
       :style="{ height: '60%' }"
+      teleport="body"
     >
       <div class="logs-popup">
         <div class="logs-header">
@@ -128,7 +129,9 @@
             <template #icon>
               <van-icon
                 :name="log.success ? 'success' : 'warning'"
-                :color="log.success ? '#07c160' : '#ee0a24'"
+                :color="
+                  log.success ? 'var(--color-success)' : 'var(--color-danger)'
+                "
               />
             </template>
           </van-cell>
@@ -315,7 +318,7 @@ onMounted(() => {
 <style scoped>
 .recurring-detail {
   padding: 16px;
-  background-color: #f7f8fa;
+  background-color: var(--bg-color-secondary);
   min-height: 100vh;
 }
 
@@ -343,6 +346,7 @@ onMounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  background-color: var(--bg-color-secondary);
 }
 
 .logs-header {
@@ -351,14 +355,17 @@ onMounted(() => {
   align-items: center;
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #ebedf0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .logs-header h3 {
   margin: 0;
   font-size: 16px;
   font-weight: 500;
-  color: #323233;
+  color: var(--text-color);
+}
+.logs-header .van-icon {
+  color: var(--text-color);
 }
 
 :deep(.van-cell-group--inset) {
@@ -366,10 +373,16 @@ onMounted(() => {
 }
 
 :deep(.positive) {
-  color: #07c160;
+  color: var(--color-success);
+}
+[data-theme="dark"] :deep(.positive) {
+  color: #95d475;
 }
 
 :deep(.negative) {
-  color: #ee0a24;
+  color: var(--color-danger);
+}
+[data-theme="dark"] :deep(.negative) {
+  color: #ff7875;
 }
 </style>

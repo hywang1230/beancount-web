@@ -1,0 +1,450 @@
+/* 主题颜色变量定义 */
+
+/* 浅色主题（默认） */
+:root,
+html[data-theme="light"] {
+  /* 背景色 */
+  --bg-color: #ffffff;
+  --bg-color-secondary: #f5f7fa;
+  --bg-color-tertiary: #f0f2f5;
+  
+  /* 文字颜色 */
+  --text-color: #303133;
+  --text-color-secondary: #606266;
+  --text-color-placeholder: #909399;
+  --text-color-disabled: #c0c4cc;
+  
+  /* 边框颜色 */
+  --border-color: #dcdfe6;
+  --border-color-light: #e4e7ed;
+  --border-color-lighter: #ebeef5;
+  --border-color-extra-light: #f2f6fc;
+  
+  /* 主题色 */
+  --color-primary: #409eff;
+  --color-primary-light: #79bbff;
+  --color-success: #67c23a;
+  --color-warning: #e6a23c;
+  --color-danger: #f56c6c;
+  --color-info: #909399;
+  
+  /* 阴影 */
+  --shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
+  --shadow-base: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
+  --shadow-dark: 0 4px 8px rgba(0, 0, 0, 0.12), 0 2px 4px rgba(0, 0, 0, 0.08);
+  
+  /* Vant 专用变量 */
+  --van-background: #f7f8fa;
+  --van-background-2: #ffffff;
+  --van-text-color: #323233;
+  --van-text-color-2: #646566;
+  --van-text-color-3: #969799;
+  --van-border-color: #ebedf0;
+  --van-active-color: #f2f3f5;
+  --van-yellow: #ff976a;
+  --van-yellow-light: #fff7e6;
+  --van-red: #ee0a24;
+  --van-red-light: #fff2f0;
+  --van-green: #07c160;
+  --van-green-light: #f6ffed;
+  --van-orange: #ff976a;
+  --van-orange-light: #fff7e6;
+}
+
+/* 暗黑主题 */
+html[data-theme="dark"] {
+  /* 背景色 */
+  --bg-color: #141414;
+  --bg-color-secondary: #1f1f1f;
+  --bg-color-tertiary: #262626;
+  
+  /* 文字颜色 */
+  --text-color: #e8e8e8;
+  --text-color-secondary: #c9c9c9;
+  --text-color-placeholder: #8c8c8c;
+  --text-color-disabled: #5c5c5c;
+  
+  /* 边框颜色 */
+  --border-color: #434343;
+  --border-color-light: #363636;
+  --border-color-lighter: #2d2d2d;
+  --border-color-extra-light: #262626;
+  
+  /* 主题色 */
+  --color-primary: #409eff;
+  --color-primary-light: #79bbff;
+  --color-success: #67c23a;
+  --color-warning: #e6a23c;
+  --color-danger: #f56c6c;
+  --color-info: #909399;
+  
+  /* 阴影 */
+  --shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.3);
+  --shadow-base: 0 2px 4px rgba(0, 0, 0, 0.24), 0 0 6px rgba(0, 0, 0, 0.12);
+  --shadow-dark: 0 4px 8px rgba(0, 0, 0, 0.24), 0 2px 4px rgba(0, 0, 0, 0.16);
+  
+  /* Vant 暗黑主题变量 */
+  --van-background: #000000;
+  --van-background-2: #1f1f1f;
+  --van-text-color: #f7f8fa;
+  --van-text-color-2: #c8c9cc;
+  --van-text-color-3: #969799;
+  --van-border-color: #323233;
+  --van-active-color: #323233;
+  --van-yellow: #a8930d;
+  --van-yellow-light: #3a3a28;
+  --van-red: #a83838;
+  --van-red-light: #3a2828;
+  --van-green: #38a838;
+  --van-green-light: #283a28;
+  --van-orange: #d48806;
+  --van-orange-light: #3a3a28;
+}
+
+/* 基础样式应用主题变量 */
+html, body {
+  background-color: var(--bg-color-secondary) !important;
+  color: var(--text-color) !important;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* 仅H5端的暗黑模式样式 */
+@media (max-width: 768px) {
+  /* Vant 组件暗黑模式适配 */
+  html[data-theme="dark"] {
+    /* Cell 组件 */
+    .van-cell {
+      background-color: var(--van-background-2) !important;
+      color: var(--van-text-color) !important;
+    }
+    
+    .van-cell__title {
+      color: var(--van-text-color) !important;
+    }
+    
+    .van-cell__label {
+      color: var(--van-text-color-3) !important;
+    }
+    
+    .van-cell__value {
+      color: var(--van-text-color-2) !important;
+    }
+    
+    /* Cell Group */
+    .van-cell-group {
+      background-color: var(--van-background-2) !important;
+    }
+    
+    .van-cell-group__title {
+      color: var(--van-text-color-2) !important;
+    }
+    
+    /* Button 组件 */
+    .van-button--default {
+      background-color: var(--van-background-2) !important;
+      border-color: var(--van-border-color) !important;
+      color: var(--van-text-color) !important;
+    }
+    
+    .van-button--primary {
+      background-color: var(--color-primary) !important;
+      border-color: var(--color-primary) !important;
+    }
+    
+    /* NavBar 组件 */
+    .van-nav-bar {
+      background-color: var(--van-background-2) !important;
+      border-bottom-color: var(--van-border-color) !important;
+    }
+    
+    .van-nav-bar__title {
+      color: var(--van-text-color) !important;
+    }
+    
+    .van-nav-bar__text {
+      color: var(--color-primary) !important;
+    }
+    
+    /* Tabbar 组件 */
+    .van-tabbar {
+      background-color: var(--van-background-2) !important;
+      border-top-color: var(--van-border-color) !important;
+    }
+    
+    .van-tabbar-item__text {
+      color: var(--van-text-color-3) !important;
+    }
+    
+    .van-tabbar-item--active .van-tabbar-item__text {
+      color: var(--color-primary) !important;
+    }
+    
+    .van-tabbar-item__icon {
+      color: var(--van-text-color-3) !important;
+    }
+    
+    .van-tabbar-item--active .van-tabbar-item__icon {
+      color: var(--color-primary) !important;
+    }
+    
+    /* Field 组件 */
+    .van-field {
+      background-color: var(--van-background-2) !important;
+    }
+    
+    .van-field__label {
+      color: var(--van-text-color) !important;
+    }
+    
+    .van-field__control {
+      background-color: transparent !important;
+      color: var(--van-text-color) !important;
+    }
+    
+    .van-field__control::placeholder {
+      color: var(--van-text-color-3) !important;
+    }
+    
+    /* Popup 组件 */
+    .van-popup {
+      background-color: var(--van-background-2) !important;
+    }
+    
+    /* Dialog 组件 */
+    .van-dialog {
+      background-color: var(--van-background-2) !important;
+    }
+    
+    .van-dialog__header {
+      color: var(--van-text-color) !important;
+    }
+    
+    .van-dialog__content {
+      color: var(--van-text-color-2) !important;
+    }
+    
+    /* Toast 组件 */
+    .van-toast {
+      background-color: rgba(0, 0, 0, 0.8) !important;
+      color: #ffffff !important;
+    }
+    
+    /* Picker 组件 */
+    .van-picker {
+      background-color: var(--van-background-2) !important;
+    }
+    
+    .van-picker__toolbar {
+      background-color: var(--van-background-2) !important;
+      border-bottom-color: var(--van-border-color) !important;
+    }
+    
+    .van-picker__cancel {
+      color: var(--van-text-color-2) !important;
+    }
+    
+    .van-picker__confirm {
+      color: var(--color-primary) !important;
+    }
+    
+    .van-picker-column__item {
+      color: var(--van-text-color) !important;
+    }
+    
+    .van-picker-column__item--selected {
+      color: var(--van-text-color) !important;
+      font-weight: 500;
+    }
+    
+    /* ActionSheet 组件 */
+    .van-action-sheet {
+      background-color: var(--van-background-2) !important;
+    }
+    
+    .van-action-sheet__header {
+      background-color: var(--van-background-2) !important;
+      color: var(--van-text-color) !important;
+    }
+    
+    .van-action-sheet__item {
+      background-color: var(--van-background-2) !important;
+      color: var(--van-text-color) !important;
+    }
+    
+    .van-action-sheet__cancel {
+      background-color: var(--van-background-2) !important;
+      color: var(--van-text-color) !important;
+    }
+    
+    /* Switch 组件 */
+    .van-switch {
+      background-color: var(--van-text-color-3) !important;
+    }
+    
+    .van-switch--on {
+      background-color: var(--color-primary) !important;
+    }
+    
+    /* Stepper 组件 */
+    .van-stepper {
+      background-color: var(--van-background-2) !important;
+    }
+    
+    .van-stepper__minus,
+    .van-stepper__plus {
+      background-color: var(--van-background-2) !important;
+      color: var(--van-text-color) !important;
+      border-color: var(--van-border-color) !important;
+    }
+    
+    .van-stepper__input {
+      background-color: var(--van-background-2) !important;
+      color: var(--van-text-color) !important;
+      border-color: var(--van-border-color) !important;
+    }
+    
+    /* Tag 组件 */
+    .van-tag--default {
+      background-color: var(--van-background) !important;
+      color: var(--van-text-color-2) !important;
+    }
+    
+    /* Overlay 组件 */
+    .van-overlay {
+      background-color: rgba(0, 0, 0, 0.7) !important;
+    }
+    
+    /* Loading 组件 */
+    .van-loading__spinner {
+      color: var(--van-text-color-3) !important;
+    }
+    
+    /* Empty 组件 */
+    .van-empty__description {
+      color: var(--van-text-color-3) !important;
+    }
+    
+    /* NumberKeyboard 组件 */
+    .van-number-keyboard {
+      background-color: var(--van-background-2) !important;
+    }
+    
+    .van-key {
+      background-color: var(--van-background-2) !important;
+      color: var(--van-text-color) !important;
+      border-color: var(--van-border-color) !important;
+    }
+    
+    .van-key--blue {
+      background-color: var(--color-primary) !important;
+      color: #ffffff !important;
+    }
+    
+    .van-key--gray {
+      background-color: var(--van-background) !important;
+      color: var(--van-text-color) !important;
+    }
+  }
+  
+  /* 页面容器暗黑模式 */
+  html[data-theme="dark"] .page-container {
+    background-color: var(--bg-color-secondary) !important;
+    color: var(--text-color) !important;
+  }
+  
+  /* 卡片样式暗黑模式 */
+  html[data-theme="dark"] .card-shadow {
+    background-color: var(--bg-color) !important;
+    box-shadow: var(--shadow-light) !important;
+  }
+  
+  /* 统计卡片暗黑模式 */
+  html[data-theme="dark"] .stat-card {
+    background-color: var(--bg-color) !important;
+    color: var(--text-color) !important;
+  }
+  
+  html[data-theme="dark"] .stat-value {
+    color: var(--text-color) !important;
+  }
+  
+  html[data-theme="dark"] .stat-label {
+    color: var(--text-color-placeholder) !important;
+  }
+  
+  /* 金额显示在暗黑模式下的颜色调整 */
+  html[data-theme="dark"] .amount-positive {
+    color: #95d475 !important;
+  }
+  
+  html[data-theme="dark"] .amount-negative {
+    color: #ff7875 !important;
+  }
+  
+  html[data-theme="dark"] .amount-zero {
+    color: var(--text-color-placeholder) !important;
+  }
+  
+  /* 浮动操作按钮暗黑模式 */
+  html[data-theme="dark"] .mobile-fab {
+    background-color: var(--color-primary) !important;
+    box-shadow: 0 4px 12px rgba(64, 158, 255, 0.4) !important;
+  }
+  
+  /* 自定义样式类暗黑模式 */
+  html[data-theme="dark"] .cell-desc {
+    color: var(--van-text-color-3) !important;
+  }
+  
+  html[data-theme="dark"] .about-content p {
+    color: var(--van-text-color-2) !important;
+  }
+  
+  html[data-theme="dark"] .version-text {
+    color: var(--van-text-color-3) !important;
+  }
+  
+  /* 滚动条暗黑模式 */
+  html[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: var(--bg-color-tertiary) !important;
+  }
+  
+  html[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: var(--border-color) !important;
+  }
+  
+  html[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: var(--border-color-light) !important;
+  }
+}
+
+/* 主题切换动画 */
+.van-cell,
+.van-cell-group,
+.van-button,
+.van-nav-bar,
+.van-tabbar,
+.van-field,
+.van-popup,
+.van-dialog,
+.van-picker,
+.van-action-sheet,
+.page-container,
+.stat-card,
+.mobile-fab {
+  transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease !important;
+}
+
+/* 确保暗黑模式只在移动端生效 */
+@media (min-width: 769px) {
+  html[data-theme="dark"] {
+    /* 在PC端强制使用浅色主题 */
+    --bg-color: #ffffff;
+    --bg-color-secondary: #f5f7fa;
+    --bg-color-tertiary: #f0f2f5;
+    --text-color: #303133;
+    --text-color-secondary: #606266;
+    --text-color-placeholder: #909399;
+    --border-color: #dcdfe6;
+  }
+}
