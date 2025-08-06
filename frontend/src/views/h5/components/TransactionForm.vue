@@ -74,7 +74,15 @@
           :value="localFormData.payee || '选择交易对象（可选）'"
           is-link
           @click="showFullScreenPayeeSelector"
-        />
+        >
+          <template #right-icon v-if="localFormData.payee">
+            <van-icon
+              name="close"
+              class="clear-icon"
+              @click.stop="clearPayee"
+            />
+          </template>
+        </van-cell>
 
         <!-- 状态选择 -->
         <van-cell title="交易状态">
@@ -106,6 +114,7 @@
           type="textarea"
           rows="2"
           autosize
+          clearable
         />
       </van-cell-group>
     </van-form>
@@ -1017,6 +1026,12 @@ const onFullScreenPayeeClose = () => {
   console.log("交易对象选择器已关闭");
 };
 
+// 清除交易对象
+const clearPayee = () => {
+  localFormData.value.payee = "";
+  console.log("已清除交易对象");
+};
+
 // 全屏账户选择器方法
 const showFullScreenAccountSelector = () => {
   if (accountSelectorRef.value) {
@@ -1775,6 +1790,22 @@ onMounted(() => {
 /* 专门为日期单元格添加样式 */
 :deep(.van-cell__title) {
   font-weight: 600; /* 为日期标题添加加粗 */
+}
+
+/* 清除图标样式 */
+.clear-icon {
+  color: #969799;
+  font-size: 16px;
+  padding: 4px;
+  transition: color 0.2s ease;
+}
+
+.clear-icon:hover {
+  color: #323233;
+}
+
+.clear-icon:active {
+  color: #ee0a24;
 }
 
 /* 为交易状态标题添加样式 */
