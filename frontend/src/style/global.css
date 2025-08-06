@@ -616,4 +616,27 @@ html, body {
       transform: translateY(100%);
     }
   }
+
+  /* iOS Safari 特殊处理 */
+  @supports (-webkit-touch-callout: none) {
+    /* iOS设备的特殊处理 */
+    @media (max-height: 600px) {
+      .van-tabbar {
+        transform: translateY(100%);
+        transition: transform 0.3s ease;
+      }
+      
+      .action-buttons {
+        bottom: 0 !important;
+        transition: bottom 0.3s ease;
+      }
+    }
+    
+    /* 针对iPhone的更激进处理 */
+    @media (max-height: 550px) {
+      .van-tabbar {
+        display: none !important;
+      }
+    }
+  }
 } 

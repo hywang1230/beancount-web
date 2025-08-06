@@ -19,6 +19,7 @@
     <div class="form-content">
       <div v-if="activeTab === 'expense'" class="tab-content">
         <TransactionForm
+          :key="formKey"
           type="expense"
           :form-data="formData"
           @update="updateFormData"
@@ -28,6 +29,7 @@
       </div>
       <div v-else-if="activeTab === 'income'" class="tab-content">
         <TransactionForm
+          :key="formKey"
           type="income"
           :form-data="formData"
           @update="updateFormData"
@@ -37,6 +39,7 @@
       </div>
       <div v-else-if="activeTab === 'transfer'" class="tab-content">
         <TransferForm
+          :key="formKey"
           :form-data="transferFormData"
           @update="updateTransferFormData"
           @submit="onTransferSubmit"
@@ -44,6 +47,7 @@
       </div>
       <div v-else-if="activeTab === 'adjustment'" class="tab-content">
         <TransactionForm
+          :key="formKey"
           type="adjustment"
           :form-data="formData"
           @update="updateFormData"
@@ -88,6 +92,7 @@ const route = useRoute();
 
 const activeTab = ref("expense");
 const keyboardVisible = ref(false);
+const formKey = ref(0); // 用于强制重新渲染表单组件
 
 // 标签列表
 const tabList = ref([
@@ -211,6 +216,9 @@ const resetForm = () => {
     currency: "CNY",
     flag: "*",
   };
+
+  // 强制重新渲染表单组件
+  formKey.value++;
 };
 
 const onSubmit = async () => {
@@ -287,8 +295,12 @@ const onSubmit = async () => {
 
     closeToast();
 
-    // 返回上一页或跳转到交易列表
-    router.back();
+    // 编辑模式返回上一页，新增模式重置表单继续记账
+    if (editId) {
+      router.back();
+    } else {
+      resetForm();
+    }
   } catch (error) {
     closeToast();
     showToast(route.query.id ? "更新失败" : "保存失败");
@@ -338,7 +350,12 @@ const onTransferSubmit = async () => {
 
     closeToast();
 
-    router.back();
+    // 编辑模式返回上一页，新增模式重置表单继续记账
+    if (editId) {
+      router.back();
+    } else {
+      resetForm();
+    }
   } catch (error) {
     closeToast();
     showToast(route.query.id ? "更新失败" : "转账失败");
