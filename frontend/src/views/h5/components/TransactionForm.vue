@@ -16,7 +16,7 @@
       </div>
 
       <!-- 金额输入卡片 -->
-      <div class="form-card amount-card" @click="showAmountKeyboard">
+      <div class="form-card amount-card">
         <div class="card-icon">
           <van-icon name="plus" />
         </div>
@@ -30,12 +30,17 @@
             }}</span>
             <van-icon name="arrow-down" size="12" />
           </div>
-          <div
-            class="amount-display"
-            :class="{ placeholder: !localFormData.amount }"
-          >
-            {{ localFormData.amount || "0.00" }}
-          </div>
+          <van-field
+            v-model="localFormData.amount"
+            placeholder="请输入金额"
+            type="text"
+            class="amount-field"
+            :formatter="formatNumberInput"
+            :rules="[
+              { validator: validateNumberInput, message: '请输入合法数字' },
+            ]"
+            @update:model-value="onAmountInput"
+          />
         </div>
       </div>
 
@@ -165,25 +170,32 @@
     <!-- 多类别分配面板 -->
     <van-popup
       v-model:show="showMultiCategorySheet"
-      position="bottom"
-      :style="{ height: '80vh' }"
-      round
+      position="right"
+      :style="{ width: '100%', height: '100%' }"
+      :teleport="'body'"
+      :overlay="false"
+      class="fullscreen-popup"
     >
       <div class="multi-category-content">
-        <!-- 自定义头部 -->
+        <!-- 全屏导航头部 -->
         <div class="multi-category-header">
-          <van-button type="default" size="small" @click="cancelMultiCategory">
-            取消
-          </van-button>
-          <div class="header-title">分类分配</div>
-          <van-button
-            type="primary"
-            size="small"
-            :disabled="!isMultiCategoryValid"
-            @click="confirmMultiCategory"
+          <van-nav-bar
+            title="分类分配"
+            left-text="取消"
+            left-arrow
+            @click-left="cancelMultiCategory"
           >
-            确认
-          </van-button>
+            <template #right>
+              <van-button
+                type="primary"
+                size="small"
+                :disabled="!isMultiCategoryValid"
+                @click="confirmMultiCategory"
+              >
+                确认
+              </van-button>
+            </template>
+          </van-nav-bar>
         </div>
 
         <div class="category-items">
@@ -205,9 +217,13 @@
               />
               <van-field
                 :model-value="item.amount"
-                type="number"
+                type="text"
                 placeholder="0.00"
                 class="amount-field-small"
+                :formatter="formatNumberInput"
+                :rules="[
+                  { validator: validateNumberInput, message: '请输入合法数字' },
+                ]"
                 @update:model-value="
                   (value) => onCategoryAmountInput(index, value)
                 "
@@ -288,20 +304,6 @@
       @confirm="onDateConfirm"
       @close="showDateCalendar = false"
     />
-
-    <!-- 数字键盘 -->
-    <van-number-keyboard
-      v-model:show="showAmountKeyboardVisible"
-      theme="custom"
-      :extra-key="['.', '-']"
-      close-button-text="完成"
-      @blur="hideAmountKeyboard"
-      @input="onKeyboardInput"
-      @delete="onKeyboardDelete"
-      @close="hideAmountKeyboard"
-      @show="onNumberKeyboardShow"
-      @hide="onNumberKeyboardHide"
-    />
   </div>
 </template>
 
@@ -364,7 +366,6 @@ watch(
 const showCurrencySelector = ref(false);
 const showMultiCategorySheet = ref(false);
 const showDateCalendar = ref(false);
-const showAmountKeyboardVisible = ref(false);
 
 // 多类别编辑的临时数据
 const tempCategories = ref<CategoryItem[]>([]);
@@ -869,118 +870,42 @@ const onAmountInput = (value: string | number) => {
   // 去掉自动联动逻辑，只记录金额输入，不自动更新分类金额
 };
 
-// 数字键盘相关方法
-const showAmountKeyboard = () => {
-  showAmountKeyboardVisible.value = true;
-};
+// 输入格式化函数：只允许输入数字、负号和小数点，限制最多两位小数
+const formatNumberInput = (value: string) => {
+  if (!value) return value;
 
-const hideAmountKeyboard = () => {
-  showAmountKeyboardVisible.value = false;
-};
+  // 先清除非数字、非负号、非小数点字符
+  let formatted = value.replace(/[^\d.-]/g, "");
 
-// Vant数字键盘显示事件
-const onNumberKeyboardShow = () => {
-  console.log("Vant数字键盘显示");
-};
-
-// Vant数字键盘隐藏事件
-const onNumberKeyboardHide = () => {
-  console.log("Vant数字键盘隐藏");
-};
-
-const onKeyboardInput = (key: string | number) => {
-  console.log("键盘输入:", key, "类型:", typeof key);
-  const currentAmount = String(localFormData.value.amount || "0");
-  console.log("当前金额:", currentAmount, "类型:", typeof currentAmount);
-
-  // 确保key是字符串
-  const keyStr = String(key);
-
-  // 处理不同类型的输入
-  if (keyStr === ".") {
-    // 处理小数点
-    handleDecimalPoint();
-    return;
-  } else if (keyStr === "-") {
-    // 处理负号
-    handleMinusSign();
-    return;
-  } else {
-    // 处理数字输入
-    let newAmount = "";
-    if (currentAmount === "0" || currentAmount === "0.00") {
-      newAmount = keyStr;
-    } else {
-      newAmount = currentAmount + keyStr;
-    }
-
-    console.log("计算的新金额:", newAmount);
-    localFormData.value.amount = newAmount;
-    console.log("设置后的金额:", localFormData.value.amount);
-  }
-
-  // 触发原有的输入处理逻辑
-  onAmountInput(localFormData.value.amount);
-};
-
-const onKeyboardDelete = () => {
-  const currentAmount = localFormData.value.amount || "";
-  if (currentAmount.length > 0) {
-    if (currentAmount.length === 1) {
-      localFormData.value.amount = "0";
-    } else {
-      localFormData.value.amount = currentAmount.slice(0, -1);
+  // 处理负号：只允许在开头有一个负号
+  if (formatted.includes("-")) {
+    const isNegative = formatted.charAt(0) === "-";
+    // 移除所有负号，然后在开头添加负号（如果原来是负数）
+    formatted = formatted.replace(/-/g, "");
+    if (isNegative) {
+      formatted = "-" + formatted;
     }
   }
 
-  // 触发原有的输入处理逻辑
-  onAmountInput(localFormData.value.amount);
+  // 处理小数点：只允许一个小数点，且限制最多两位小数
+  const parts = formatted.split(".");
+  if (parts.length > 2) {
+    // 如果有多个小数点，只保留第一个
+    formatted = parts[0] + "." + parts.slice(1).join("");
+  } else if (parts.length === 2) {
+    // 如果有小数部分，限制最多两位小数
+    const decimalPart = parts[1].slice(0, 2);
+    formatted = parts[0] + "." + decimalPart;
+  }
+
+  return formatted;
 };
 
-const handleDecimalPoint = () => {
-  const currentAmount = String(localFormData.value.amount || "0");
-
-  // 检查是否已有小数点
-  if (currentAmount.includes(".")) {
-    return; // 已经有小数点了，不再添加
-  }
-
-  // 添加小数点
-  if (currentAmount === "0" || currentAmount === "") {
-    localFormData.value.amount = "0.";
-  } else {
-    localFormData.value.amount = currentAmount + ".";
-  }
-
-  console.log("添加小数点后:", localFormData.value.amount);
-
-  // 触发原有的输入处理逻辑
-  onAmountInput(localFormData.value.amount);
-};
-
-const handleMinusSign = () => {
-  const currentAmount = String(localFormData.value.amount || "0");
-
-  // 如果已经是负数，则转为正数
-  if (currentAmount.startsWith("-")) {
-    localFormData.value.amount = currentAmount.substring(1);
-  } else {
-    // 如果是正数或零，则转为负数
-    if (
-      currentAmount === "0" ||
-      currentAmount === "0.00" ||
-      currentAmount === ""
-    ) {
-      localFormData.value.amount = "-0";
-    } else {
-      localFormData.value.amount = "-" + currentAmount;
-    }
-  }
-
-  console.log("切换正负号后:", localFormData.value.amount);
-
-  // 触发原有的输入处理逻辑
-  onAmountInput(localFormData.value.amount);
+// 输入验证函数
+const validateNumberInput = (value: string) => {
+  if (!value) return true; // 允许空值
+  // 验证格式：可选负号 + 数字 + 可选小数部分（最多两位小数）
+  return /^-?\d*(\.\d{0,2})?$/.test(value);
 };
 
 const onCategoryAmountInput = (index: number, value: string | number) => {
@@ -1558,36 +1483,27 @@ onMounted(() => {
 }
 
 .amount-field :deep(.van-field__control) {
-  font-size: 20px; /* 进一步减小字体 */
+  font-size: 20px;
   font-weight: bold;
   text-align: left;
   color: #323233;
-  min-height: 32px; /* 进一步减小最小高度 */
-  line-height: 1.2; /* 减小行高 */
+  min-height: 32px;
+  line-height: 1.2;
+  border: none;
+  background: transparent;
+  padding: 0;
 }
 
 .amount-field :deep(.van-field__control::placeholder) {
   color: #c8c9cc;
 }
 
-/* 金额显示区域样式 */
-.amount-display {
-  flex: 1;
-  font-size: 20px;
-  font-weight: bold;
-  text-align: left;
-  color: #323233;
-  min-height: 32px;
-  line-height: 32px;
-  cursor: pointer;
+.amount-field :deep(.van-field__body) {
   padding: 0;
-  border: none;
-  background: transparent;
-  user-select: none;
 }
 
-.amount-display.placeholder {
-  color: #c8c9cc;
+.amount-field :deep(.van-field__label) {
+  display: none;
 }
 
 /* 分类卡片 */
@@ -1619,31 +1535,26 @@ onMounted(() => {
   transform: scale(0.98);
 }
 
+/* 全屏弹窗样式 */
+.fullscreen-popup {
+  z-index: 3000;
+}
+
 /* 多类别面板样式 */
 .multi-category-content {
   height: 100%;
   display: flex;
   flex-direction: column;
-  position: relative;
-  z-index: 2003;
+  background: #f7f8fa;
 }
 
 .multi-category-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #ebedf0;
   background: white;
-  position: sticky;
-  top: 0;
-  z-index: 1;
+  border-bottom: 1px solid #ebedf0;
 }
 
-.header-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #323233;
+.multi-category-header .van-nav-bar {
+  background: white;
 }
 
 .category-items {
