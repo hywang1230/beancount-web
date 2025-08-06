@@ -1410,13 +1410,14 @@ onMounted(() => {
 }
 
 .payee-list {
-  flex: 1;
-  overflow-y: auto;
+  /* 移除内部滚动，由.content-area统一处理 */
+  /* flex: 1; */
+  /* overflow-y: auto; */
   /* 确保最后一个项目不被遮挡 */
   padding-bottom: max(80px, calc(40px + env(safe-area-inset-bottom)));
   /* 增强移动端滚动体验 */
-  -webkit-overflow-scrolling: touch;
-  scroll-behavior: smooth;
+  /* -webkit-overflow-scrolling: touch; */
+  /* scroll-behavior: smooth; */
 }
 
 .payee-item {
