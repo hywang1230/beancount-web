@@ -901,77 +901,31 @@ const getCategoryHierarchy = () => {
       targetAccountType = 'Expenses'
   }
 
-  // 从现有的分类选项中构建层级结构
-  const hierarchy: any[] = []
-  const pathMap = new Map()
+  // 从现有的分类选项中构建扁平数组，供新的树形结构使用
+  const flatCategories: any[] = []
 
-  // 首先收集所有路径
+  console.log('TransactionForm - categoryOptions.value:', categoryOptions.value)
+  console.log('TransactionForm - targetAccountType:', targetAccountType)
+
   categoryOptions.value.forEach(option => {
     if (option.disabled || !option.value.startsWith(`${targetAccountType}:`)) {
       return
     }
 
-    const parts = option.value.split(':')
-    if (parts.length < 2) return
-
-    // 为每个层级创建路径项
-    for (let i = 1; i <= parts.length; i++) {
-      const currentPath = parts.slice(0, i).join(':')
-      const currentPart = parts[i - 1]
-      
-      if (!pathMap.has(currentPath)) {
-        const isLeaf = i === parts.length
-        
-        pathMap.set(currentPath, {
-          name: currentPath,
-          displayName: i === 1 ? 
-            currentPart : // 第一级显示原始名称
-            formatAccountNameForDisplay(currentPath), // 其他级别格式化显示
-          hasChildren: !isLeaf,
-          children: [],
-          level: i - 1
-        })
-      }
-    }
-  })
-
-  // 构建层级关系
-  pathMap.forEach((category, path) => {
-    const parts = path.split(':')
-    
-    if (parts.length === 1) {
-      // 根级别（Expenses或Income），跳过
-      return
-    } else if (parts.length === 2) {
-      // 第一级分类，直接添加到hierarchy
-      hierarchy.push(category)
-    } else {
-      // 子级分类，添加到父级的children
-      const parentPath = parts.slice(0, -1).join(':')
-      const parent = pathMap.get(parentPath)
-      if (parent) {
-        parent.children.push(category)
-        parent.hasChildren = true
-      }
-    }
-  })
-
-  // 按名称排序
-  const sortCategories = (categories: any[]) => {
-    categories.sort((a, b) => a.displayName.localeCompare(b.displayName))
-    categories.forEach(cat => {
-      if (cat.children && cat.children.length > 0) {
-        sortCategories(cat.children)
-      }
+    console.log('TransactionForm - 处理分类选项:', option.value)
+    flatCategories.push({
+      name: option.value
     })
-  }
+  })
 
-  sortCategories(hierarchy)
+  console.log('TransactionForm - 构建的扁平分类数组:', flatCategories)
+  console.log('TransactionForm - 分类数量:', flatCategories.length)
   
-  console.log('TransactionForm - 构建的分类层级:', hierarchy)
-  console.log('TransactionForm - 分类层级数量:', hierarchy.length)
+  // 检查是否有多层级的数据
+  const hasMultiLevel = flatCategories.some(cat => cat.name.split(':').length > 2)
+  console.log('TransactionForm - 是否有多层级数据:', hasMultiLevel)
   
-  return hierarchy
+  return flatCategories
 }
 
 

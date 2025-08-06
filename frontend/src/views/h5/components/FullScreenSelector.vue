@@ -268,7 +268,12 @@ const accountTree = computed(() => {
 
 // 构建分类树形结构  
 const categoryTree = computed(() => {
+  console.log('categoryTree - 开始计算')
+  console.log('categoryTree - currentCategories.value:', currentCategories.value)
+  console.log('categoryTree - currentCategories.value 长度:', currentCategories.value?.length)
+  
   if (!currentCategories.value || currentCategories.value.length === 0) {
+    console.log('categoryTree - 分类数据为空，返回空数组')
     return []
   }
 
@@ -284,7 +289,15 @@ const categoryTree = computed(() => {
     )
   }
 
-  return buildTreeFromCategories(filtered)
+  console.log('categoryTree - 过滤后的分类:', filtered)
+  const result = buildTreeFromCategories(filtered)
+  console.log('categoryTree - 构建的树结构:', result)
+  console.log('categoryTree - 树结构数量:', result.length)
+  if (result.length > 0) {
+    console.log('categoryTree - 第一个节点:', result[0])
+    console.log('categoryTree - 第一个节点是否有子节点:', result[0].hasChildren)
+  }
+  return result
 })
 
 const filteredCategories = computed(() => {
@@ -475,7 +488,9 @@ const buildTreeFromAccounts = (accountList: Account[]) => {
 }
 
 const buildTreeFromCategories = (categoryList: Category[]) => {
+  console.log('buildTreeFromCategories - 开始构建，输入数据:', categoryList)
   if (!categoryList || categoryList.length === 0) {
+    console.log('buildTreeFromCategories - 输入数据为空')
     return []
   }
 
@@ -484,10 +499,15 @@ const buildTreeFromCategories = (categoryList: Category[]) => {
 
   // 为每个分类创建节点，跳过顶级分类（Expenses、Income等）
   categoryList.forEach(category => {
+    console.log('buildTreeFromCategories - 处理分类:', category)
     const parts = category.name.split(':')
+    console.log('buildTreeFromCategories - 分割结果:', parts)
     
     // 跳过顶级分类，从第二级开始
-    if (parts.length < 2) return
+    if (parts.length < 2) {
+      console.log('buildTreeFromCategories - 跳过分类，层级不足:', category.name)
+      return
+    }
     
     for (let i = 1; i < parts.length; i++) { // 从索引1开始，跳过顶级
       const path = parts.slice(0, i + 1).join(':')
@@ -509,20 +529,30 @@ const buildTreeFromCategories = (categoryList: Category[]) => {
           cat.name !== path && cat.name.startsWith(path + ':')
         )
         
-        nodeMap.set(path, {
+        const node = {
           path,
           displayName,
           level,
           hasChildren: hasChildrenInList,
           children: [],
           visible: false
-        })
+        }
+        
+        console.log(`buildTreeFromCategories - 创建节点: ${path} (level: ${level}, hasChildren: ${hasChildrenInList})`)
+        if (hasChildrenInList) {
+          const children = categoryList.filter(cat => 
+            cat.name !== path && cat.name.startsWith(path + ':')
+          )
+          console.log(`buildTreeFromCategories - 节点 ${path} 的子节点:`, children.map(c => c.name))
+        }
+        nodeMap.set(path, node)
       }
     }
   })
 
   // 构建可见节点
   const allNodes = Array.from(nodeMap.values())
+  console.log('buildTreeFromCategories - 所有节点:', allNodes)
   
   // 默认展开所有父节点
   allNodes.forEach(node => {
@@ -538,6 +568,7 @@ const buildTreeFromCategories = (categoryList: Category[]) => {
       tree.push(node)
     }
   })
+  console.log('buildTreeFromCategories - 根节点:', tree)
 
   const getVisibleNodes = (nodes: any[]): any[] => {
     const visible: any[] = []
@@ -558,7 +589,9 @@ const buildTreeFromCategories = (categoryList: Category[]) => {
     return visible
   }
 
-  return getVisibleNodes(tree)
+  const result = getVisibleNodes(tree)
+  console.log('buildTreeFromCategories - 最终结果:', result)
+  return result
 }
 
 // 节点操作方法
@@ -721,6 +754,37 @@ const show = () => {
   
   visible.value = true
   
+  // 如果是分类类型，设置分类数据
+  if (props.type === 'category') {
+    console.log('FullScreenSelector - 设置分类数据')
+    currentCategories.value = props.categories || []
+    console.log('FullScreenSelector - 分类数据设置完成:', currentCategories.value)
+    
+    // 如果没有分类数据，提供一些测试数据
+    if (currentCategories.value.length === 0) {
+      console.log('FullScreenSelector - 分类数据为空，使用测试数据')
+      currentCategories.value = [
+        { name: 'Expenses:CY-餐饮' },
+        { name: 'Expenses:CY-餐饮:早餐' },
+        { name: 'Expenses:CY-餐饮:午餐' },
+        { name: 'Expenses:CY-餐饮:晚餐' },
+        { name: 'Expenses:CY-餐饮:聚餐' },
+        { name: 'Expenses:JT-交通' },
+        { name: 'Expenses:JT-交通:公交' },
+        { name: 'Expenses:JT-交通:地铁' },
+        { name: 'Expenses:JT-交通:打车' },
+        { name: 'Expenses:JT-交通:停车' },
+        { name: 'Expenses:GW-购物' },
+        { name: 'Expenses:GW-购物:服装' },
+        { name: 'Expenses:GW-购物:数码' },
+        { name: 'Expenses:YL-娱乐' },
+        { name: 'Expenses:YL-娱乐:电影' },
+        { name: 'Expenses:YL-娱乐:游戏' }
+      ]
+      console.log('FullScreenSelector - 设置测试数据完成:', currentCategories.value)
+    }
+  }
+  
   // 如果是账户类型但没有数据，立即加载
   if (props.type === 'account' && accounts.value.length === 0) {
     console.log('FullScreenSelector - 账户数据为空，立即加载')
@@ -736,44 +800,41 @@ defineExpose({
 // 监听类型变化
 watch(() => props.type, (newType) => {
   console.log('FullScreenSelector - 类型变化:', newType)
-  if (newType === 'category') {
-    currentCategories.value = props.categories || []
-    console.log('FullScreenSelector - 设置分类数据:', currentCategories.value)
+}, { immediate: true })
+
+// 监听分类数据变化
+watch(() => props.categories, (newCategories) => {
+  console.log('FullScreenSelector - 分类数据变化:', newCategories)
+  if (props.type === 'category') {
+    currentCategories.value = newCategories || []
+    console.log('FullScreenSelector - 更新分类数据:', currentCategories.value)
+    console.log('FullScreenSelector - 分类数据长度:', currentCategories.value.length)
     
     // 如果没有分类数据，提供一些测试数据
     if (currentCategories.value.length === 0) {
       console.log('FullScreenSelector - 分类数据为空，使用测试数据')
       currentCategories.value = [
-        {
-          name: 'Expenses:餐饮',
-          displayName: '餐饮',
-          hasChildren: true,
-          children: [
-            { name: 'Expenses:餐饮:早餐', displayName: '早餐', hasChildren: false, children: [] },
-            { name: 'Expenses:餐饮:午餐', displayName: '午餐', hasChildren: false, children: [] },
-            { name: 'Expenses:餐饮:晚餐', displayName: '晚餐', hasChildren: false, children: [] }
-          ]
-        },
-        {
-          name: 'Expenses:交通',
-          displayName: '交通',
-          hasChildren: true,
-          children: [
-            { name: 'Expenses:交通:公交', displayName: '公交', hasChildren: false, children: [] },
-            { name: 'Expenses:交通:地铁', displayName: '地铁', hasChildren: false, children: [] },
-            { name: 'Expenses:交通:打车', displayName: '打车', hasChildren: false, children: [] }
-          ]
-        },
-        {
-          name: 'Expenses:购物',
-          displayName: '购物',
-          hasChildren: false,
-          children: []
-        }
+        { name: 'Expenses:CY-餐饮' },
+        { name: 'Expenses:CY-餐饮:早餐' },
+        { name: 'Expenses:CY-餐饮:午餐' },
+        { name: 'Expenses:CY-餐饮:晚餐' },
+        { name: 'Expenses:CY-餐饮:聚餐' },
+        { name: 'Expenses:JT-交通' },
+        { name: 'Expenses:JT-交通:公交' },
+        { name: 'Expenses:JT-交通:地铁' },
+        { name: 'Expenses:JT-交通:打车' },
+        { name: 'Expenses:JT-交通:停车' },
+        { name: 'Expenses:GW-购物' },
+        { name: 'Expenses:GW-购物:服装' },
+        { name: 'Expenses:GW-购物:数码' },
+        { name: 'Expenses:YL-娱乐' },
+        { name: 'Expenses:YL-娱乐:电影' },
+        { name: 'Expenses:YL-娱乐:游戏' }
       ]
+      console.log('FullScreenSelector - 设置测试数据完成:', currentCategories.value)
     }
   }
-}, { immediate: true })
+}, { immediate: true, deep: true })
 
 // 生命周期
 onMounted(() => {
