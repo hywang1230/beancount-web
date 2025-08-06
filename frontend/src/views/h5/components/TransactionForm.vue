@@ -763,7 +763,7 @@ watch(
   () => props.formData,
   (newData) => {
     // 避免循环更新：只在有实质性变化且不是来自内部更新时更新
-    if (newData && newData.amount && newData.account && !isUpdatingFromProps) {
+    if (newData && !isUpdatingFromProps) {
       // 检查是否真的有变化
       const hasSignificantChange =
         newData.amount !== localFormData.value.amount ||
