@@ -135,6 +135,55 @@
             </template>
           </div>
         </div>
+
+        <!-- 交易对象选择 -->
+        <div v-else-if="type === 'payee'" class="payee-content">
+          <!-- 交易对象列表 -->
+          <div class="payee-list">
+            <van-list
+              v-model:loading="loading"
+              :finished="finished"
+              finished-text="没有更多交易对象"
+            >
+              <!-- 新增交易对象选项 -->
+              <div class="payee-item new-payee-item" @click="showAddPayeeInput">
+                <van-icon name="plus" class="add-icon" />
+                <span class="payee-name">添加新的交易对象</span>
+              </div>
+              
+              <!-- 交易对象列表 -->
+              <div 
+                v-for="payee in filteredPayees" 
+                :key="payee"
+                class="payee-item"
+                @click="selectPayee(payee)"
+              >
+                <van-icon name="user-o" class="payee-icon" />
+                <span class="payee-name">{{ payee }}</span>
+              </div>
+            </van-list>
+          </div>
+
+          <!-- 新增交易对象输入框 -->
+          <van-popup v-model:show="showNewPayeeInput" position="top">
+            <div class="new-payee-popup">
+              <div class="popup-header">
+                <van-button type="default" @click="showNewPayeeInput = false">取消</van-button>
+                <span class="popup-title">添加交易对象</span>
+                <van-button type="primary" @click="confirmNewPayee">确定</van-button>
+              </div>
+              
+              <div class="payee-input-section">
+                <van-field
+                  v-model="newPayeeName"
+                  placeholder="输入交易对象名称"
+                  clearable
+                  autofocus
+                />
+              </div>
+            </div>
+          </van-popup>
+        </div>
       </div>
     </div>
   </van-popup>
@@ -163,12 +212,13 @@ interface PathItem {
 }
 
 interface Props {
-  type: 'account' | 'category'
+  type: 'account' | 'category' | 'payee'
   title?: string
   showSearch?: boolean
   showAccountTypes?: boolean
   accountTypes?: string[]
   categories?: Category[]
+  payees?: string[]
 }
 
 interface Emits {
@@ -195,7 +245,10 @@ const accounts = ref<Account[]>([])
 const activeAccountType = ref('Assets')
 const currentPath = ref<PathItem[]>([])
 const currentCategories = ref<Category[]>([])
+const currentPayees = ref<string[]>([])
 const expandedNodes = ref<Set<string>>(new Set())
+const showNewPayeeInput = ref(false)
+const newPayeeName = ref('')
 
 // 确保初始状态正确
 if (!accounts.value) {
@@ -311,6 +364,18 @@ const filteredCategories = computed(() => {
       category.name.toLowerCase().includes(keyword) ||
       formatCategoryName(category.name).toLowerCase().includes(keyword)
     )
+  )
+})
+
+// 过滤后的交易对象
+const filteredPayees = computed(() => {
+  if (!searchKeyword.value.trim()) {
+    return currentPayees.value
+  }
+  
+  const keyword = searchKeyword.value.toLowerCase()
+  return currentPayees.value.filter(payee =>
+    payee && payee.toLowerCase().includes(keyword)
   )
 })
 
@@ -608,6 +673,36 @@ const selectCategory = (categoryPath: string) => {
   close()
 }
 
+// 选择交易对象
+const selectPayee = (payee: string) => {
+  emit('confirm', payee)
+  close()
+}
+
+// 显示添加新交易对象输入框
+const showAddPayeeInput = () => {
+  newPayeeName.value = ''
+  showNewPayeeInput.value = true
+}
+
+// 确认添加新交易对象
+const confirmNewPayee = () => {
+  if (newPayeeName.value.trim()) {
+    const newPayee = newPayeeName.value.trim()
+    // 添加到当前交易对象列表
+    if (!currentPayees.value.includes(newPayee)) {
+      currentPayees.value.unshift(newPayee)
+    }
+    // 选择新添加的交易对象
+    emit('confirm', newPayee)
+    showNewPayeeInput.value = false
+    newPayeeName.value = ''
+    close()
+  } else {
+    showToast('请输入交易对象名称')
+  }
+}
+
 const navigateToCategory = (category: Category) => {
   currentPath.value.push({
     name: formatCategoryName(category.name),
@@ -785,6 +880,31 @@ const show = () => {
     }
   }
   
+  // 如果是交易对象类型，设置交易对象数据
+  if (props.type === 'payee') {
+    console.log('FullScreenSelector - 设置交易对象数据')
+    currentPayees.value = props.payees || []
+    console.log('FullScreenSelector - 交易对象数据设置完成:', currentPayees.value)
+    
+    // 如果没有交易对象数据，提供一些测试数据
+    if (currentPayees.value.length === 0) {
+      console.log('FullScreenSelector - 交易对象数据为空，使用测试数据')
+      currentPayees.value = [
+        '张三',
+        '李四',
+        '王五',
+        '赵六',
+        '星巴克',
+        '麦当劳',
+        '超市',
+        '加油站',
+        '出租车',
+        '地铁'
+      ]
+      console.log('FullScreenSelector - 设置测试数据完成:', currentPayees.value)
+    }
+  }
+  
   // 如果是账户类型但没有数据，立即加载
   if (props.type === 'account' && accounts.value.length === 0) {
     console.log('FullScreenSelector - 账户数据为空，立即加载')
@@ -836,12 +956,23 @@ watch(() => props.categories, (newCategories) => {
   }
 }, { immediate: true, deep: true })
 
+// 监听交易对象数据变化
+watch(() => props.payees, (newPayees) => {
+  console.log('FullScreenSelector - 交易对象数据变化:', newPayees)
+  if (props.type === 'payee') {
+    currentPayees.value = newPayees || []
+    console.log('FullScreenSelector - 更新交易对象数据:', currentPayees.value)
+  }
+}, { immediate: true, deep: true })
+
 // 生命周期
 onMounted(() => {
   if (props.type === 'account') {
     loadAccounts()
   } else if (props.type === 'category') {
     currentCategories.value = props.categories || []
+  } else if (props.type === 'payee') {
+    currentPayees.value = props.payees || []
   }
 })
 </script>
@@ -1237,5 +1368,86 @@ onMounted(() => {
     background: #1a1a1a;
     border-color: #5a5a5a;
   }
+}
+
+/* 交易对象选择样式 */
+.payee-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.payee-list {
+  flex: 1;
+  overflow-y: auto;
+}
+
+.payee-item {
+  display: flex;
+  align-items: center;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.payee-item:hover {
+  background-color: #f5f5f5;
+}
+
+.payee-item:last-child {
+  border-bottom: none;
+}
+
+.new-payee-item {
+  background-color: #f8f9fa;
+  border: 1px dashed #ddd;
+  color: #666;
+}
+
+.new-payee-item:hover {
+  background-color: #e9ecef;
+}
+
+.add-icon, .payee-icon {
+  font-size: 20px;
+  margin-right: 12px;
+  color: #1989fa;
+}
+
+.payee-name {
+  font-size: 16px;
+  color: #323233;
+}
+
+.new-payee-item .payee-name {
+  color: #666;
+}
+
+/* 新增交易对象弹窗样式 */
+.new-payee-popup {
+  background: white;
+  border-radius: 8px 8px 0 0;
+  overflow: hidden;
+}
+
+.popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.popup-title {
+  font-size: 16px;
+  font-weight: 500;
+  color: #323233;
+}
+
+.payee-input-section {
+  padding: 16px;
 }
 </style>

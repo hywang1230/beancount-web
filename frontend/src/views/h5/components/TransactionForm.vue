@@ -60,14 +60,11 @@
         />
 
         <!-- 交易对象 -->
-        <van-field
-          v-model="localFormData.payee"
-          label="交易对象"
-          placeholder="请输入交易对象（可选）"
-          :right-icon="localFormData.payee ? 'clear' : 'add-o'"
-          readonly
-          @click="handlePayeeClick"
-          @click-right-icon="handlePayeeRightIcon"
+        <van-cell
+          title="交易对象"
+          :value="localFormData.payee || '选择交易对象（可选）'"
+          is-link
+          @click="showFullScreenPayeeSelector"
         />
 
         <!-- 状态选择 -->
@@ -104,37 +101,7 @@
       </van-cell-group>
     </van-form>
 
-    <!-- 收款人输入弹窗 -->
-    <van-popup v-model:show="showPayeeInput" position="bottom">
-      <div class="payee-input-popup">
-        <div class="popup-header">
-          <van-button type="default" @click="showPayeeInput = false">取消</van-button>
-          <span class="popup-title">选择交易对象</span>
-          <van-button type="primary" @click="confirmPayee">确定</van-button>
-        </div>
-        
-        <div class="payee-input-section">
-          <van-field
-            v-model="tempPayee"
-            placeholder="输入交易对象名称"
-            clearable
-          />
-        </div>
-        
-        <div class="payee-history">
-          <div class="history-title">历史记录</div>
-          <van-cell-group>
-            <van-cell
-              v-for="payee in payeeOptions"
-              :key="payee.value"
-              :title="payee.text"
-              is-link
-              @click="selectPayeeFromHistory(payee.value)"
-            />
-          </van-cell-group>
-        </div>
-      </div>
-    </van-popup>
+
 
     <!-- 全屏账户选择器 -->
     <FullScreenSelector
@@ -157,6 +124,17 @@
       :categories="getCategoryHierarchy()"
       @confirm="onFullScreenCategoryConfirm"
       @close="onFullScreenCategoryClose"
+    />
+
+    <!-- 全屏交易对象选择器 -->
+    <FullScreenSelector
+      ref="payeeSelectorRef"
+      type="payee"
+      title="选择交易对象"
+      :show-search="true"
+      :payees="getPayeeList()"
+      @confirm="onFullScreenPayeeConfirm"
+      @close="onFullScreenPayeeClose"
     />
 
     <!-- 币种选择器 -->
@@ -328,7 +306,6 @@ const localFormData = ref({
 })
 
 // 弹窗状态
-const showPayeeInput = ref(false)
 const showCurrencySelector = ref(false)
 const showMultiCategorySheet = ref(false)
 const showDateCalendar = ref(false)
@@ -338,12 +315,12 @@ const tempCategories = ref<CategoryItem[]>([])
 const isEditingMultiCategory = ref(false)
 
 // 临时数据
-const tempPayee = ref('')
 const currentCategoryIndex = ref(0)
 
 // 全屏选择器引用
 const accountSelectorRef = ref()
 const categorySelectorRef = ref()
+const payeeSelectorRef = ref()
 
 interface Option {
   text: string
@@ -741,33 +718,20 @@ const onCategoryAmountInput = (index: number, value: string | number) => {
   console.log('Current categories:', targetCategories)
 }
 
-// 收款人相关方法
-const handlePayeeClick = () => {
-  showPayeeInput.value = true
-}
-
-const handlePayeeRightIcon = () => {
-  if (localFormData.value.payee) {
-    // 清除收款人
-    localFormData.value.payee = ''
-  } else {
-    // 显示选择器
-    showPayeeInput.value = true
+// 全屏交易对象选择器方法
+const showFullScreenPayeeSelector = () => {
+  if (payeeSelectorRef.value) {
+    payeeSelectorRef.value.show()
   }
 }
 
-const confirmPayee = () => {
-  if (tempPayee.value.trim()) {
-    localFormData.value.payee = tempPayee.value.trim()
-    showPayeeInput.value = false
-    tempPayee.value = ''
-  }
-}
-
-const selectPayeeFromHistory = (payee: string) => {
+const onFullScreenPayeeConfirm = (payee: string) => {
   localFormData.value.payee = payee
-  showPayeeInput.value = false
-  tempPayee.value = ''
+  console.log('选择的交易对象:', payee)
+}
+
+const onFullScreenPayeeClose = () => {
+  console.log('交易对象选择器已关闭')
 }
 
 // 全屏账户选择器方法
@@ -928,7 +892,17 @@ const getCategoryHierarchy = () => {
   return flatCategories
 }
 
-
+// 构建交易对象列表
+const getPayeeList = () => {
+  console.log('TransactionForm - payeeOptions.value:', payeeOptions.value)
+  
+  const payeeList = payeeOptions.value.map(option => option.value)
+  
+  console.log('TransactionForm - 构建的交易对象列表:', payeeList)
+  console.log('TransactionForm - 交易对象数量:', payeeList.length)
+  
+  return payeeList
+}
 
 const onSubmit = () => {
   // 基础信息校验
@@ -1409,38 +1383,7 @@ onMounted(() => {
   border-color: #b7eb8f;
 }
 
-/* 收款人输入弹窗样式 */
-.payee-input-popup {
-  background: white;
-  border-radius: 16px 16px 0 0;
-  max-height: 70vh;
-  overflow: hidden;
-  position: relative;
-  z-index: 2002;
-}
 
-.popup-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #ebedf0;
-}
-
-.popup-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: #323233;
-}
-
-.payee-input-section {
-  padding: 16px;
-}
-
-.payee-history {
-  max-height: 300px;
-  overflow-y: auto;
-}
 
 .history-title {
   padding: 16px;
