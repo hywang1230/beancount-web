@@ -2,7 +2,7 @@
   <div class="transfer-form">
     <van-form @submit="onSubmit">
       <!-- 转出账户卡片 -->
-      <div class="form-card from-account-card" @click="showFromAccountSelector = true">
+      <div class="form-card from-account-card" @click="showFullScreenFromAccountSelector">
         <div class="card-icon">
           <van-icon name="gold-coin-o" />
         </div>
@@ -24,7 +24,7 @@
           </div>
           <van-field
             v-model="localFormData.amount"
-            type="digit"
+            type="number"
             placeholder="0.00"
             class="amount-field"
             :border="false"
@@ -41,7 +41,7 @@
       </div>
 
       <!-- 转入账户卡片 -->
-      <div class="form-card to-account-card" @click="showToAccountSelector = true">
+      <div class="form-card to-account-card" @click="showFullScreenToAccountSelector">
         <div class="card-icon">
           <van-icon name="gold-coin-o" />
         </div>
@@ -73,23 +73,29 @@
       </van-cell-group>
     </van-form>
 
-    <!-- 转出账户选择器 -->
-    <van-popup v-model:show="showFromAccountSelector" position="bottom">
-      <van-picker
-        :columns="accountOptions"
-        @cancel="showFromAccountSelector = false"
-        @confirm="onFromAccountConfirm"
-      />
-    </van-popup>
+    <!-- 全屏转出账户选择器 -->
+    <FullScreenSelector
+      ref="fromAccountSelectorRef"
+      type="account"
+      title="选择转出账户"
+      :show-search="true"
+      :show-account-types="true"
+      :account-types="['Assets', 'Liabilities']"
+      @confirm="onFullScreenFromAccountConfirm"
+      @close="onFullScreenFromAccountClose"
+    />
 
-    <!-- 转入账户选择器 -->
-    <van-popup v-model:show="showToAccountSelector" position="bottom">
-      <van-picker
-        :columns="toAccountOptions"
-        @cancel="showToAccountSelector = false"
-        @confirm="onToAccountConfirm"
-      />
-    </van-popup>
+    <!-- 全屏转入账户选择器 -->
+    <FullScreenSelector
+      ref="toAccountSelectorRef"
+      type="account"
+      title="选择转入账户"
+      :show-search="true"
+      :show-account-types="true"
+      :account-types="['Assets', 'Liabilities']"
+      @confirm="onFullScreenToAccountConfirm"
+      @close="onFullScreenToAccountClose"
+    />
 
     <!-- 币种选择器 -->
     <van-popup v-model:show="showCurrencySelector" position="bottom">
@@ -119,6 +125,7 @@
 import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { showToast } from 'vant'
 import { getAccountsByType } from '@/api/accounts'
+import FullScreenSelector from './FullScreenSelector.vue'
 
 interface Props {
   formData: {
@@ -145,10 +152,12 @@ const localFormData = ref({
 })
 
 // 弹窗状态
-const showFromAccountSelector = ref(false)
-const showToAccountSelector = ref(false)
 const showCurrencySelector = ref(false)
 const showDateCalendar = ref(false)
+
+// 全屏选择器引用
+const fromAccountSelectorRef = ref()
+const toAccountSelectorRef = ref()
 
 interface Option {
   text: string
@@ -377,10 +386,7 @@ const toAccountDisplayName = computed(() => {
   return formatAccountNameForDisplay(localFormData.value.toAccount)
 })
 
-const toAccountOptions = computed(() => {
-  // 排除已选择的转出账户
-  return accountOptions.value.filter(item => item.value !== localFormData.value.fromAccount)
-})
+
 
 
 
@@ -488,14 +494,33 @@ const onAmountInput = (value: string | number) => {
   localFormData.value.amount = parts.join('.')
 }
 
-const onFromAccountConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
-  localFormData.value.fromAccount = selectedValues[0]
-  showFromAccountSelector.value = false
+// 全屏账户选择器方法
+const showFullScreenFromAccountSelector = () => {
+  if (fromAccountSelectorRef.value) {
+    fromAccountSelectorRef.value.show()
+  }
 }
 
-const onToAccountConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
-  localFormData.value.toAccount = selectedValues[0]
-  showToAccountSelector.value = false
+const onFullScreenFromAccountConfirm = (accountName: string) => {
+  localFormData.value.fromAccount = accountName
+}
+
+const onFullScreenFromAccountClose = () => {
+  // 关闭回调
+}
+
+const showFullScreenToAccountSelector = () => {
+  if (toAccountSelectorRef.value) {
+    toAccountSelectorRef.value.show()
+  }
+}
+
+const onFullScreenToAccountConfirm = (accountName: string) => {
+  localFormData.value.toAccount = accountName
+}
+
+const onFullScreenToAccountClose = () => {
+  // 关闭回调
 }
 
 
@@ -593,30 +618,38 @@ onMounted(() => {
   align-items: center;
   background: white;
   border-radius: 16px;
-  padding: 16px;
-  margin: 16px;
-  margin-bottom: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 14px; /* 进一步减小内边距 */
+  margin: 10px 16px; /* 进一步减尊上下间距 */
+  margin-bottom: 6px; /* 进一步减小底部间距 */
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   cursor: pointer;
+  min-height: 54px; /* 进一步减小最小高度 */
+  position: relative;
 }
 
 .form-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.form-card:active {
+  transform: scale(0.98);
+  transition: all 0.1s ease;
 }
 
 .card-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px; /* 进一步减小图标容器 */
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #f7f8fa;
-  border-radius: 12px;
-  margin-right: 16px;
+  border-radius: 10px; /* 进一步减小圆角 */
+  margin-right: 12px; /* 进一步减小右边距 */
   color: #646566;
-  font-size: 20px;
+  font-size: 16px; /* 进一步减小图标 */
+  flex-shrink: 0;
 }
 
 .card-content {
@@ -627,9 +660,12 @@ onMounted(() => {
 }
 
 .card-label {
-  font-size: 16px;
+  font-size: 16px; /* 适中字体大小 */
   color: #323233;
   font-weight: 500;
+  flex: 1;
+  margin-right: 10px; /* 减小右边距 */
+  line-height: 1.4; /* 减小行高 */
 }
 
 /* 转出账户卡片 */
@@ -659,19 +695,25 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 8px 12px;
+  padding: 6px 10px; /* 进一步减小内边距 */
   background: #f7f8fa;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  min-height: 32px; /* 进一步减小最小高度 */
 }
 
 .currency-selector:hover {
   background: #ebedf0;
+  transform: scale(1.02);
+}
+
+.currency-selector:active {
+  transform: scale(0.98);
 }
 
 .currency-symbol {
-  font-size: 24px;
+  font-size: 20px; /* 进一步减小字体 */
   font-weight: bold;
   color: #323233;
 }
@@ -681,10 +723,12 @@ onMounted(() => {
 }
 
 .amount-field :deep(.van-field__control) {
-  font-size: 24px;
+  font-size: 20px; /* 进一步减小字体 */
   font-weight: bold;
   text-align: left;
   color: #323233;
+  min-height: 32px; /* 进一步减小最小高度 */
+  line-height: 1.2; /* 减小行高 */
 }
 
 .amount-field :deep(.van-field__control::placeholder) {
@@ -695,21 +739,27 @@ onMounted(() => {
 .transfer-arrow-container {
   display: flex;
   justify-content: center;
-  margin: -6px 16px;
+  margin: -5px 16px; /* 进一步减小重叠效果 */
   position: relative;
   z-index: 1;
 }
 
 .transfer-arrow {
-  width: 48px;
-  height: 48px;
+  width: 40px; /* 进一步减小箭头 */
+  height: 40px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: linear-gradient(135deg, #34a853 0%, #4caf50 100%);
   border-radius: 50%;
   color: white;
-  box-shadow: 0 4px 12px rgba(52, 168, 83, 0.3);
+  box-shadow: 0 3px 10px rgba(52, 168, 83, 0.25); /* 进一步减弱阴影 */
+  transition: all 0.3s ease;
+}
+
+.transfer-arrow:hover {
+  transform: scale(1.05);
+  box-shadow: 0 8px 20px rgba(52, 168, 83, 0.4);
 }
 
 /* 转入账户卡片 */
@@ -722,6 +772,104 @@ onMounted(() => {
 
 /* 使用标准 van-cell-group 样式 */
 :deep(.van-cell-group--inset) {
-  margin: 16px;
+  margin: 12px 16px; /* 减小上下间距 */
+  border-radius: 16px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+
+:deep(.van-cell) {
+  min-height: 46px; /* 减小单元格最小高度 */
+  padding: 10px 16px; /* 减小内边距 */
+}
+
+:deep(.van-field__label) {
+  font-size: 16px; /* 增大标签字体 */
+  font-weight: 600; /* 增加字体粗细，与其他标签保持一致 */
+}
+
+/* 专门为日期单元格添加样式 */
+:deep(.van-cell__title) {
+  font-weight: 600; /* 为日期标题添加加粗 */
+}
+
+:deep(.van-field__control) {
+  font-size: 16px; /* 增大输入框字体 */
+}
+
+/* 移动端响应式优化 */
+@media (max-width: 375px) {
+  .form-card {
+    margin: 8px 12px; /* 进一步减小间距 */
+    padding: 12px; /* 进一步减小内边距 */
+    min-height: 50px; /* 进一步减小最小高度 */
+  }
+  
+  .card-icon {
+    width: 34px; /* 进一步减小图标 */
+    height: 34px;
+    margin-right: 10px;
+    font-size: 14px;
+  }
+  
+  .card-label {
+    font-size: 14px; /* 进一步减小字体 */
+  }
+  
+  .currency-symbol {
+    font-size: 18px; /* 进一步减小字体 */
+  }
+  
+  .amount-field :deep(.van-field__control) {
+    font-size: 18px; /* 进一步减小字体 */
+    min-height: 30px;
+  }
+  
+  .transfer-arrow {
+    width: 36px; /* 进一步减小箭头 */
+    height: 36px;
+  }
+  
+  :deep(.van-cell) {
+    min-height: 40px; /* 进一步减小单元格高度 */
+    padding: 6px 16px; /* 进一步减小内边距 */
+  }
+}
+
+@media (max-width: 320px) {
+  .form-card {
+    margin: 8px 10px; /* 减小间距 */
+    padding: 12px; /* 减小内边距 */
+    min-height: 52px; /* 减小最小高度 */
+  }
+  
+  .card-icon {
+    width: 36px; /* 减小图标 */
+    height: 36px;
+    margin-right: 12px;
+    font-size: 14px;
+  }
+  
+  .card-label {
+    font-size: 14px; /* 减小字体 */
+  }
+  
+  .currency-symbol {
+    font-size: 18px; /* 减小字体 */
+  }
+  
+  .amount-field :deep(.van-field__control) {
+    font-size: 18px; /* 减小字体 */
+    min-height: 30px;
+  }
+  
+  .transfer-arrow {
+    width: 36px; /* 减小箭头 */
+    height: 36px;
+  }
+  
+  :deep(.van-cell) {
+    min-height: 40px; /* 减小单元格高度 */
+    padding: 6px 16px; /* 减小内边距 */
+  }
 }
 </style>

@@ -31,15 +31,32 @@ html, body {
   
   /* Vant 组件优化 */
   .van-cell {
-    min-height: 48px; /* 增加触摸目标大小 */
+    min-height: 46px; /* 减小触摸目标大小 */
+    padding: 10px 16px; /* 减小内边距 */
   }
   
   .van-button {
-    min-height: 44px; /* 确保按钮触摸目标大小 */
+    min-height: 42px; /* 减小按钮触摸目标大小 */
+    border-radius: 8px;
+  }
+  
+  .van-button--large {
+    min-height: 46px; /* 减小大按钮高度 */
+    font-size: 16px; /* 减小字体 */
+    font-weight: 600;
   }
   
   .van-popup {
-    border-radius: 16px 16px 0 0 !important;
+    border-radius: 20px 20px 0 0 !important; /* 增大圆角 */
+  }
+  
+  .van-picker__confirm {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+  }
+  
+  .van-picker__cancel {
+    font-size: 16px !important;
   }
 }
 
@@ -114,7 +131,7 @@ html, body {
 /* 响应式布局 */
 @media (max-width: 768px) {
   .page-container {
-    padding: 12px;
+    padding: 16px; /* 增加内边距 */
     min-height: calc(100vh - 110px); /* 考虑底部导航栏 */
   }
   
@@ -139,7 +156,7 @@ html, body {
 /* 超小屏幕优化 */
 @media (max-width: 480px) {
   .page-container {
-    padding: 8px;
+    padding: 12px; /* 保持足够的内边距 */
   }
   
   .page-title {

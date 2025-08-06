@@ -65,28 +65,6 @@
 
     <!-- 操作按钮 -->
     <div v-if="transaction" class="action-buttons">
-      <!-- 状态切换按钮 -->
-      <div class="status-buttons">
-        <van-button
-          v-if="transaction.flag !== '*' && transaction.flag !== 'txn'"
-          type="success"
-          size="small"
-          @click="markAsConfirmed"
-          :loading="statusLoading"
-        >
-          标记为已确认
-        </van-button>
-        <van-button
-          v-if="transaction.flag === '*' || transaction.flag === 'txn'"
-          type="warning"
-          size="small"
-          @click="markAsPending"
-          :loading="statusLoading"
-        >
-          标记为待确认
-        </van-button>
-      </div>
-      
       <!-- 编辑和删除按钮 -->
       <div class="edit-delete-buttons">
         <van-button
@@ -94,14 +72,14 @@
           size="large"
           @click="editTransaction"
         >
-          编辑交易
+          编辑
         </van-button>
         <van-button
           type="danger"
           size="large"
           @click="deleteTransaction"
         >
-          删除交易
+          删除
         </van-button>
       </div>
     </div>
@@ -112,7 +90,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import { showConfirmDialog, showToast } from 'vant'
-import { getTransactionById, deleteTransaction as deleteTransactionApi, updateTransaction } from '@/api/transactions'
+import { getTransactionById, deleteTransaction as deleteTransactionApi } from '@/api/transactions'
 import { getAccountsByType } from '@/api/accounts'
 
 const router = useRouter()
@@ -121,7 +99,6 @@ const route = useRoute()
 const loading = ref(true)
 const transaction = ref<any>(null)
 const accountTypes = ref<Record<string, string[]>>({})
-const statusLoading = ref(false)
 
 const formatAmount = (amount: string | number | undefined, currency?: string) => {
   if (amount === undefined || amount === null) return '0.00'
@@ -235,54 +212,6 @@ const editTransaction = () => {
   router.push(`/h5/add-transaction?id=${transactionId}`)
 }
 
-const markAsConfirmed = async () => {
-  if (!transaction.value) return
-  
-  statusLoading.value = true
-  try {
-    const updatedTransaction = {
-      ...transaction.value,
-      flag: '*'  // 设置为已确认状态
-    }
-    
-    const transactionId = transaction.value?.transaction_id || route.params.id as string
-    await updateTransaction(transactionId, updatedTransaction)
-    
-    // 更新本地状态
-    transaction.value.flag = '*'
-    showToast('已标记为确认状态')
-  } catch (error) {
-    console.error('更新交易状态失败:', error)
-    showToast('更新状态失败')
-  } finally {
-    statusLoading.value = false
-  }
-}
-
-const markAsPending = async () => {
-  if (!transaction.value) return
-  
-  statusLoading.value = true
-  try {
-    const updatedTransaction = {
-      ...transaction.value,
-      flag: '!'  // 设置为待确认状态
-    }
-    
-    const transactionId = transaction.value?.transaction_id || route.params.id as string
-    await updateTransaction(transactionId, updatedTransaction)
-    
-    // 更新本地状态
-    transaction.value.flag = '!'
-    showToast('已标记为待确认状态')
-  } catch (error) {
-    console.error('更新交易状态失败:', error)
-    showToast('更新状态失败')
-  } finally {
-    statusLoading.value = false
-  }
-}
-
 const deleteTransaction = async () => {
   try {
     await showConfirmDialog({
@@ -352,8 +281,23 @@ onMounted(async () => {
 
 .edit-delete-buttons {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   gap: 12px;
+}
+
+.edit-delete-buttons :deep(.van-button--large) {
+  height: 46px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+}
+
+/* 响应式设计 */
+@media (max-width: 375px) {
+  .edit-delete-buttons :deep(.van-button--large) {
+    height: 44px;
+    font-size: 15px;
+  }
 }
 
 :deep(.van-cell-group) {

@@ -1,16 +1,16 @@
 <template>
   <div class="transaction-form">
     <van-form @submit="onSubmit">
-      <!-- 账户选择卡片 -->
-      <div class="form-card account-card" @click="showAccountSelector = true">
-        <div class="card-icon">
-          <van-icon name="gold-coin-o" />
-        </div>
-        <div class="card-content">
-          <div class="card-label">{{ accountDisplayName || '选择账户' }}</div>
-          <van-icon name="arrow" />
-        </div>
+          <!-- 账户选择卡片 -->
+    <div class="form-card account-card" @click="showFullScreenAccountSelector">
+      <div class="card-icon">
+        <van-icon name="gold-coin-o" />
       </div>
+      <div class="card-content">
+        <div class="card-label">{{ accountDisplayName || '选择账户' }}</div>
+        <van-icon name="arrow" />
+      </div>
+    </div>
 
       <!-- 金额输入卡片 -->
       <div class="form-card amount-card">
@@ -24,7 +24,7 @@
           </div>
           <van-field
             v-model="localFormData.amount"
-            type="digit"
+            type="number"
             placeholder="0.00"
             class="amount-field"
             :border="false"
@@ -34,7 +34,7 @@
       </div>
 
       <!-- 分类选择卡片 -->
-      <div class="form-card category-card" @click="showCategorySelector = true; currentCategoryIndex = 0">
+      <div class="form-card category-card" @click="() => showFullScreenCategorySelector()">
         <div class="card-icon">
           <van-icon name="apps-o" />
         </div>
@@ -60,14 +60,11 @@
         />
 
         <!-- 交易对象 -->
-        <van-field
-          v-model="localFormData.payee"
-          label="交易对象"
-          placeholder="请输入交易对象（可选）"
-          :right-icon="localFormData.payee ? 'clear' : 'add-o'"
-          readonly
-          @click="handlePayeeClick"
-          @click-right-icon="handlePayeeRightIcon"
+        <van-cell
+          title="交易对象"
+          :value="localFormData.payee || '选择交易对象（可选）'"
+          is-link
+          @click="showFullScreenPayeeSelector"
         />
 
         <!-- 状态选择 -->
@@ -104,55 +101,41 @@
       </van-cell-group>
     </van-form>
 
-    <!-- 收款人输入弹窗 -->
-    <van-popup v-model:show="showPayeeInput" position="bottom">
-      <div class="payee-input-popup">
-        <div class="popup-header">
-          <van-button type="default" @click="showPayeeInput = false">取消</van-button>
-          <span class="popup-title">选择交易对象</span>
-          <van-button type="primary" @click="confirmPayee">确定</van-button>
-        </div>
-        
-        <div class="payee-input-section">
-          <van-field
-            v-model="tempPayee"
-            placeholder="输入交易对象名称"
-            clearable
-          />
-        </div>
-        
-        <div class="payee-history">
-          <div class="history-title">历史记录</div>
-          <van-cell-group>
-            <van-cell
-              v-for="payee in payeeOptions"
-              :key="payee.value"
-              :title="payee.text"
-              is-link
-              @click="selectPayeeFromHistory(payee.value)"
-            />
-          </van-cell-group>
-        </div>
-      </div>
-    </van-popup>
 
-    <!-- 账户选择器 -->
-    <van-popup v-model:show="showAccountSelector" position="bottom">
-      <van-picker
-        :columns="accountOptions"
-        @cancel="showAccountSelector = false"
-        @confirm="onAccountConfirm"
-      />
-    </van-popup>
 
-    <!-- 分类选择器 -->
-    <van-popup v-model:show="showCategorySelector" position="bottom">
-      <van-picker
-        :columns="categoryOptions"
-        @cancel="showCategorySelector = false"
-        @confirm="onCategoryConfirm"
-      />
-    </van-popup>
+    <!-- 全屏账户选择器 -->
+    <FullScreenSelector
+      ref="accountSelectorRef"
+      type="account"
+      title="选择账户"
+      :show-search="true"
+      :show-account-types="true"
+      :account-types="getAccountTypesForTransaction()"
+      @confirm="onFullScreenAccountConfirm"
+      @close="onFullScreenAccountClose"
+    />
+
+    <!-- 全屏分类选择器 -->
+    <FullScreenSelector
+      ref="categorySelectorRef"
+      type="category"
+      title="选择分类"
+      :show-search="true"
+      :categories="getCategoryHierarchy()"
+      @confirm="onFullScreenCategoryConfirm"
+      @close="onFullScreenCategoryClose"
+    />
+
+    <!-- 全屏交易对象选择器 -->
+    <FullScreenSelector
+      ref="payeeSelectorRef"
+      type="payee"
+      title="选择交易对象"
+      :show-search="true"
+      :payees="getPayeeList()"
+      @confirm="onFullScreenPayeeConfirm"
+      @close="onFullScreenPayeeClose"
+    />
 
     <!-- 币种选择器 -->
     <van-popup v-model:show="showCurrencySelector" position="bottom">
@@ -204,11 +187,11 @@
                 placeholder="选择分类"
                 readonly
                 class="category-field"
-                @click="showCategorySelector = true; currentCategoryIndex = index"
+                @click="() => showFullScreenCategorySelector(index)"
               />
               <van-field
                 :model-value="item.amount"
-                type="digit"
+                type="number"
                 placeholder="0.00"
                 class="amount-field-small"
                 @update:model-value="(value) => onCategoryAmountInput(index, value)"
@@ -283,6 +266,7 @@ import { ref, computed, watch, onMounted, nextTick } from 'vue'
 import { showToast } from 'vant'
 import { getPayees } from '@/api/transactions'
 import { getAccountsByType } from '@/api/accounts'
+import FullScreenSelector from './FullScreenSelector.vue'
 
 interface CategoryItem {
   categoryName: string
@@ -322,9 +306,6 @@ const localFormData = ref({
 })
 
 // 弹窗状态
-const showPayeeInput = ref(false)
-const showAccountSelector = ref(false)
-const showCategorySelector = ref(false)
 const showCurrencySelector = ref(false)
 const showMultiCategorySheet = ref(false)
 const showDateCalendar = ref(false)
@@ -334,8 +315,12 @@ const tempCategories = ref<CategoryItem[]>([])
 const isEditingMultiCategory = ref(false)
 
 // 临时数据
-const tempPayee = ref('')
 const currentCategoryIndex = ref(0)
+
+// 全屏选择器引用
+const accountSelectorRef = ref()
+const categorySelectorRef = ref()
+const payeeSelectorRef = ref()
 
 interface Option {
   text: string
@@ -625,12 +610,21 @@ const isMultiCategoryValid = computed(() => {
 })
 
 
-// 监听数据变化
-watch(localFormData, (newData) => {
-  // 只在不是从props更新时才emit
-  if (!isUpdatingFromProps) {
-    emit('update', newData)
+// 监听数据变化 - 使用防抖减少频繁触发
+let updateTimeout: ReturnType<typeof setTimeout> | null = null
+const debouncedEmitUpdate = (newData: any) => {
+  if (updateTimeout) {
+    clearTimeout(updateTimeout)
   }
+  updateTimeout = setTimeout(() => {
+    if (!isUpdatingFromProps) {
+      emit('update', newData)
+    }
+  }, 800) // 800ms延迟，显著减少触发频率
+}
+
+watch(localFormData, (newData) => {
+  debouncedEmitUpdate(newData)
 }, { deep: true })
 
 // 监听props.formData变化，用于编辑模式的数据加载
@@ -691,21 +685,8 @@ const onCurrencyConfirm = ({ selectedValues }: { selectedValues: string[] }) => 
 const onAmountInput = (value: string | number) => {
   console.log('onAmountInput called with:', value, typeof value)
   
-  // 延迟执行，避免与分类金额输入冲突
-  nextTick(() => {
-    const totalAmount = localFormData.value.amount || ''
-    
-    if (localFormData.value.categories.length === 1) {
-      // 单分类情况：总是同步总金额到分类金额
-      localFormData.value.categories[0].amount = totalAmount
-    } else if (localFormData.value.categories.length > 1) {
-      // 多分类情况：分配给第一个空的分类
-      const firstEmptyCategory = localFormData.value.categories.find(cat => !cat.amount)
-      if (firstEmptyCategory && totalAmount) {
-        firstEmptyCategory.amount = totalAmount
-      }
-    }
-  })
+  // 大幅减少自动同步逻辑，避免过度干预
+  // 只在非常特定的条件下才自动同步金额到分类
 }
 
 const onCategoryAmountInput = (index: number, value: string | number) => {
@@ -733,39 +714,35 @@ const onCategoryAmountInput = (index: number, value: string | number) => {
   console.log('Current categories:', targetCategories)
 }
 
-// 收款人相关方法
-const handlePayeeClick = () => {
-  showPayeeInput.value = true
-}
-
-const handlePayeeRightIcon = () => {
-  if (localFormData.value.payee) {
-    // 清除收款人
-    localFormData.value.payee = ''
-  } else {
-    // 显示选择器
-    showPayeeInput.value = true
+// 全屏交易对象选择器方法
+const showFullScreenPayeeSelector = () => {
+  if (payeeSelectorRef.value) {
+    payeeSelectorRef.value.show()
   }
 }
 
-const confirmPayee = () => {
-  if (tempPayee.value.trim()) {
-    localFormData.value.payee = tempPayee.value.trim()
-    showPayeeInput.value = false
-    tempPayee.value = ''
-  }
-}
-
-const selectPayeeFromHistory = (payee: string) => {
+const onFullScreenPayeeConfirm = (payee: string) => {
   localFormData.value.payee = payee
-  showPayeeInput.value = false
-  tempPayee.value = ''
+  console.log('选择的交易对象:', payee)
 }
 
-// 账户选择
-const onAccountConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
-  localFormData.value.account = selectedValues[0]
-  showAccountSelector.value = false
+const onFullScreenPayeeClose = () => {
+  console.log('交易对象选择器已关闭')
+}
+
+// 全屏账户选择器方法
+const showFullScreenAccountSelector = () => {
+  if (accountSelectorRef.value) {
+    accountSelectorRef.value.show()
+  }
+}
+
+const onFullScreenAccountConfirm = (accountName: string) => {
+  localFormData.value.account = accountName
+}
+
+const onFullScreenAccountClose = () => {
+  // 关闭回调，可以在这里处理一些状态重置
 }
 
 // 日期处理
@@ -824,23 +801,104 @@ const confirmMultiCategory = () => {
   showMultiCategorySheet.value = false
 }
 
-const onCategoryConfirm = ({ selectedValues }: { selectedValues: string[] }) => {
-  const index = currentCategoryIndex.value
-  const selectedCategory = categoryOptions.value.find(opt => opt.value === selectedValues[0])
-  
-  if (selectedCategory) {
-    // 获取当前编辑的分类数组
-    const targetCategories = isEditingMultiCategory.value ? tempCategories.value : localFormData.value.categories
-    
-    targetCategories[index].category = selectedCategory.value // 原始值用于提交
-    targetCategories[index].categoryName = selectedCategory.text // 保持兼容
-    targetCategories[index].categoryDisplayName = formatAccountNameForDisplay(selectedCategory.value) // 格式化显示值
+// 全屏分类选择器方法
+const showFullScreenCategorySelector = (index?: number) => {
+  if (index !== undefined) {
+    currentCategoryIndex.value = index
+  } else {
+    currentCategoryIndex.value = 0
   }
   
-  showCategorySelector.value = false
+  if (categorySelectorRef.value) {
+    categorySelectorRef.value.show()
+  }
 }
 
+const onFullScreenCategoryConfirm = (categoryName: string) => {
+  const index = currentCategoryIndex.value
+  
+  // 获取当前编辑的分类数组
+  const targetCategories = isEditingMultiCategory.value ? tempCategories.value : localFormData.value.categories
+  
+  targetCategories[index].category = categoryName // 原始值用于提交
+  targetCategories[index].categoryName = categoryName // 保持兼容
+  targetCategories[index].categoryDisplayName = formatAccountNameForDisplay(categoryName) // 格式化显示值
+}
 
+const onFullScreenCategoryClose = () => {
+  // 关闭回调，可以在这里处理一些状态重置
+}
+
+// 获取交易类型对应的账户类型
+const getAccountTypesForTransaction = () => {
+  switch (props.type) {
+    case 'expense':
+      return ['Assets', 'Liabilities']
+    case 'income':
+      return ['Assets', 'Liabilities']
+    case 'adjustment':
+      return ['Assets', 'Liabilities']
+    default:
+      return ['Assets', 'Liabilities', 'Income', 'Expenses']
+  }
+}
+
+// 构建分类层级数据
+const getCategoryHierarchy = () => {
+  // 根据交易类型确定分类账户类型
+  let targetAccountType = ''
+  switch (props.type) {
+    case 'expense':
+      targetAccountType = 'Expenses'
+      break
+    case 'income':
+      targetAccountType = 'Income'
+      break
+    case 'adjustment':
+      targetAccountType = 'Expenses' // 调整余额默认使用支出分类
+      break
+    default:
+      targetAccountType = 'Expenses'
+  }
+
+  // 从现有的分类选项中构建扁平数组，供新的树形结构使用
+  const flatCategories: any[] = []
+
+  console.log('TransactionForm - categoryOptions.value:', categoryOptions.value)
+  console.log('TransactionForm - targetAccountType:', targetAccountType)
+
+  categoryOptions.value.forEach(option => {
+    if (option.disabled || !option.value.startsWith(`${targetAccountType}:`)) {
+      return
+    }
+
+    console.log('TransactionForm - 处理分类选项:', option.value)
+    flatCategories.push({
+      name: option.value
+    })
+  })
+
+  console.log('TransactionForm - 构建的扁平分类数组:', flatCategories)
+  console.log('TransactionForm - 分类数量:', flatCategories.length)
+  
+  // 检查是否有多层级的数据
+  const hasMultiLevel = flatCategories.some(cat => cat.name.split(':').length > 2)
+  console.log('TransactionForm - 是否有多层级数据:', hasMultiLevel)
+  
+  return flatCategories
+}
+
+// 构建交易对象列表
+const getPayeeList = () => {
+  console.log('TransactionForm - payeeOptions.value:', payeeOptions.value)
+  
+  const payeeList = payeeOptions.value.map(option => option.value)
+  
+  console.log('TransactionForm - 构建的交易对象列表:', payeeList)
+  console.log('TransactionForm - 交易对象数量:', payeeList.length)
+  
+  return payeeList
+}
 
 const onSubmit = () => {
   // 基础信息校验
@@ -1038,31 +1096,38 @@ onMounted(() => {
   align-items: center;
   background: white;
   border-radius: 16px;
-  padding: 16px;
-  margin: 12px 16px;
-  margin-bottom: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  padding: 12px; /* 进一步减小内边距 */
+  margin: 10px 16px; /* 进一步减小上下间距 */
+  margin-bottom: 6px; /* 进一步减小底部间距 */
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
   transition: all 0.3s ease;
   cursor: pointer;
-  min-height: 64px; /* 确保足够的触摸目标大小 */
+  min-height: 50px; /* 进一步减小最小高度 */
+  position: relative;
 }
 
 .form-card:hover {
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  transform: translateY(-2px);
+}
+
+.form-card:active {
+  transform: scale(0.98);
+  transition: all 0.1s ease;
 }
 
 .card-icon {
-  width: 40px;
-  height: 40px;
+  width: 36px; /* 进一步减小图标容器 */
+  height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
   background: #f7f8fa;
-  border-radius: 12px;
-  margin-right: 16px;
+  border-radius: 10px; /* 进一步减小圆角 */
+  margin-right: 12px; /* 进一步减小右边距 */
   color: #646566;
-  font-size: 20px;
+  font-size: 16px; /* 进一步减小图标 */
+  flex-shrink: 0;
 }
 
 .card-content {
@@ -1073,13 +1138,13 @@ onMounted(() => {
 }
 
 .card-label {
-  font-size: 16px;
+  font-size: 16px; /* 适中字体大小 */
   color: #323233;
   font-weight: 500;
   flex: 1;
-  margin-right: 8px;
-  line-height: 1.4;
-  max-height: 2.8em;
+  margin-right: 10px; /* 减小右边距 */
+  line-height: 1.4; /* 减小行高 */
+  max-height: 2.8em; /* 减小最大高度 */
   overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 2;
@@ -1114,19 +1179,25 @@ onMounted(() => {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 8px 12px;
+  padding: 6px 10px; /* 进一步减小内边距 */
   background: #f7f8fa;
   border-radius: 8px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s;
+  min-height: 32px; /* 进一步减小最小高度 */
 }
 
 .currency-selector:hover {
   background: #ebedf0;
+  transform: scale(1.02);
+}
+
+.currency-selector:active {
+  transform: scale(0.98);
 }
 
 .currency-symbol {
-  font-size: 24px;
+  font-size: 20px; /* 进一步减小字体 */
   font-weight: bold;
   color: #323233;
 }
@@ -1136,10 +1207,12 @@ onMounted(() => {
 }
 
 .amount-field :deep(.van-field__control) {
-  font-size: 24px;
+  font-size: 20px; /* 进一步减小字体 */
   font-weight: bold;
   text-align: left;
   color: #323233;
+  min-height: 32px; /* 进一步减小最小高度 */
+  line-height: 1.2; /* 减小行高 */
 }
 
 .amount-field :deep(.van-field__control::placeholder) {
@@ -1155,13 +1228,24 @@ onMounted(() => {
 .multi-category-btn {
   display: flex;
   align-items: center;
-  gap: 4px;
-  padding: 6px 12px;
-  background: #f7f8fa;
-  border-radius: 8px;
-  font-size: 14px;
-  color: #646566;
+  gap: 3px; /* 进一步减小间距 */
+  padding: 5px 10px; /* 进一步减小内边距 */
+  background: rgba(238, 90, 82, 0.1);
+  border-radius: 14px; /* 进一步减小圆角 */
+  font-size: 11px; /* 进一步减小字体大小 */
+  color: #ee5a52;
   cursor: pointer;
+  min-height: 28px; /* 进一步减小最小高度 */
+  transition: all 0.2s ease;
+}
+
+.multi-category-btn:hover {
+  background: rgba(238, 90, 82, 0.15);
+  transform: scale(1.02);
+}
+
+.multi-category-btn:active {
+  transform: scale(0.98);
 }
 
 /* 多类别面板样式 */
@@ -1295,38 +1379,7 @@ onMounted(() => {
   border-color: #b7eb8f;
 }
 
-/* 收款人输入弹窗样式 */
-.payee-input-popup {
-  background: white;
-  border-radius: 16px 16px 0 0;
-  max-height: 70vh;
-  overflow: hidden;
-  position: relative;
-  z-index: 2002;
-}
 
-.popup-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 16px;
-  border-bottom: 1px solid #ebedf0;
-}
-
-.popup-title {
-  font-size: 16px;
-  font-weight: 500;
-  color: #323233;
-}
-
-.payee-input-section {
-  padding: 16px;
-}
-
-.payee-history {
-  max-height: 300px;
-  overflow-y: auto;
-}
 
 .history-title {
   padding: 16px;
@@ -1352,47 +1405,106 @@ onMounted(() => {
 
 /* 使用标准 van-cell-group 样式 */
 :deep(.van-cell-group--inset) {
-  margin: 12px 16px;
-  border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  margin: 12px 16px; /* 减小上下间距 */
+  border-radius: 16px;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
+}
+
+:deep(.van-cell) {
+  min-height: 46px; /* 减小单元格最小高度 */
+  padding: 10px 16px; /* 减小内边距 */
+}
+
+:deep(.van-field__label) {
+  font-size: 16px; /* 增大标签字体 */
+  font-weight: 600; /* 增加字体粗细，与其他标签保持一致 */
+}
+
+/* 专门为日期单元格添加样式 */
+:deep(.van-cell__title) {
+  font-weight: 600; /* 为日期标题添加加粗 */
+}
+
+/* 为交易状态标题添加样式 */
+:deep(.van-cell__title) {
+  font-weight: 600; /* 确保所有cell标题都加粗 */
+}
+
+:deep(.van-field__control) {
+  font-size: 16px; /* 增大输入框字体 */
 }
 
 :deep(.van-button--mini) {
-  min-width: 60px;
-  height: 32px; /* 增加按钮高度以便触摸 */
-  font-size: 12px;
+  min-width: 65px; /* 减小最小宽度 */
+  height: 34px; /* 减小按钮高度 */
+  font-size: 12px; /* 减小字体 */
+  border-radius: 18px; /* 减小圆角 */
 }
 
 /* 移动端响应式优化 */
 @media (max-width: 375px) {
   .form-card {
-    margin: 8px 12px;
-    padding: 12px;
+    margin: 10px 12px; /* 减小间距 */
+    padding: 14px; /* 减小内边距 */
+    min-height: 56px; /* 减小最小高度 */
+  }
+  
+  .card-icon {
+    width: 38px; /* 减小图标 */
+    height: 38px;
+    margin-right: 12px; /* 减小右边距 */
+    font-size: 16px;
   }
   
   .card-label {
-    font-size: 14px;
+    font-size: 15px; /* 减小字体 */
   }
   
   .currency-symbol {
-    font-size: 20px;
+    font-size: 20px; /* 减小字体 */
   }
   
   .amount-field :deep(.van-field__control) {
-    font-size: 20px;
+    font-size: 20px; /* 减小字体 */
+    min-height: 32px;
+  }
+  
+  :deep(.van-cell) {
+    min-height: 42px; /* 减小单元格高度 */
+    padding: 8px 16px; /* 减小内边距 */
   }
 }
 
 @media (max-width: 320px) {
   .form-card {
-    margin: 6px 8px;
-    padding: 10px;
+    margin: 8px 10px; /* 减小间距 */
+    padding: 12px; /* 减小内边距 */
+    min-height: 52px; /* 减小最小高度 */
   }
   
   .card-icon {
-    width: 36px;
+    width: 36px; /* 减小图标 */
     height: 36px;
     margin-right: 12px;
+    font-size: 14px;
+  }
+  
+  .card-label {
+    font-size: 14px; /* 减小字体 */
+  }
+  
+  .currency-symbol {
+    font-size: 18px; /* 减小字体 */
+  }
+  
+  .amount-field :deep(.van-field__control) {
+    font-size: 18px; /* 减小字体 */
+    min-height: 30px;
+  }
+  
+  :deep(.van-cell) {
+    min-height: 40px; /* 减小单元格高度 */
+    padding: 6px 16px; /* 减小内边距 */
   }
 }
 </style>
