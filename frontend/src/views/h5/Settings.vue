@@ -14,18 +14,6 @@
       </van-cell>
 
       <van-cell
-        title="文件管理"
-        icon="folder-o"
-        is-link
-        @click="navigateTo('/h5/files')"
-        :border="false"
-      >
-        <template #label>
-          <span class="cell-desc">导入导出账本文件</span>
-        </template>
-      </van-cell>
-
-      <van-cell
         title="账户管理"
         icon="manager-o"
         is-link
@@ -34,6 +22,18 @@
       >
         <template #label>
           <span class="cell-desc">管理收支账户信息</span>
+        </template>
+      </van-cell>
+
+      <van-cell
+        title="文件管理"
+        icon="balance-list-o"
+        is-link
+        @click="navigateTo('/h5/files')"
+        :border="false"
+      >
+        <template #label>
+          <span class="cell-desc">查看和验证账本文件</span>
         </template>
       </van-cell>
     </van-cell-group>
