@@ -286,6 +286,7 @@
       theme="custom"
       :extra-key="['.', '-']"
       close-button-text="完成"
+      @blur="hideAmountKeyboard"
       @input="onKeyboardInput"
       @delete="onKeyboardDelete"
       @close="hideAmountKeyboard"
