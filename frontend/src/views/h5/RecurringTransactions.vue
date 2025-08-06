@@ -4,6 +4,14 @@
     <van-sticky>
       <div class="header-actions">
         <van-button
+          type="success"
+          size="small"
+          icon="plus"
+          @click="addRecurring"
+        >
+          新建周期记账
+        </van-button>
+        <van-button
           type="primary"
           size="small"
           @click="executeNow"
@@ -64,11 +72,23 @@
         <!-- 空状态 -->
         <van-empty
           v-if="!loading && recurringList.length === 0"
-          description="暂无周期记账"
+          description="暂无周期记账数据"
           image="search"
         >
-          <van-button type="primary" size="small" @click="addRecurring">
-            创建周期记账
+          <template #description>
+            <div class="empty-description">
+              <p>您还没有创建任何周期记账</p>
+              <p>周期记账可以帮您自动处理重复的交易</p>
+            </div>
+          </template>
+          <van-button
+            type="primary"
+            size="normal"
+            round
+            @click="addRecurring"
+            icon="plus"
+          >
+            创建第一个周期记账
           </van-button>
         </van-empty>
 
@@ -636,8 +656,15 @@ onMounted(() => {
   background-color: white;
   padding: 12px 16px;
   display: flex;
-  gap: 12px;
+  gap: 8px;
   border-bottom: 1px solid #ebedf0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.header-actions::-webkit-scrollbar {
+  display: none;
 }
 
 .filter-section {
@@ -733,6 +760,18 @@ onMounted(() => {
   font-size: 16px;
   font-weight: 500;
   color: #323233;
+}
+
+/* 空状态样式 */
+.empty-description {
+  margin: 8px 0 24px 0;
+}
+
+.empty-description p {
+  margin: 4px 0;
+  color: #969799;
+  font-size: 14px;
+  line-height: 20px;
 }
 
 /* 浮动按钮样式修复 */
