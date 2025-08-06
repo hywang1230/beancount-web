@@ -54,7 +54,11 @@
     </div>
 
     <!-- 操作按钮 -->
-    <div class="action-buttons" v-show="!keyboardVisible">
+    <div
+      class="action-buttons"
+      :class="{ 'keyboard-visible': keyboardVisible }"
+      v-show="!keyboardVisible"
+    >
       <van-button
         type="primary"
         size="large"
@@ -636,6 +640,12 @@ const loadTransactionData = async () => {
   border-top: 1px solid #ebedf0;
   z-index: 998; /* 确保在内容之上，但在导航栏之下 */
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15); /* 增强阴影效果 */
+  transition: bottom 0.3s ease; /* 添加过渡动画 */
+}
+
+/* 键盘弹出时调整操作按钮位置 */
+.action-buttons.keyboard-visible {
+  bottom: 0; /* 键盘弹出时贴底显示 */
 }
 
 .action-buttons :deep(.van-button--large) {

@@ -297,6 +297,7 @@
 <script setup lang="ts">
 import { getAccountsByType } from "@/api/accounts";
 import { getPayees } from "@/api/transactions";
+import { useKeyboard } from "@/utils/useKeyboard";
 import { showToast } from "vant";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import FullScreenSelector from "./FullScreenSelector.vue";
@@ -331,6 +332,9 @@ interface Emits {
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
+
+// 使用键盘管理工具
+const { isKeyboardVisible } = useKeyboard();
 
 const localFormData = ref({
   ...props.formData,
@@ -869,6 +873,11 @@ const hideAmountKeyboard = () => {
   showAmountKeyboardVisible.value = false;
   emit("keyboard-visible", false);
 };
+
+// 监听全局键盘状态变化
+watch(isKeyboardVisible, (visible) => {
+  emit("keyboard-visible", visible);
+});
 
 const onKeyboardInput = (key: string | number) => {
   console.log("键盘输入:", key, "类型:", typeof key);
