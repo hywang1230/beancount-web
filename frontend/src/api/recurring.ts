@@ -6,7 +6,7 @@ export interface RecurringTransaction {
   description?: string;
   recurrence_type: "daily" | "weekly" | "weekdays" | "monthly";
   start_date: string;
-  end_date?: string;
+  end_date?: string | null;
   weekly_days?: number[];
   monthly_days?: number[];
   flag: string;
@@ -31,7 +31,7 @@ export interface RecurringTransactionCreate {
   description?: string;
   recurrence_type: "daily" | "weekly" | "weekdays" | "monthly";
   start_date: string;
-  end_date?: string;
+  end_date?: string | null;
   weekly_days?: number[];
   monthly_days?: number[];
   flag?: string;
@@ -52,7 +52,7 @@ export interface RecurringTransactionUpdate {
   description?: string;
   recurrence_type?: "daily" | "weekly" | "weekdays" | "monthly";
   start_date?: string;
-  end_date?: string;
+  end_date?: string | null;
   weekly_days?: number[];
   monthly_days?: number[];
   flag?: string;

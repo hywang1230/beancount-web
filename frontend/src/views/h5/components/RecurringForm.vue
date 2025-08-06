@@ -23,7 +23,7 @@
           name="narration"
           label="摘要"
           placeholder="请输入交易摘要"
-          :rules="[{ required: true, message: '请输入摘要' }]"
+          :rules="[{ required: false, message: '请输入摘要' }]"
         />
       </van-cell-group>
 
@@ -589,11 +589,6 @@ const validateForm = () => {
     return false;
   }
 
-  if (!form.value.narration?.trim()) {
-    showToast("请输入交易摘要");
-    return false;
-  }
-
   if (!form.value.start_date) {
     showToast("请选择开始日期");
     return false;
@@ -663,6 +658,7 @@ const onSubmit = async () => {
 
     const dataToSend = {
       ...form.value,
+      end_date: form.value.end_date || null, // 空字符串转为null，避免422错误
       postings: form.value.postings.map((p) => ({
         account: p.account,
         amount: parseFloat(p.amount?.toString() || "0") || 0,
