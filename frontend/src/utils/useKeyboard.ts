@@ -101,15 +101,3 @@ export function useKeyboard() {
     initialViewportHeight,
   };
 }
-
-// 声明 visualViewport 类型（如果 TypeScript 不识别）
-declare global {
-  interface Window {
-    visualViewport?: {
-      height: number;
-      width: number;
-      addEventListener: (event: string, callback: () => void) => void;
-      removeEventListener: (event: string, callback: () => void) => void;
-    };
-  }
-}
