@@ -1,38 +1,29 @@
 import { defineStore } from "pinia";
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
+
+export type ThemeSetting = "light" | "dark" | "system";
 
 export const useThemeStore = defineStore("theme", () => {
-  // 主题状态：'light' | 'dark'
-  const theme = ref<"light" | "dark">("light");
+  // 用户的主题设置：'light' | 'dark' | 'system'
+  const themeSetting = ref<ThemeSetting>("system");
+
+  // 当前应用的实际主题：'light' | 'dark'
+  const currentTheme = ref<"light" | "dark">("light");
 
   // 是否是暗黑模式
-  const isDark = computed(() => theme.value === "dark");
+  const isDark = computed(() => currentTheme.value === "dark");
 
-  // 从本地存储加载主题设置
-  const loadTheme = () => {
-    const savedTheme = localStorage.getItem("beancount-theme");
-    if (savedTheme && (savedTheme === "light" || savedTheme === "dark")) {
-      theme.value = savedTheme;
+  // 更新当前主题
+  const updateTheme = () => {
+    let newTheme: "light" | "dark";
+    if (themeSetting.value === "system") {
+      newTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
+        ? "dark"
+        : "light";
     } else {
-      // 检查系统偏好
-      const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)"
-      ).matches;
-      theme.value = prefersDark ? "dark" : "light";
+      newTheme = themeSetting.value;
     }
-    applyTheme();
-  };
-
-  // 设置主题
-  const setTheme = (newTheme: "light" | "dark") => {
-    theme.value = newTheme;
-    localStorage.setItem("beancount-theme", newTheme);
-    applyTheme();
-  };
-
-  // 切换主题
-  const toggleTheme = () => {
-    setTheme(theme.value === "light" ? "dark" : "light");
+    currentTheme.value = newTheme;
   };
 
   // 应用主题到文档
@@ -43,10 +34,10 @@ export const useThemeStore = defineStore("theme", () => {
     html.classList.remove("light-theme", "dark-theme");
 
     // 添加新的主题类
-    html.classList.add(`${theme.value}-theme`);
+    html.classList.add(`${currentTheme.value}-theme`);
 
     // 设置主题属性，供CSS变量使用
-    html.setAttribute("data-theme", theme.value);
+    html.setAttribute("data-theme", currentTheme.value);
 
     // 为移动端（H5）特别设置
     if (window.innerWidth <= 768) {
@@ -54,25 +45,45 @@ export const useThemeStore = defineStore("theme", () => {
     }
   };
 
+  // 从本地存储加载主题设置
+  const loadThemeSetting = () => {
+    const savedThemeSetting = localStorage.getItem(
+      "beancount-theme-setting"
+    ) as ThemeSetting | null;
+    if (savedThemeSetting) {
+      themeSetting.value = savedThemeSetting;
+    }
+    updateTheme();
+    applyTheme();
+  };
+
+  // 设置用户的主题偏好
+  const setThemeSetting = (newSetting: ThemeSetting) => {
+    themeSetting.value = newSetting;
+    localStorage.setItem("beancount-theme-setting", newSetting);
+    updateTheme();
+    // applyTheme 会在 currentTheme 变化时自动调用
+  };
+
   // 监听系统主题变化
   const initSystemThemeListener = () => {
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
-    mediaQuery.addEventListener("change", (e) => {
-      // 只有在用户没有手动设置主题时才跟随系统
-      const savedTheme = localStorage.getItem("beancount-theme");
-      if (!savedTheme) {
-        setTheme(e.matches ? "dark" : "light");
+    mediaQuery.addEventListener("change", () => {
+      if (themeSetting.value === "system") {
+        updateTheme();
       }
     });
   };
 
+  // 监听 currentTheme 的变化并应用
+  watch(currentTheme, applyTheme);
+
   return {
-    theme,
+    themeSetting,
+    currentTheme,
     isDark,
-    loadTheme,
-    setTheme,
-    toggleTheme,
-    applyTheme,
+    loadThemeSetting,
+    setThemeSetting,
     initSystemThemeListener,
   };
 });
