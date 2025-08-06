@@ -560,12 +560,12 @@ const buildTreeFromAccounts = (accountList: Account[]) => {
   // 构建层级关系和可见性
   const allNodes = Array.from(nodeMap.values());
 
-  // 默认展开所有父节点
-  allNodes.forEach((node) => {
-    if (node.hasChildren) {
-      expandedNodes.value.add(node.path);
-    }
-  });
+  // 默认折叠所有父节点，不再自动展开
+  // allNodes.forEach((node) => {
+  //   if (node.hasChildren) {
+  //     expandedNodes.value.add(node.path);
+  //   }
+  // });
 
   // 第二级作为根节点（level = 0）默认可见
   allNodes.forEach((node) => {
@@ -675,12 +675,12 @@ const buildTreeFromCategories = (categoryList: Category[]) => {
   const allNodes = Array.from(nodeMap.values());
   console.log("buildTreeFromCategories - 所有节点:", allNodes);
 
-  // 默认展开所有父节点
-  allNodes.forEach((node) => {
-    if (node.hasChildren) {
-      expandedNodes.value.add(node.path);
-    }
-  });
+  // 默认折叠所有父节点，不再自动展开
+  // allNodes.forEach((node) => {
+  //   if (node.hasChildren) {
+  //     expandedNodes.value.add(node.path);
+  //   }
+  // });
 
   // 第二级作为根节点（level = 0）默认可见
   allNodes.forEach((node) => {
