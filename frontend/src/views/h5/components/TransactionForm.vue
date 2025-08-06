@@ -308,7 +308,6 @@
 <script setup lang="ts">
 import { getAccountsByType } from "@/api/accounts";
 import { getPayees } from "@/api/transactions";
-import { useKeyboard } from "@/utils/useKeyboard";
 import { showToast } from "vant";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import FullScreenSelector from "./FullScreenSelector.vue";
@@ -338,14 +337,10 @@ interface Props {
 interface Emits {
   (e: "update", data: any): void;
   (e: "submit", data: any): void;
-  (e: "keyboard-visible", visible: boolean): void;
 }
 
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
-
-// 使用键盘管理工具
-const { isKeyboardVisible } = useKeyboard();
 
 const localFormData = ref({
   ...props.formData,
@@ -877,33 +872,21 @@ const onAmountInput = (value: string | number) => {
 // 数字键盘相关方法
 const showAmountKeyboard = () => {
   showAmountKeyboardVisible.value = true;
-  emit("keyboard-visible", true);
 };
 
 const hideAmountKeyboard = () => {
   showAmountKeyboardVisible.value = false;
-  emit("keyboard-visible", false);
 };
 
 // Vant数字键盘显示事件
 const onNumberKeyboardShow = () => {
   console.log("Vant数字键盘显示");
-  emit("keyboard-visible", true);
 };
 
 // Vant数字键盘隐藏事件
 const onNumberKeyboardHide = () => {
   console.log("Vant数字键盘隐藏");
-  emit("keyboard-visible", false);
 };
-
-// 监听全局键盘状态变化（但优先使用Vant的事件）
-watch(isKeyboardVisible, (visible) => {
-  // 只有在数字键盘没有显示时才响应全局键盘检测
-  if (!showAmountKeyboardVisible.value) {
-    emit("keyboard-visible", visible);
-  }
-});
 
 const onKeyboardInput = (key: string | number) => {
   console.log("键盘输入:", key, "类型:", typeof key);

@@ -24,7 +24,6 @@
           :form-data="formData"
           @update="updateFormData"
           @submit="onSubmit"
-          @keyboard-visible="handleKeyboardVisible"
         />
       </div>
       <div v-else-if="activeTab === 'income'" class="tab-content">
@@ -34,7 +33,6 @@
           :form-data="formData"
           @update="updateFormData"
           @submit="onSubmit"
-          @keyboard-visible="handleKeyboardVisible"
         />
       </div>
       <div v-else-if="activeTab === 'transfer'" class="tab-content">
@@ -52,17 +50,12 @@
           :form-data="formData"
           @update="updateFormData"
           @submit="onSubmit"
-          @keyboard-visible="handleKeyboardVisible"
         />
       </div>
     </div>
 
     <!-- 操作按钮 -->
-    <div
-      class="action-buttons"
-      :class="{ 'keyboard-visible': keyboardVisible }"
-      v-show="!keyboardVisible"
-    >
+    <div class="action-buttons">
       <van-button
         type="primary"
         size="large"
@@ -91,7 +84,7 @@ const router = useRouter();
 const route = useRoute();
 
 const activeTab = ref("expense");
-const keyboardVisible = ref(false);
+
 const formKey = ref(0); // 用于强制重新渲染表单组件
 
 // 标签列表
@@ -158,10 +151,6 @@ const handleSave = async () => {
 
 const updateFormData = (data: any) => {
   formData.value = { ...formData.value, ...data };
-};
-
-const handleKeyboardVisible = (visible: boolean) => {
-  keyboardVisible.value = visible;
 };
 
 const updateTransferFormData = (data: any) => {
@@ -658,11 +647,6 @@ const loadTransactionData = async () => {
   z-index: 998; /* 确保在内容之上，但在导航栏之下 */
   box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.15); /* 增强阴影效果 */
   transition: bottom 0.3s ease; /* 添加过渡动画 */
-}
-
-/* 键盘弹出时调整操作按钮位置 */
-.action-buttons.keyboard-visible {
-  bottom: 0; /* 键盘弹出时贴底显示 */
 }
 
 .action-buttons :deep(.van-button--large) {
