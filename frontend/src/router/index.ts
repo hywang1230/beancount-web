@@ -101,6 +101,15 @@ const routes: RouteRecordRaw[] = [
         meta: { title: "报表分析", platform: "h5" },
       },
       {
+        path: "accounts/journal/:accountName",
+        name: "AccountJournal",
+        component: () => import("@/views/h5/AccountJournal.vue"),
+        meta: {
+          title: (route: any) => `${route.params.accountName}`,
+          platform: "h5",
+        },
+      },
+      {
         path: "accounts",
         name: "H5Accounts",
         component: () => import("@/views/h5/Accounts.vue"),

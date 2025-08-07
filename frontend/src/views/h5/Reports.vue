@@ -55,7 +55,14 @@
                           <div
                             v-for="subAccount in account.subAccounts"
                             :key="subAccount.fullName"
-                            class="sub-account-item"
+                            class="sub-account-item clickable-item"
+                            @click="
+                              goToAccountJournal(
+                                subAccount.fullName,
+                                getYearStartDateFor(asOfDate),
+                                asOfDate
+                              )
+                            "
                           >
                             <span class="account-name">{{
                               subAccount.name
@@ -69,7 +76,17 @@
                     </van-collapse>
                   </div>
                   <!-- 普通账户直接显示 -->
-                  <div v-else class="account-item">
+                  <div
+                    v-else
+                    class="account-item clickable-item"
+                    @click="
+                      goToAccountJournal(
+                        account.fullName,
+                        getYearStartDateFor(asOfDate),
+                        asOfDate
+                      )
+                    "
+                  >
                     <span class="account-name">{{ account.name }}</span>
                     <span class="account-amount">{{
                       formatCurrency(account.balance)
@@ -114,7 +131,14 @@
                           <div
                             v-for="subAccount in account.subAccounts"
                             :key="subAccount.fullName"
-                            class="sub-account-item"
+                            class="sub-account-item clickable-item"
+                            @click="
+                              goToAccountJournal(
+                                subAccount.fullName,
+                                getYearStartDateFor(asOfDate),
+                                asOfDate
+                              )
+                            "
                           >
                             <span class="account-name">{{
                               subAccount.name
@@ -128,7 +152,17 @@
                     </van-collapse>
                   </div>
                   <!-- 普通账户直接显示 -->
-                  <div v-else class="account-item">
+                  <div
+                    v-else
+                    class="account-item clickable-item"
+                    @click="
+                      goToAccountJournal(
+                        account.fullName,
+                        getYearStartDateFor(asOfDate),
+                        asOfDate
+                      )
+                    "
+                  >
                     <span class="account-name">{{
                       formatAccountName(account.name)
                     }}</span>
@@ -175,7 +209,14 @@
                           <div
                             v-for="subAccount in account.subAccounts"
                             :key="subAccount.fullName"
-                            class="sub-account-item"
+                            class="sub-account-item clickable-item"
+                            @click="
+                              goToAccountJournal(
+                                subAccount.fullName,
+                                getYearStartDateFor(asOfDate),
+                                asOfDate
+                              )
+                            "
                           >
                             <span class="account-name">{{
                               subAccount.name
@@ -189,7 +230,17 @@
                     </van-collapse>
                   </div>
                   <!-- 普通账户直接显示 -->
-                  <div v-else class="account-item">
+                  <div
+                    v-else
+                    class="account-item clickable-item"
+                    @click="
+                      goToAccountJournal(
+                        account.fullName,
+                        getYearStartDateFor(asOfDate),
+                        asOfDate
+                      )
+                    "
+                  >
                     <span class="account-name">{{ account.name }}</span>
                     <span class="account-amount">{{
                       formatCurrency(account.balance)
@@ -239,7 +290,10 @@
                 <div
                   v-for="account in category.accounts"
                   :key="account.name"
-                  class="account-item"
+                  class="account-item clickable-item"
+                  @click="
+                    goToAccountJournal(account.fullName, startDate, endDate)
+                  "
                 >
                   <span class="account-name">{{
                     formatAccountName(account.name)
@@ -273,7 +327,10 @@
                 <div
                   v-for="account in category.accounts"
                   :key="account.name"
-                  class="account-item"
+                  class="account-item clickable-item"
+                  @click="
+                    goToAccountJournal(account.fullName, startDate, endDate)
+                  "
                 >
                   <span class="account-name">{{
                     formatAccountName(account.name)
@@ -442,6 +499,14 @@
             :title="formatAccountName(account.name.replace('Income:', ''))"
             :value="formatCurrency(Math.abs(account.balance))"
             value-class="positive"
+            is-link
+            @click="
+              goToAccountJournal(
+                account.name,
+                getMonthDateRange(selectedYear, selectedMonth).start,
+                getMonthDateRange(selectedYear, selectedMonth).end
+              )
+            "
           />
         </van-cell-group>
 
@@ -452,6 +517,14 @@
             :title="formatAccountName(account.name.replace('Expenses:', ''))"
             :value="formatCurrency(Math.abs(account.balance))"
             value-class="negative"
+            is-link
+            @click="
+              goToAccountJournal(
+                account.name,
+                getMonthDateRange(selectedYear, selectedMonth).start,
+                getMonthDateRange(selectedYear, selectedMonth).end
+              )
+            "
           />
         </van-cell-group>
       </div>
@@ -533,6 +606,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import { showToast } from "vant";
 import { computed, onMounted, ref, watch } from "vue";
 import VChart from "vue-echarts";
+import { useRouter } from "vue-router";
 
 import {
   getBalanceSheet,
@@ -541,6 +615,9 @@ import {
   getTrends,
   getYearToDateSummary,
 } from "@/api/reports";
+
+// 路由
+const router = useRouter();
 
 // 主题 store
 const themeStore = useThemeStore();
@@ -677,6 +754,39 @@ const formatAccountName = (accountName: string) => {
 // 格式化分类名称
 const formatCategoryName = (categoryName: string) => {
   return formatAccountName(categoryName);
+};
+
+// 获取给定日期所在年份的第一天
+const getYearStartDateFor = (dateStr: string) => {
+  const date = new Date(dateStr);
+  const year = date.getFullYear();
+  return new Date(year, 0, 1).toLocaleDateString("en-CA");
+};
+
+// 获取指定年月的开始和结束日期
+const getMonthDateRange = (year: number, month: number) => {
+  const startDate = new Date(year, month - 1, 1);
+  const endDate = new Date(year, month, 0);
+  return {
+    start: startDate.toLocaleDateString("en-CA"),
+    end: endDate.toLocaleDateString("en-CA"),
+  };
+};
+
+// 跳转到账户日记账页面
+const goToAccountJournal = (accountName: string, from: string, to: string) => {
+  if (from && to) {
+    router.push({
+      name: "AccountJournal",
+      params: { accountName: accountName },
+      query: { from, to },
+    });
+  } else {
+    router.push({
+      name: "AccountJournal",
+      params: { accountName: accountName },
+    });
+  }
 };
 
 // 分组账户数据
@@ -1173,6 +1283,14 @@ onMounted(() => {
 
 .account-item:last-child {
   border-bottom: none;
+}
+
+.clickable-item {
+  cursor: pointer;
+}
+
+.clickable-item:hover {
+  background-color: var(--bg-color-tertiary);
 }
 
 .account-name {

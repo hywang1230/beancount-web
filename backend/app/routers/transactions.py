@@ -102,6 +102,27 @@ async def get_payees():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取收付方列表失败: {str(e)}")
 
+
+@router.get("/account-journal", response_model=List[TransactionResponse])
+async def get_account_journal(
+    account: str = Query(..., description="账户名称"),
+    start_date: Optional[date] = Query(None, description="开始日期"),
+    end_date: Optional[date] = Query(None, description="结束日期"),
+):
+    """获取指定账户在时间范围内的所有交易记录（日记账）"""
+    try:
+        filter_params = TransactionFilter(
+            account=account,
+            start_date=start_date,
+            end_date=end_date,
+        )
+        transactions = beancount_service.get_transactions(filter_params)
+        return transactions
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取账户日记账失败: {str(e)}")
+
+
+
 @router.get("/recent", response_model=List[TransactionResponse])
 async def get_recent_transactions(days: int = Query(30, description="最近天数", ge=1, le=365)):
     """获取最近的交易"""

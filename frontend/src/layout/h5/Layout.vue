@@ -103,6 +103,14 @@ watch(
 );
 
 const currentPageTitle = computed(() => {
+  // 优先从路由元信息获取标题
+  if (route.meta && route.meta.title) {
+    if (typeof route.meta.title === "function") {
+      return route.meta.title(route);
+    }
+    return route.meta.title as string;
+  }
+
   const currentItem = allMenuItems.find((item) => item.path === route.path);
   if (currentItem) {
     return currentItem.title;
@@ -111,6 +119,10 @@ const currentPageTitle = computed(() => {
   // 处理动态路由
   if (route.path.startsWith("/h5/transactions/")) {
     return "交易详情";
+  }
+
+  if (route.path.startsWith("/h5/accounts/journal/")) {
+    return `账户: ${route.params.accountName}`;
   }
 
   if (route.path.startsWith("/h5/recurring/")) {
