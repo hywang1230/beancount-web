@@ -1,7 +1,7 @@
 <template>
   <div class="page-container">
     <h1 class="page-title">新增交易</h1>
-    
+
     <el-card>
       <el-form
         ref="formRef"
@@ -23,7 +23,7 @@
               />
             </el-form-item>
           </el-col>
-          
+
           <el-col :span="isMobile ? 24 : 12">
             <el-form-item label="标记" prop="flag">
               <el-select v-model="transactionForm.flag" style="width: 100%">
@@ -33,21 +33,27 @@
             </el-form-item>
           </el-col>
         </el-row>
-        
+
         <el-row :gutter="isMobile ? 0 : 20">
           <el-col :span="isMobile ? 24 : 12">
             <el-form-item label="收付方">
-              <PayeeSelector v-model="transactionForm.payee" placeholder="选择或输入收付方" />
+              <PayeeSelector
+                v-model="transactionForm.payee"
+                placeholder="选择或输入收付方"
+              />
             </el-form-item>
           </el-col>
-          
+
           <el-col :span="isMobile ? 24 : 12">
             <el-form-item label="摘要">
-              <el-input v-model="transactionForm.narration" placeholder="请输入摘要" />
+              <el-input
+                v-model="transactionForm.narration"
+                placeholder="请输入摘要"
+              />
             </el-form-item>
           </el-col>
         </el-row>
-        
+
         <!-- 分录列表 -->
         <el-form-item label="分录明细">
           <div class="posting-tips">
@@ -60,7 +66,7 @@
             />
           </div>
           <div class="postings-container">
-            <div 
+            <div
               v-for="(posting, index) in transactionForm.postings"
               :key="index"
               class="posting-row"
@@ -81,24 +87,37 @@
                     @change="onAccountChange(index)"
                   />
                 </el-col>
-                
+
                 <el-col :span="isMobile ? 24 : 5">
                   <el-form-item v-if="isMobile" label="金额" :label-width="60">
                     <el-input
                       v-model="posting.amount"
                       placeholder="金额或公式 (如: 1+2+3, 可为空)"
-                      :class="{ 
-                        'negative-amount': posting.computedAmount && posting.computedAmount < 0,
+                      :class="{
+                        'negative-amount':
+                          posting.computedAmount && posting.computedAmount < 0,
                         'formula-input': isFormula(posting.amount),
-                        'empty-amount': !posting.amount || posting.amount.trim() === '',
-                        'invalid-amount': posting.amount && posting.amount.trim() !== '' && posting.computedAmount === undefined
+                        'empty-amount':
+                          !posting.amount || posting.amount.trim() === '',
+                        'invalid-amount':
+                          posting.amount &&
+                          posting.amount.trim() !== '' &&
+                          posting.computedAmount === undefined,
                       }"
                       @input="(value: string) => onAmountInput(posting, value)"
                       @blur="onAmountBlur(posting)"
                       @keydown="onAmountKeydown(posting, $event)"
                     >
-                      <template #suffix v-if="posting.computedAmount !== undefined && posting.amount !== posting.computedAmount.toString()">
-                        <span class="computed-result">= {{ posting.computedAmount.toFixed(2) }}</span>
+                      <template
+                        #suffix
+                        v-if="
+                          posting.computedAmount !== undefined &&
+                          posting.amount !== posting.computedAmount.toString()
+                        "
+                      >
+                        <span class="computed-result"
+                          >= {{ posting.computedAmount.toFixed(2) }}</span
+                        >
                       </template>
                     </el-input>
                   </el-form-item>
@@ -106,22 +125,35 @@
                     v-else
                     v-model="posting.amount"
                     placeholder="金额或公式 (如: 1+2+3, 可为空)"
-                    :class="{ 
-                      'negative-amount': posting.computedAmount && posting.computedAmount < 0,
+                    :class="{
+                      'negative-amount':
+                        posting.computedAmount && posting.computedAmount < 0,
                       'formula-input': isFormula(posting.amount),
-                      'empty-amount': !posting.amount || posting.amount.trim() === '',
-                      'invalid-amount': posting.amount && posting.amount.trim() !== '' && posting.computedAmount === undefined
+                      'empty-amount':
+                        !posting.amount || posting.amount.trim() === '',
+                      'invalid-amount':
+                        posting.amount &&
+                        posting.amount.trim() !== '' &&
+                        posting.computedAmount === undefined,
                     }"
                     @input="(value: string) => onAmountInput(posting, value)"
                     @blur="onAmountBlur(posting)"
                     @keydown="onAmountKeydown(posting, $event)"
                   >
-                    <template #suffix v-if="posting.computedAmount !== undefined && posting.amount !== posting.computedAmount.toString()">
-                      <span class="computed-result">= {{ posting.computedAmount.toFixed(2) }}</span>
+                    <template
+                      #suffix
+                      v-if="
+                        posting.computedAmount !== undefined &&
+                        posting.amount !== posting.computedAmount.toString()
+                      "
+                    >
+                      <span class="computed-result"
+                        >= {{ posting.computedAmount.toFixed(2) }}</span
+                      >
                     </template>
                   </el-input>
                 </el-col>
-                
+
                 <el-col :span="isMobile ? 12 : 3">
                   <el-form-item v-if="isMobile" label="币种" :label-width="60">
                     <el-select v-model="posting.currency" style="width: 100%">
@@ -129,12 +161,16 @@
                       <el-option label="USD" value="USD" />
                     </el-select>
                   </el-form-item>
-                  <el-select v-else v-model="posting.currency" style="width: 100%">
+                  <el-select
+                    v-else
+                    v-model="posting.currency"
+                    style="width: 100%"
+                  >
                     <el-option label="CNY" value="CNY" />
                     <el-option label="USD" value="USD" />
                   </el-select>
                 </el-col>
-                
+
                 <el-col :span="isMobile ? 12 : 2">
                   <el-button
                     type="danger"
@@ -148,14 +184,14 @@
                 </el-col>
               </el-row>
             </div>
-            
+
             <el-button type="primary" plain @click="addPosting">
               <el-icon><Plus /></el-icon>
               添加分录
             </el-button>
           </div>
         </el-form-item>
-        
+
         <!-- 标签 -->
         <el-form-item label="标签">
           <el-tag
@@ -166,7 +202,7 @@
           >
             {{ tag }}
           </el-tag>
-          
+
           <el-input
             v-if="tagInputVisible"
             v-model="tagInputValue"
@@ -176,19 +212,19 @@
             @keyup.enter="addTag"
             @blur="addTag"
           />
-          
-          <el-button
-            v-else
-            size="small"
-            @click="showTagInput"
-          >
+
+          <el-button v-else size="small" @click="showTagInput">
             + 新标签
           </el-button>
         </el-form-item>
-        
+
         <!-- 提交按钮 -->
         <el-form-item>
-          <el-button type="primary" @click="submitTransaction" :loading="submitting">
+          <el-button
+            type="primary"
+            @click="submitTransaction"
+            :loading="submitting"
+          >
             保存交易
           </el-button>
           <el-button @click="resetForm">重置</el-button>
@@ -200,310 +236,371 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, nextTick, onMounted, onUnmounted } from 'vue'
-import { ElMessage } from 'element-plus'
-import { Plus } from '@element-plus/icons-vue'
-import AccountSelector from '@/components/AccountSelector.vue'
-import PayeeSelector from '@/components/PayeeSelector.vue'
-import { createTransaction } from '@/api/transactions'
+import { createTransaction, validateTransaction } from "@/api/transactions";
+import AccountSelector from "@/components/AccountSelector.vue";
+import PayeeSelector from "@/components/PayeeSelector.vue";
+import { Plus } from "@element-plus/icons-vue";
+import { ElMessage } from "element-plus";
+import { nextTick, onMounted, onUnmounted, reactive, ref } from "vue";
 
-const formRef = ref()
-const tagInputRef = ref()
-const submitting = ref(false)
-const tagInputVisible = ref(false)
-const tagInputValue = ref('')
-const isMobile = ref(false)
+const formRef = ref();
+const tagInputRef = ref();
+const submitting = ref(false);
+const tagInputVisible = ref(false);
+const tagInputValue = ref("");
+const isMobile = ref(false);
 
 interface Posting {
-  account: string
-  amount: string
-  currency: string
-  computedAmount?: number
+  account: string;
+  amount: string;
+  currency: string;
+  computedAmount?: number;
 }
 
 const transactionForm = reactive({
-  date: new Date().toLocaleDateString('en-CA'),
-  flag: '*',
-  payee: '',
-  narration: '',
+  date: new Date().toLocaleDateString("en-CA"),
+  flag: "*",
+  payee: "",
+  narration: "",
   tags: [] as string[],
   postings: [
-    { account: '', amount: '', currency: 'CNY', computedAmount: undefined } as Posting,
-    { account: '', amount: '', currency: 'CNY', computedAmount: undefined } as Posting
-  ] as Posting[]
-})
+    {
+      account: "",
+      amount: "",
+      currency: "CNY",
+      computedAmount: undefined,
+    } as Posting,
+    {
+      account: "",
+      amount: "",
+      currency: "CNY",
+      computedAmount: undefined,
+    } as Posting,
+  ] as Posting[],
+});
 
 const formRules = {
-  date: [{ required: true, message: '请选择日期', trigger: 'blur' }],
-  flag: [{ required: true, message: '请选择标记', trigger: 'blur' }]
-}
+  date: [{ required: true, message: "请选择日期", trigger: "blur" }],
+  flag: [{ required: true, message: "请选择标记", trigger: "blur" }],
+};
 
 // 账户变化处理
 const onAccountChange = (_index: number) => {
   // 可以在这里添加账户变化的逻辑
-}
+};
 
 // 添加分录
 const addPosting = () => {
   transactionForm.postings.push({
-    account: '',
-    amount: '',
-    currency: 'CNY',
-    computedAmount: undefined
-  } as Posting)
-}
+    account: "",
+    amount: "",
+    currency: "CNY",
+    computedAmount: undefined,
+  } as Posting);
+};
 
 // 删除分录
 const removePosting = (index: number) => {
-  transactionForm.postings.splice(index, 1)
-}
+  transactionForm.postings.splice(index, 1);
+};
 
 // 显示标签输入框
 const showTagInput = () => {
-  tagInputVisible.value = true
+  tagInputVisible.value = true;
   nextTick(() => {
-    tagInputRef.value?.focus()
-  })
-}
+    tagInputRef.value?.focus();
+  });
+};
 
 // 添加标签
 const addTag = () => {
-  const tag = tagInputValue.value.trim()
+  const tag = tagInputValue.value.trim();
   if (tag && !transactionForm.tags.includes(tag)) {
-    transactionForm.tags.push(tag)
+    transactionForm.tags.push(tag);
   }
-  
-  tagInputVisible.value = false
-  tagInputValue.value = ''
-}
+
+  tagInputVisible.value = false;
+  tagInputValue.value = "";
+};
 
 // 删除标签
 const removeTag = (tag: string) => {
-  const index = transactionForm.tags.indexOf(tag)
+  const index = transactionForm.tags.indexOf(tag);
   if (index > -1) {
-    transactionForm.tags.splice(index, 1)
+    transactionForm.tags.splice(index, 1);
   }
-}
+};
 
 // 验证分录规则
 const validatePostings = (): string | null => {
-  const postingsWithAccount = transactionForm.postings.filter(p => p.account.trim() !== '')
-  
+  const postingsWithAccount = transactionForm.postings.filter(
+    (p) => p.account.trim() !== ""
+  );
+
   if (postingsWithAccount.length < 2) {
-    return '至少需要两个有效分录（包含账户）'
+    return "至少需要两个有效分录（包含账户）";
   }
-  
+
   // 检查金额规则：最多只能有一个分录不填金额
-  const emptyAmountPostings = postingsWithAccount.filter(p => 
-    p.amount.trim() === '' || p.computedAmount === undefined
-  )
-  
+  const emptyAmountPostings = postingsWithAccount.filter(
+    (p) => p.amount.trim() === "" || p.computedAmount === undefined
+  );
+
   if (emptyAmountPostings.length > 1) {
-    return '最多只能有一个分录不填金额'
+    return "最多只能有一个分录不填金额";
   }
-  
+
   // 检查有金额的分录是否都有有效的计算结果
-  const postingsWithAmount = postingsWithAccount.filter(p => 
-    p.amount.trim() !== '' && p.computedAmount !== undefined
-  )
-  
-  const invalidAmountPostings = postingsWithAmount.filter(p => p.computedAmount === null)
+  const postingsWithAmount = postingsWithAccount.filter(
+    (p) => p.amount.trim() !== "" && p.computedAmount !== undefined
+  );
+
+  const invalidAmountPostings = postingsWithAmount.filter(
+    (p) => p.computedAmount === null
+  );
   if (invalidAmountPostings.length > 0) {
-    return '存在无效的金额或公式，请检查输入'
+    return "存在无效的金额或公式，请检查输入";
   }
-  
+
   // 如果所有分录都有金额，检查借贷平衡
   if (emptyAmountPostings.length === 0) {
-    const sum = postingsWithAmount.reduce((total, posting) => total + (posting.computedAmount || 0), 0)
+    const sum = postingsWithAmount.reduce(
+      (total, posting) => total + (posting.computedAmount || 0),
+      0
+    );
     if (Math.abs(sum) > 0.01) {
-      return '借贷不平衡，请检查金额'
+      return "借贷不平衡，请检查金额";
     }
   }
-  
-  return null
-}
+
+  return null;
+};
 
 // 提交交易
 const submitTransaction = async () => {
   try {
-    await formRef.value.validate()
-    
+    await formRef.value.validate();
+
     // 验证分录规则
-    const validationError = validatePostings()
+    const validationError = validatePostings();
     if (validationError) {
-      ElMessage.error(validationError)
-      return
+      ElMessage.error(validationError);
+      return;
     }
-    
-    submitting.value = true
-    
+
+    submitting.value = true;
+
     // 准备提交数据
     const validPostings = transactionForm.postings
-      .filter(p => p.account.trim() !== '')
-      .map(posting => {
+      .filter((p) => p.account.trim() !== "")
+      .map((posting) => {
         const result = {
           account: posting.account,
-          currency: posting.currency
-        } as any
-        
+          currency: posting.currency,
+        } as any;
+
         // 只有非空金额才添加amount字段
-        if (posting.amount.trim() !== '' && posting.computedAmount !== undefined) {
-          result.amount = posting.computedAmount
+        if (
+          posting.amount.trim() !== "" &&
+          posting.computedAmount !== undefined
+        ) {
+          result.amount = posting.computedAmount;
         }
-        
-        return result
-      })
-    
+
+        return result;
+      });
+
     const transactionData = {
       ...transactionForm,
-      postings: validPostings
+      postings: validPostings,
+    };
+
+    // 先进行校验
+    try {
+      const validationResult = await validateTransaction(transactionData);
+      const validation = validationResult.data || validationResult;
+
+      if (!validation.valid) {
+        // 处理多个错误信息
+        if (validation.errors && validation.errors.length > 0) {
+          if (validation.errors.length === 1) {
+            // 单个错误直接显示
+            ElMessage.error(validation.errors[0]);
+          } else {
+            // 多个错误，显示主要错误和提示
+            const mainError = validation.errors[0];
+            const additionalCount = validation.errors.length - 1;
+            const errorMsg = `${mainError}${
+              additionalCount > 0 ? ` (还有${additionalCount}个错误)` : ""
+            }`;
+            ElMessage.error(errorMsg);
+          }
+        } else {
+          ElMessage.error("交易数据校验失败");
+        }
+
+        console.error("交易校验失败:", validation.errors);
+        return;
+      }
+    } catch (validationError) {
+      ElMessage.error("交易校验失败，请检查数据格式");
+      console.error("校验接口调用失败:", validationError);
+      return;
     }
-    
-    await createTransaction(transactionData)
-    ElMessage.success('交易创建成功')
-    
+
+    await createTransaction(transactionData);
+    ElMessage.success("交易创建成功");
+
     // 重置表单或跳转
-    resetForm()
-    
+    resetForm();
   } catch (error) {
-    console.error('提交交易失败:', error)
-    ElMessage.error('提交交易失败，请重试')
+    console.error("提交交易失败:", error);
+    ElMessage.error("提交交易失败，请重试");
   } finally {
-    submitting.value = false
+    submitting.value = false;
   }
-}
+};
 
 // 重置表单
 const resetForm = () => {
-  transactionForm.date = new Date().toLocaleDateString('en-CA')
-  transactionForm.flag = '*'
-  transactionForm.payee = ''
-  transactionForm.narration = ''
-  transactionForm.tags = []
+  transactionForm.date = new Date().toLocaleDateString("en-CA");
+  transactionForm.flag = "*";
+  transactionForm.payee = "";
+  transactionForm.narration = "";
+  transactionForm.tags = [];
   transactionForm.postings = [
-    { account: '', amount: '', currency: 'CNY', computedAmount: undefined } as Posting,
-    { account: '', amount: '', currency: 'CNY', computedAmount: undefined } as Posting
-  ]
-  
-  formRef.value?.clearValidate()
-}
+    {
+      account: "",
+      amount: "",
+      currency: "CNY",
+      computedAmount: undefined,
+    } as Posting,
+    {
+      account: "",
+      amount: "",
+      currency: "CNY",
+      computedAmount: undefined,
+    } as Posting,
+  ];
+
+  formRef.value?.clearValidate();
+};
 
 // 格式化金额
-
 
 // 金额输入框失去焦点时的处理
 const onAmountBlur = (posting: Posting) => {
   // 如果是空值，不做处理（允许空值）
-  if (posting.amount === '' || posting.amount.trim() === '') {
-    posting.computedAmount = undefined
-    return
+  if (posting.amount === "" || posting.amount.trim() === "") {
+    posting.computedAmount = undefined;
+    return;
   }
-  
+
   // 如果是公式，检查计算结果
   if (isFormula(posting.amount)) {
-    const result = evaluateFormula(posting.amount)
+    const result = evaluateFormula(posting.amount);
     if (result !== null) {
-      posting.computedAmount = result
+      posting.computedAmount = result;
     } else {
       // 公式无效，清除计算结果
-      posting.computedAmount = undefined
-      ElMessage.warning('公式格式错误，请检查输入')
+      posting.computedAmount = undefined;
+      ElMessage.warning("公式格式错误，请检查输入");
     }
   } else {
     // 如果是普通数字，格式化
-    const numValue = parseFloat(posting.amount)
+    const numValue = parseFloat(posting.amount);
     if (!isNaN(numValue)) {
-      posting.computedAmount = numValue
+      posting.computedAmount = numValue;
       // 可选：格式化显示
       // posting.amount = numValue.toFixed(2)
     } else {
-      posting.computedAmount = undefined
-      ElMessage.warning('金额格式错误，请输入有效数字或公式')
+      posting.computedAmount = undefined;
+      ElMessage.warning("金额格式错误，请输入有效数字或公式");
     }
   }
-}
+};
 
 // 金额输入框按键处理
 const onAmountKeydown = (posting: Posting, event: KeyboardEvent) => {
   // 按Ctrl+Enter或Enter键快速计算公式
-  if ((event.ctrlKey && event.key === 'Enter') || event.key === 'Enter') {
+  if ((event.ctrlKey && event.key === "Enter") || event.key === "Enter") {
     if (isFormula(posting.amount)) {
-      event.preventDefault()
-      const result = evaluateFormula(posting.amount)
+      event.preventDefault();
+      const result = evaluateFormula(posting.amount);
       if (result !== null) {
-        posting.amount = result.toFixed(2)
-        posting.computedAmount = result
+        posting.amount = result.toFixed(2);
+        posting.computedAmount = result;
       }
     }
   }
-}
+};
 
 // 检查是否为公式
 const isFormula = (value: string): boolean => {
   // 添加类型检查
-  if (typeof value !== 'string' || !value || value.trim() === '') return false
+  if (typeof value !== "string" || !value || value.trim() === "") return false;
   // 包含运算符且不只是负号的情况
-  return /[+\-*/()]/.test(value) && !/^-?[\d.]*$/.test(value)
-}
+  return /[+\-*/()]/.test(value) && !/^-?[\d.]*$/.test(value);
+};
 
 // 计算公式结果
 const evaluateFormula = (formula: string): number | null => {
   try {
     // 清理输入，只允许数字、小数点、基本运算符和括号
-    const cleanFormula = formula.replace(/[^0-9+\-*/.() ]/g, '')
+    const cleanFormula = formula.replace(/[^0-9+\-*/.() ]/g, "");
     if (cleanFormula !== formula) {
-      return null // 包含非法字符
+      return null; // 包含非法字符
     }
-    
+
     // 使用 Function 构造器安全地计算表达式
-    const result = Function(`"use strict"; return (${cleanFormula})`)()
-    
-    if (typeof result === 'number' && !isNaN(result) && isFinite(result)) {
-      return result
+    const result = Function(`"use strict"; return (${cleanFormula})`)();
+
+    if (typeof result === "number" && !isNaN(result) && isFinite(result)) {
+      return result;
     }
-    return null
+    return null;
   } catch {
-    return null
+    return null;
   }
-}
+};
 
 // 金额输入处理
 const onAmountInput = (posting: Posting, value: string | number) => {
   // 安全地将输入值转换为字符串
-  const stringValue = value?.toString() || ''
-  const trimmedValue = stringValue.trim()
-  
-  posting.amount = trimmedValue
-  
-  if (trimmedValue === '') {
-    posting.computedAmount = undefined
-    return
+  const stringValue = value?.toString() || "";
+  const trimmedValue = stringValue.trim();
+
+  posting.amount = trimmedValue;
+
+  if (trimmedValue === "") {
+    posting.computedAmount = undefined;
+    return;
   }
-  
+
   if (isFormula(trimmedValue)) {
     // 如果是公式，尝试计算结果
-    const result = evaluateFormula(trimmedValue)
-    posting.computedAmount = result || undefined
+    const result = evaluateFormula(trimmedValue);
+    posting.computedAmount = result || undefined;
   } else {
     // 如果是普通数字，直接解析
-    const numValue = parseFloat(trimmedValue)
-    posting.computedAmount = isNaN(numValue) ? undefined : numValue
+    const numValue = parseFloat(trimmedValue);
+    posting.computedAmount = isNaN(numValue) ? undefined : numValue;
   }
-}
+};
 
 // 检测屏幕尺寸
 const checkScreenSize = () => {
-  isMobile.value = window.innerWidth < 768
-}
+  isMobile.value = window.innerWidth < 768;
+};
 
 onMounted(() => {
-  checkScreenSize()
-  window.addEventListener('resize', checkScreenSize)
-})
+  checkScreenSize();
+  window.addEventListener("resize", checkScreenSize);
+});
 
 onUnmounted(() => {
-  window.removeEventListener('resize', checkScreenSize)
-})
+  window.removeEventListener("resize", checkScreenSize);
+});
 </script>
 
 <style scoped>
@@ -614,30 +711,30 @@ onUnmounted(() => {
   .el-form {
     padding: 0;
   }
-  
+
   .el-form-item {
     margin-bottom: 16px;
   }
-  
+
   .el-form-item__label {
     padding-right: 8px;
     font-size: 14px;
   }
-  
+
   .posting-tips {
     margin-bottom: 12px;
   }
-  
+
   .posting-tips .el-alert {
     font-size: 12px;
     padding: 8px 12px;
   }
-  
+
   .postings-container {
     padding: 12px;
     border-radius: 8px;
   }
-  
+
   .posting-row {
     background: #fff;
     padding: 12px;
@@ -645,51 +742,51 @@ onUnmounted(() => {
     border: 1px solid #e4e7ed;
     margin-bottom: 12px;
   }
-  
+
   .posting-row:last-child {
     margin-bottom: 8px;
   }
-  
+
   .posting-row .el-form-item {
     margin-bottom: 8px;
   }
-  
+
   .posting-row .el-form-item:last-child {
     margin-bottom: 0;
   }
-  
+
   .computed-result {
     font-size: 11px;
   }
-  
+
   /* 移动端按钮优化 */
   .el-button {
     min-height: 40px;
   }
-  
+
   .el-button--small {
     min-height: 32px;
     font-size: 12px;
   }
-  
+
   /* 移动端输入框优化 */
   .el-input__inner {
     font-size: 16px;
   }
-  
+
   .el-select .el-input__inner {
     font-size: 16px;
   }
-  
+
   /* 移动端日期选择器优化 */
   .el-date-editor .el-input__inner {
     font-size: 16px;
   }
-  
+
   /* 标签区域优化 */
   .el-tag {
     margin-right: 8px;
     margin-bottom: 8px;
   }
 }
-</style> 
+</style>

@@ -52,6 +52,36 @@ async def get_transactions(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取交易列表失败: {str(e)}")
 
+@router.post("/validate", response_model=dict)
+async def validate_transaction(transaction: TransactionCreate):
+    """校验交易数据但不保存"""
+    try:
+        # 转换为字典格式
+        transaction_data = {
+            "date": transaction.date.isoformat(),
+            "flag": transaction.flag,
+            "payee": transaction.payee,
+            "narration": transaction.narration,
+            "tags": transaction.tags,
+            "links": transaction.links,
+            "postings": [
+                {
+                    "account": p.account,
+                    "amount": float(p.amount) if p.amount else None,
+                    "currency": p.currency
+                }
+                for p in transaction.postings
+            ]
+        }
+        
+        # 校验交易数据
+        validation_result = beancount_service.validate_transaction(transaction_data)
+        
+        return validation_result
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"校验交易失败: {str(e)}")
+
 @router.post("/", response_model=dict)
 async def create_transaction(transaction: TransactionCreate):
     """创建新交易"""

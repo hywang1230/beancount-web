@@ -76,6 +76,7 @@ import {
   createTransaction,
   getTransactionById,
   updateTransaction,
+  validateTransaction,
 } from "@/api/transactions";
 import { calculateBottomButtonPosition, isPWAMode } from "@/utils/pwa";
 import TransactionForm from "@/views/h5/components/TransactionForm.vue";
@@ -236,7 +237,7 @@ const resetForm = () => {
 const onSubmit = async () => {
   try {
     showLoadingToast({
-      message: "保存中...",
+      message: "校验中...",
       forbidClick: true,
     });
 
@@ -292,6 +293,49 @@ const onSubmit = async () => {
     console.log("准备发送的交易数据:", transactionData);
     console.log("postings详情:", postings);
 
+    // 先进行校验
+    try {
+      const validationResult = await validateTransaction(transactionData);
+      const validation = validationResult.data || validationResult;
+
+      if (!validation.valid) {
+        closeToast();
+
+        // 处理多个错误信息
+        if (validation.errors && validation.errors.length > 0) {
+          if (validation.errors.length === 1) {
+            // 单个错误直接显示
+            showToast(validation.errors[0]);
+          } else {
+            // 多个错误，显示主要错误和提示
+            const mainError = validation.errors[0];
+            const additionalCount = validation.errors.length - 1;
+            showToast(
+              `${mainError}${
+                additionalCount > 0 ? ` (还有${additionalCount}个错误)` : ""
+              }`
+            );
+          }
+        } else {
+          showToast("交易数据校验失败");
+        }
+
+        console.error("交易校验失败:", validation.errors);
+        return;
+      }
+    } catch (validationError) {
+      closeToast();
+      showToast("交易校验失败，请检查数据格式");
+      console.error("校验接口调用失败:", validationError);
+      return;
+    }
+
+    // 校验通过，更新加载提示
+    showLoadingToast({
+      message: "保存中...",
+      forbidClick: true,
+    });
+
     // 检查是否为编辑模式
     const editId = route.query.id as string;
     if (editId) {
@@ -323,7 +367,7 @@ const onSubmit = async () => {
 const onTransferSubmit = async () => {
   try {
     showLoadingToast({
-      message: "保存中...",
+      message: "校验中...",
       forbidClick: true,
     });
 
@@ -346,6 +390,49 @@ const onTransferSubmit = async () => {
         },
       ],
     };
+
+    // 先进行校验
+    try {
+      const validationResult = await validateTransaction(transferData);
+      const validation = validationResult.data || validationResult;
+
+      if (!validation.valid) {
+        closeToast();
+
+        // 处理多个错误信息
+        if (validation.errors && validation.errors.length > 0) {
+          if (validation.errors.length === 1) {
+            // 单个错误直接显示
+            showToast(validation.errors[0]);
+          } else {
+            // 多个错误，显示主要错误和提示
+            const mainError = validation.errors[0];
+            const additionalCount = validation.errors.length - 1;
+            showToast(
+              `${mainError}${
+                additionalCount > 0 ? ` (还有${additionalCount}个错误)` : ""
+              }`
+            );
+          }
+        } else {
+          showToast("转账数据校验失败");
+        }
+
+        console.error("转账校验失败:", validation.errors);
+        return;
+      }
+    } catch (validationError) {
+      closeToast();
+      showToast("转账校验失败，请检查数据格式");
+      console.error("校验接口调用失败:", validationError);
+      return;
+    }
+
+    // 校验通过，更新加载提示
+    showLoadingToast({
+      message: "保存中...",
+      forbidClick: true,
+    });
 
     // 检查是否为编辑模式
     const editId = route.query.id as string;
