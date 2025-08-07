@@ -1,3 +1,4 @@
+import { useAuthStore } from "@/stores/auth";
 import axios from "axios";
 
 // 根据环境确定API基础URL
@@ -22,7 +23,11 @@ const api = axios.create({
 // 请求拦截器
 api.interceptors.request.use(
   (config) => {
-    // 在这里可以添加认证token等
+    // 添加认证token
+    const authStore = useAuthStore();
+    if (authStore.token) {
+      config.headers.Authorization = `Bearer ${authStore.token}`;
+    }
     return config;
   },
   (error) => {
@@ -38,6 +43,17 @@ api.interceptors.response.use(
   (error) => {
     // 统一错误处理
     console.error("API Error:", error);
+
+    // 处理401未授权错误
+    if (error.response?.status === 401) {
+      const authStore = useAuthStore();
+      authStore.logout();
+      // 如果不是登录页面，重定向到登录页
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+    }
+
     return Promise.reject(error);
   }
 );

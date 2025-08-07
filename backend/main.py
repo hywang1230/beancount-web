@@ -1,4 +1,4 @@
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from app.routers import transactions, reports, accounts, files, recurring
+from app.routers import transactions, reports, accounts, files, recurring, auth
 from app.core.config import settings
 from app.services.scheduler import scheduler
 
@@ -43,12 +43,16 @@ app.add_middleware(
 # 确保data目录存在（使用配置中的路径）
 settings.data_dir.mkdir(exist_ok=True)
 
+# 导入认证依赖
+from app.utils.auth import get_current_user
+
 # 注册API路由
-app.include_router(transactions.router, prefix="/api/transactions", tags=["交易"])
-app.include_router(reports.router, prefix="/api/reports", tags=["报表"])
-app.include_router(accounts.router, prefix="/api/accounts", tags=["账户"])
-app.include_router(files.router, prefix="/api/files", tags=["文件"])
-app.include_router(recurring.router, prefix="/api/recurring", tags=["周期记账"])
+app.include_router(auth.router, prefix="/api/auth", tags=["认证"])
+app.include_router(transactions.router, prefix="/api/transactions", tags=["交易"], dependencies=[Depends(get_current_user)])
+app.include_router(reports.router, prefix="/api/reports", tags=["报表"], dependencies=[Depends(get_current_user)])
+app.include_router(accounts.router, prefix="/api/accounts", tags=["账户"], dependencies=[Depends(get_current_user)])
+app.include_router(files.router, prefix="/api/files", tags=["文件"], dependencies=[Depends(get_current_user)])
+app.include_router(recurring.router, prefix="/api/recurring", tags=["周期记账"], dependencies=[Depends(get_current_user)])
 
 @app.get("/api")
 async def api_root():
