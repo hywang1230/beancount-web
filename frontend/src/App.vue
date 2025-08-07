@@ -9,10 +9,14 @@
     <van-config-provider v-else :locale="zhCn">
       <router-view />
     </van-config-provider>
+
+    <!-- PWA 更新提示 -->
+    <PWAUpdatePrompt />
   </div>
 </template>
 
 <script setup lang="ts">
+import PWAUpdatePrompt from "@/components/PWAUpdatePrompt.vue";
 import { useThemeStore } from "@/stores/theme";
 import zhCn from "element-plus/es/locale/lang/zh-cn";
 import { onMounted, ref } from "vue";
