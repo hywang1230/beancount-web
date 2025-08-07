@@ -47,10 +47,9 @@
 import { getTransactionsByAccount } from "@/api/transactions"; // This function needs to be created
 import { showToast } from "vant";
 import { onMounted, ref } from "vue";
-import { useRoute, useRouter } from "vue-router";
+import { useRoute } from "vue-router";
 
 const route = useRoute();
-const router = useRouter();
 
 const accountName = ref(route.params.accountName as string);
 const fromDate = ref(route.query.from as string);
