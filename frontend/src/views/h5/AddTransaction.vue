@@ -54,7 +54,11 @@
     </div>
 
     <!-- 操作按钮 -->
-    <div class="action-buttons">
+    <div
+      class="action-buttons"
+      :class="{ 'pwa-mode': isPWA }"
+      :style="{ bottom: buttonPosition }"
+    >
       <van-button
         type="primary"
         size="large"
@@ -73,6 +77,7 @@ import {
   getTransactionById,
   updateTransaction,
 } from "@/api/transactions";
+import { calculateBottomButtonPosition, isPWAMode } from "@/utils/pwa";
 import TransactionForm from "@/views/h5/components/TransactionForm.vue";
 import TransferForm from "@/views/h5/components/TransferForm.vue";
 import { closeToast, showLoadingToast, showToast } from "vant";
@@ -143,6 +148,12 @@ const canSave = computed(() => {
     return hasValidCategory;
   }
 });
+
+// PWA模式检测
+const isPWA = computed(() => isPWAMode());
+
+// 动态计算按钮位置
+const buttonPosition = computed(() => calculateBottomButtonPosition());
 
 // 标签页切换处理
 const onTabChange = (tabName: string) => {
@@ -644,7 +655,9 @@ const loadTransactionData = async () => {
 /* 操作按钮 */
 .action-buttons {
   position: fixed;
-  bottom: 60px; /* 为底部导航栏留出更多空间 */
+  bottom: calc(
+    60px + env(safe-area-inset-bottom, 0px)
+  ); /* 适配安全区域和底部导航栏 */
   left: 0;
   right: 0;
   padding: 12px 16px; /* 增加内边距 */
@@ -663,6 +676,30 @@ const loadTransactionData = async () => {
   border-radius: 12px;
 }
 
+/* PWA模式优化 */
+@media (display-mode: standalone) {
+  .action-buttons {
+    /* PWA模式下，进一步调整底部按钮位置 */
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .tab-content {
+    /* PWA模式下为底部按钮留出更多空间 */
+    padding-bottom: 160px;
+  }
+}
+
+/* iOS Safari PWA优化 */
+@supports (-webkit-appearance: none) {
+  @media (display-mode: standalone) {
+    .action-buttons {
+      /* iOS PWA模式下的特殊处理 */
+      bottom: calc(65px + env(safe-area-inset-bottom, 5px));
+      transition: all 0.3s ease-in-out;
+    }
+  }
+}
+
 /* 响应式设计 */
 @media (max-width: 375px) {
   .tab-item {
@@ -678,6 +715,17 @@ const loadTransactionData = async () => {
   .action-buttons :deep(.van-button--large) {
     height: 44px; /* 小屏幕按钮高度 */
     font-size: 15px; /* 减小字体 */
+  }
+}
+
+/* iPhone X 及以上设备优化 */
+@media (max-width: 414px) and (min-height: 812px) {
+  .action-buttons {
+    bottom: calc(70px + env(safe-area-inset-bottom, 10px));
+  }
+
+  .tab-content {
+    padding-bottom: 170px;
   }
 }
 </style>

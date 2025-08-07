@@ -678,6 +678,41 @@ html, body {
   }
 }
 
+/* PWA模式专用优化 */
+@media (display-mode: standalone) {
+  /* 确保PWA模式下的整体布局适配 */
+  .page-container {
+    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+  
+  /* PWA模式下的导航栏优化 */
+  .van-tabbar {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5px) !important;
+  }
+  
+  /* PWA模式下的主内容区域优化 */
+  .main-content {
+    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
+  }
+}
+
+/* iOS PWA专用优化 */
+@supports (-webkit-appearance: none) {
+  @media (display-mode: standalone) {
+    /* iOS PWA模式下的特殊处理 */
+    .van-tabbar {
+      border-top: 1px solid var(--van-border-color) !important;
+      backdrop-filter: blur(10px) !important;
+      -webkit-backdrop-filter: blur(10px) !important;
+      background-color: rgba(var(--van-background-2-rgb, 255, 255, 255), 0.9) !important;
+    }
+    
+    html[data-theme="dark"] .van-tabbar {
+      background-color: rgba(var(--van-background-2-rgb, 0, 0, 0), 0.9) !important;
+    }
+  }
+}
+
 /* 数字键盘样式 */
 .van-number-keyboard {
   /* 确保数字键盘显示在底部导航上方 */
@@ -688,4 +723,36 @@ html, body {
 /* 当数字键盘显示时，确保底部导航始终可见 */
 .van-tabbar {
   z-index: 1000 !important;
+}
+
+/* PWA模式下的动态类样式 */
+.pwa-mode {
+  /* PWA模式下的根元素样式调整 */
+}
+
+.pwa-mode .action-buttons {
+  /* PWA模式下按钮位置的JavaScript动态调整 */
+  bottom: calc(70px + env(safe-area-inset-bottom, 10px)) !important;
+}
+
+.pwa-ios .action-buttons {
+  /* iOS PWA模式下的特殊按钮位置 */
+  bottom: calc(75px + env(safe-area-inset-bottom, 15px)) !important;
+  transition: bottom 0.3s ease-in-out;
+}
+
+.pwa-android .action-buttons {
+  /* Android PWA模式下的按钮位置 */
+  bottom: calc(65px + env(safe-area-inset-bottom, 5px)) !important;
+}
+
+/* 横屏模式下的优化 */
+@media (orientation: landscape) {
+  .pwa-mode .action-buttons {
+    bottom: calc(50px + env(safe-area-inset-bottom, 5px)) !important;
+  }
+  
+  .pwa-mode .tab-content {
+    padding-bottom: 120px !important;
+  }
 } 
