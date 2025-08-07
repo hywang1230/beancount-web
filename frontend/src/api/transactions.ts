@@ -47,6 +47,11 @@ export const getTransactions = (
   return api.get("/transactions/", { params });
 };
 
+// 校验交易数据
+export const validateTransaction = (data: Transaction) => {
+  return api.post("/transactions/validate", data);
+};
+
 // 创建新交易
 export const createTransaction = (data: Transaction) => {
   return api.post("/transactions/", data);
