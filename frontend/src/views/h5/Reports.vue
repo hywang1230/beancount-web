@@ -59,7 +59,7 @@
                             @click="
                               goToAccountJournal(
                                 subAccount.fullName,
-                                getYearStartDateFor(asOfDate),
+                                '1990-01-01',
                                 asOfDate
                               )
                             "
@@ -82,7 +82,7 @@
                     @click="
                       goToAccountJournal(
                         account.fullName,
-                        getYearStartDateFor(asOfDate),
+                        '1990-01-01',
                         asOfDate
                       )
                     "
@@ -135,7 +135,7 @@
                             @click="
                               goToAccountJournal(
                                 subAccount.fullName,
-                                getYearStartDateFor(asOfDate),
+                                '1990-01-01',
                                 asOfDate
                               )
                             "
@@ -158,7 +158,7 @@
                     @click="
                       goToAccountJournal(
                         account.fullName,
-                        getYearStartDateFor(asOfDate),
+                        '1990-01-01',
                         asOfDate
                       )
                     "
@@ -213,7 +213,7 @@
                             @click="
                               goToAccountJournal(
                                 subAccount.fullName,
-                                getYearStartDateFor(asOfDate),
+                                '1990-01-01',
                                 asOfDate
                               )
                             "
@@ -236,7 +236,7 @@
                     @click="
                       goToAccountJournal(
                         account.fullName,
-                        getYearStartDateFor(asOfDate),
+                        '1990-01-01',
                         asOfDate
                       )
                     "
@@ -754,13 +754,6 @@ const formatAccountName = (accountName: string) => {
 // 格式化分类名称
 const formatCategoryName = (categoryName: string) => {
   return formatAccountName(categoryName);
-};
-
-// 获取给定日期所在年份的第一天
-const getYearStartDateFor = (dateStr: string) => {
-  const date = new Date(dateStr);
-  const year = date.getFullYear();
-  return new Date(year, 0, 1).toLocaleDateString("en-CA");
 };
 
 // 获取指定年月的开始和结束日期

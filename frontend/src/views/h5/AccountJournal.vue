@@ -17,6 +17,9 @@
               <span class="date">{{ transaction.date }}</span>
               <span class="payee">{{ transaction.payee }}</span>
             </div>
+            <div class="narration">
+              {{ transaction.narration }}
+            </div>
             <div class="transaction-body">
               <div
                 v-for="(posting, index) in transaction.postings"
@@ -133,6 +136,13 @@ onMounted(() => {
 .payee {
   font-weight: 500;
   color: var(--text-color);
+}
+
+.narration {
+  font-size: 13px;
+  color: var(--text-color-secondary);
+  margin-top: 4px;
+  margin-bottom: 8px;
 }
 
 .transaction-body {
