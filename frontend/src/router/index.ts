@@ -158,6 +158,14 @@ const routes: RouteRecordRaw[] = [
 const router = createRouter({
   history: createWebHistory(),
   routes,
+  scrollBehavior(_to, _from, savedPosition) {
+    // 如果有保存的位置（比如通过浏览器前进后退），返回到保存的位置
+    if (savedPosition) {
+      return savedPosition;
+    }
+    // 对于新的路由导航，滚动到顶部
+    return { top: 0, behavior: "smooth" };
+  },
 });
 
 export default router;
