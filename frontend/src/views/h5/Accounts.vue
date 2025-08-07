@@ -150,8 +150,7 @@
     <van-popup
       v-model:show="showCreateDialog"
       position="bottom"
-      :style="{ height: '70%' }"
-      round
+      :style="{ height: '100%' }"
       closeable
       close-icon-position="top-right"
     >
@@ -190,7 +189,7 @@
             placeholder="请选择开启日期"
             readonly
             is-link
-            @click="showDatePicker = true"
+            @click="showDateCalendar = true"
             :rules="[{ required: true, message: '请选择开启日期' }]"
           />
 
@@ -238,14 +237,19 @@
       />
     </van-popup>
 
-    <!-- 日期选择器 -->
-    <van-popup v-model:show="showDatePicker" position="bottom">
-      <van-date-picker
-        :model-value="selectedDate"
-        @confirm="onDateConfirm"
-        @cancel="showDatePicker = false"
-      />
-    </van-popup>
+    <!-- 日历选择器 -->
+    <van-calendar
+      v-model:show="showDateCalendar"
+      title="选择开启日期"
+      :default-date="createForm.date ? new Date(createForm.date) : new Date()"
+      :min-date="new Date(2020, 0, 1)"
+      :max-date="new Date()"
+      switch-mode="year-month"
+      @confirm="onDateConfirm"
+      @cancel="showDateCalendar = false"
+      :show-confirm="false"
+      teleport="body"
+    />
 
     <!-- 货币选择器 -->
     <van-popup v-model:show="showCurrencyPicker" position="bottom">
@@ -293,7 +297,7 @@
             title="归档日期"
             :value="archiveDate || '请选择归档日期'"
             is-link
-            @click="showArchiveDatePicker = true"
+            @click="showArchiveDateCalendar = true"
             class="date-cell"
           >
             <template #icon>
@@ -319,14 +323,19 @@
       </div>
     </van-dialog>
 
-    <!-- 归档日期选择器 -->
-    <van-popup v-model:show="showArchiveDatePicker" position="bottom">
-      <van-date-picker
-        :model-value="selectedArchiveDate"
-        @confirm="onArchiveDateConfirm"
-        @cancel="showArchiveDatePicker = false"
-      />
-    </van-popup>
+    <!-- 归档日期选择日历 -->
+    <van-calendar
+      v-model:show="showArchiveDateCalendar"
+      title="选择归档日期"
+      :default-date="archiveDate ? new Date(archiveDate) : new Date()"
+      :min-date="new Date(2020, 0, 1)"
+      :max-date="new Date()"
+      switch-mode="year-month"
+      @confirm="onArchiveDateConfirm"
+      @cancel="showArchiveDateCalendar = false"
+      :show-confirm="false"
+      teleport="body"
+    />
 
     <!-- 恢复确认对话框 -->
     <van-dialog
@@ -424,17 +433,15 @@ const createForm = ref({
 
 // 选择器状态
 const showTypePicker = ref(false);
-const showDatePicker = ref(false);
+const showDateCalendar = ref(false);
 const showCurrencyPicker = ref(false);
 const showBookingPicker = ref(false);
-const selectedDate = ref(["2024", "01", "01"]);
 
 // 归档相关
 const showArchiveDialog = ref(false);
-const showArchiveDatePicker = ref(false);
+const showArchiveDateCalendar = ref(false);
 const archiveAccountName = ref("");
 const archiveDate = ref("");
-const selectedArchiveDate = ref(["2024", "01", "01"]);
 
 // 恢复相关
 const showRestoreDialog = ref(false);
@@ -779,11 +786,9 @@ const onTypeConfirm = ({ selectedOptions }: any) => {
   showTypePicker.value = false;
 };
 
-const onDateConfirm = ({ selectedValues }: any) => {
-  const [year, month, day] = selectedValues;
-  const date = new Date(year, month - 1, day);
+const onDateConfirm = (date: Date) => {
   createForm.value.date = date.toLocaleDateString("en-CA");
-  showDatePicker.value = false;
+  showDateCalendar.value = false;
 };
 
 const onCurrencyConfirm = ({ selectedOptions }: any) => {
@@ -845,19 +850,13 @@ const handleArchiveAccount = (accountName: string) => {
   archiveAccountName.value = accountName;
   const today = new Date();
   archiveDate.value = today.toLocaleDateString("en-CA");
-  selectedArchiveDate.value = [
-    today.getFullYear().toString(),
-    (today.getMonth() + 1).toString().padStart(2, "0"),
-    today.getDate().toString().padStart(2, "0"),
-  ];
+
   showArchiveDialog.value = true;
 };
 
-const onArchiveDateConfirm = ({ selectedValues }: any) => {
-  const [year, month, day] = selectedValues;
-  const date = new Date(year, month - 1, day);
+const onArchiveDateConfirm = (date: Date) => {
   archiveDate.value = date.toLocaleDateString("en-CA");
-  showArchiveDatePicker.value = false;
+  showArchiveDateCalendar.value = false;
 };
 
 const confirmArchiveAccount = async () => {

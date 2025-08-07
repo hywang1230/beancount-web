@@ -3,7 +3,7 @@
     <!-- 头部导航 -->
     <van-nav-bar
       :title="currentPageTitle"
-      left-arrow
+      :left-arrow="showBackArrow"
       @click-left="onBack"
       class="top-nav"
     >
@@ -103,6 +103,14 @@ watch(
 );
 
 const currentPageTitle = computed(() => {
+  // 优先从路由元信息获取标题
+  if (route.meta && route.meta.title) {
+    if (typeof route.meta.title === "function") {
+      return route.meta.title(route);
+    }
+    return route.meta.title as string;
+  }
+
   const currentItem = allMenuItems.find((item) => item.path === route.path);
   if (currentItem) {
     return currentItem.title;
@@ -111,6 +119,10 @@ const currentPageTitle = computed(() => {
   // 处理动态路由
   if (route.path.startsWith("/h5/transactions/")) {
     return "交易详情";
+  }
+
+  if (route.path.startsWith("/h5/accounts/journal/")) {
+    return `账户: ${route.params.accountName}`;
   }
 
   if (route.path.startsWith("/h5/recurring/")) {
@@ -148,6 +160,12 @@ const showMenu = computed(() => {
   }
 
   return false; // 默认不显示菜单按钮
+});
+
+// 根据当前路由判断是否显示返回箭头
+const showBackArrow = computed(() => {
+  const isTabbarPage = tabbarItems.some((item) => item.path === route.path);
+  return !isTabbarPage;
 });
 
 const onBack = () => {

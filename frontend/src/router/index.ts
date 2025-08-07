@@ -74,7 +74,7 @@ const routes: RouteRecordRaw[] = [
         path: "dashboard",
         name: "H5Dashboard",
         component: () => import("@/views/h5/Dashboard.vue"),
-        meta: { title: "仪表盘", platform: "h5" },
+        meta: { title: "首页", platform: "h5" },
       },
       {
         path: "transactions",
@@ -99,6 +99,15 @@ const routes: RouteRecordRaw[] = [
         name: "H5Reports",
         component: () => import("@/views/h5/Reports.vue"),
         meta: { title: "报表分析", platform: "h5" },
+      },
+      {
+        path: "accounts/journal/:accountName",
+        name: "AccountJournal",
+        component: () => import("@/views/h5/AccountJournal.vue"),
+        meta: {
+          title: (route: any) => `${route.params.accountName}`,
+          platform: "h5",
+        },
       },
       {
         path: "accounts",

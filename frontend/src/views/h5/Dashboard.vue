@@ -4,13 +4,32 @@
     <van-card class="balance-card">
       <template #title>
         <div class="balance-header">
-          <span>净资产</span>
+          <span>账户概览</span>
           <van-icon name="eye-o" @click="toggleBalanceVisibility" />
         </div>
       </template>
       <template #desc>
-        <div class="balance-amount">
-          {{ showBalance ? formatAmount(totalBalance) : "****" }}
+        <div class="balance-overview-two-rows">
+          <div class="main-balance">
+            <div class="overview-label">净资产</div>
+            <div class="overview-amount large">
+              {{ showBalance ? formatAmount(totalBalance) : "****" }}
+            </div>
+          </div>
+          <div class="sub-balances">
+            <div class="overview-item">
+              <div class="overview-label">资产</div>
+              <div class="overview-amount">
+                {{ showBalance ? formatAmount(totalAssets) : "****" }}
+              </div>
+            </div>
+            <div class="overview-item">
+              <div class="overview-label">负债</div>
+              <div class="overview-amount">
+                {{ showBalance ? formatAmount(totalLiabilities) : "****" }}
+              </div>
+            </div>
+          </div>
         </div>
       </template>
     </van-card>
@@ -106,6 +125,8 @@ const isDark = computed(() => themeStore.isDark);
 
 const showBalance = ref(true);
 const totalBalance = ref(0);
+const totalAssets = ref(0);
+const totalLiabilities = ref(0);
 
 interface Account {
   id: number;
@@ -330,6 +351,20 @@ const loadDashboardData = async () => {
     if (balanceSheetRes.status === "fulfilled") {
       const balanceData = balanceSheetRes.value as any;
       totalBalance.value = balanceData?.net_worth || 0;
+      totalAssets.value =
+        balanceData?.accounts
+          ?.filter((acc: any) => acc.account_type === "Assets")
+          .reduce(
+            (sum: number, acc: any) => sum + parseFloat(acc.balance),
+            0
+          ) || 0;
+      totalLiabilities.value =
+        balanceData?.accounts
+          ?.filter((acc: any) => acc.account_type === "Liabilities")
+          .reduce(
+            (sum: number, acc: any) => sum + parseFloat(acc.balance),
+            0
+          ) || 0;
 
       // 取前几个主要账户
       const assetAccounts =
@@ -436,6 +471,39 @@ watch(isDark, () => {
   font-size: 32px;
   font-weight: bold;
   margin-top: 8px;
+}
+
+.balance-overview-two-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+.main-balance {
+  text-align: center;
+  margin-bottom: 12px;
+}
+
+.sub-balances {
+  display: flex;
+  justify-content: space-around;
+}
+
+.overview-item {
+  text-align: center;
+}
+
+.overview-label {
+  font-size: 12px;
+  opacity: 0.8;
+  margin-bottom: 4px;
+}
+
+.overview-amount {
+  font-weight: bold;
+}
+
+.overview-amount.large {
+  font-size: 28px;
 }
 
 .quick-actions {

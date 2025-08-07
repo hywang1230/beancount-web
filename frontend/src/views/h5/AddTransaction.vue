@@ -92,7 +92,7 @@ const tabList = ref([
   { name: "expense", title: "支出" },
   { name: "income", title: "收入" },
   { name: "transfer", title: "转账" },
-  { name: "adjustment", title: "调整余额" },
+  // { name: "adjustment", title: "调整余额" },
 ]);
 
 const formData = ref({
