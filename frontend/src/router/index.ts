@@ -74,7 +74,7 @@ const routes: RouteRecordRaw[] = [
         path: "dashboard",
         name: "H5Dashboard",
         component: () => import("@/views/h5/Dashboard.vue"),
-        meta: { title: "仪表盘", platform: "h5" },
+        meta: { title: "首页", platform: "h5" },
       },
       {
         path: "transactions",
