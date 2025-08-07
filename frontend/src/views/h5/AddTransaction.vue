@@ -1,17 +1,16 @@
 <template>
   <div class="h5-add-transaction">
     <!-- 类型选择标签 -->
-    <div class="type-tabs">
-      <div class="tab-container">
-        <div
-          v-for="tab in tabList"
-          :key="tab.name"
-          class="tab-item"
-          :class="{ active: activeTab === tab.name }"
-          @click="setActiveTab(tab.name)"
-        >
-          {{ tab.title }}
-        </div>
+    <div class="tabs-fixed-container">
+      <div class="transaction-type-selector">
+        <van-tabs v-model:active="activeTab" @change="onTabChange" swipeable>
+          <van-tab
+            v-for="tab in tabList"
+            :key="tab.name"
+            :title="tab.title"
+            :name="tab.name"
+          />
+        </van-tabs>
       </div>
     </div>
 
@@ -145,8 +144,8 @@ const canSave = computed(() => {
   }
 });
 
-// 设置活动标签
-const setActiveTab = (tabName: string) => {
+// 标签页切换处理
+const onTabChange = (tabName: string) => {
   if (activeTab.value !== tabName) {
     activeTab.value = tabName;
     resetForm();
@@ -595,62 +594,50 @@ const loadTransactionData = async () => {
     border-color 0.3s ease;
 }
 
-/* 类型选择标签 */
-.type-tabs {
-  background: var(--van-background-2);
-  padding: 0;
-  border-bottom: 1px solid var(--van-border-color);
+/* 固定标签页容器 */
+.tabs-fixed-container {
   position: sticky;
   top: 0;
-  z-index: 99;
+  z-index: 999;
+  background-color: var(--van-background-2);
+  border-bottom: 1px solid var(--van-border-color);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
-.tab-container {
-  display: flex;
-  background: var(--van-background-2);
-  transition: background-color 0.3s ease;
+/* 交易类型选择器 */
+.transaction-type-selector {
+  background-color: transparent;
 }
 
-.tab-item {
-  flex: 1;
-  text-align: center;
-  padding: 12px 8px; /* 减小垂直内边距 */
-  font-size: 15px; /* 减小字体 */
-  color: #646566;
-  cursor: pointer;
-  position: relative;
-  transition: all 0.3s ease;
-  border-bottom: 3px solid transparent;
-  min-height: 44px; /* 减小最小高度 */
-  display: flex;
-  align-items: center;
-  justify-content: center;
+.transaction-type-selector :deep(.van-tabs__nav) {
+  background-color: var(--van-background-2);
 }
 
-.tab-item.active {
+.transaction-type-selector :deep(.van-tab) {
+  color: var(--van-text-color-2);
+}
+
+.transaction-type-selector :deep(.van-tab--active) {
   color: #ee5a52;
-  font-weight: 600;
-  border-bottom-color: #ee5a52;
-  background: rgba(238, 90, 82, 0.08);
 }
 
-.tab-item:hover {
-  background: rgba(238, 90, 82, 0.05);
+.transaction-type-selector :deep(.van-tabs__line) {
+  background-color: #ee5a52;
 }
 
 /* 表单内容 */
 .form-content {
   flex: 1;
   overflow-y: auto;
+  margin-top: 1px; /* 减少顶部间距 */
 }
 
 .tab-content {
   height: 100%;
   background: var(--van-background);
   padding-bottom: 140px; /* 为底部按钮和导航留出更多空间 */
-  padding-top: 8px; /* 增加顶部间距 */
+  padding-top: 1px; /* 适中的顶部间距 */
   transition: background-color 0.3s ease;
 }
 
