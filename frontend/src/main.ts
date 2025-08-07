@@ -14,9 +14,16 @@ import "vant/lib/index.css";
 import "./style/global.css";
 import "./style/theme.css";
 
+// PWA工具函数
+import { applyPWAStyles, setupPWAEventListeners } from "./utils/pwa";
+
 const app = createApp(App);
 
 app.use(createPinia());
 app.use(router);
 
 app.mount("#app");
+
+// 应用PWA样式优化
+applyPWAStyles();
+setupPWAEventListeners();
