@@ -3,7 +3,7 @@
     <!-- 头部导航 -->
     <van-nav-bar
       :title="currentPageTitle"
-      left-arrow
+      :left-arrow="showBackArrow"
       @click-left="onBack"
       class="top-nav"
     >
@@ -160,6 +160,12 @@ const showMenu = computed(() => {
   }
 
   return false; // 默认不显示菜单按钮
+});
+
+// 根据当前路由判断是否显示返回箭头
+const showBackArrow = computed(() => {
+  const isTabbarPage = tabbarItems.some((item) => item.path === route.path);
+  return !isTabbarPage;
 });
 
 const onBack = () => {
