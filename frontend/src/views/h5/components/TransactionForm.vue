@@ -661,12 +661,26 @@ const categoryDisplayText = computed(() => {
   return categories.map((cat) => cat.categoryDisplayName).join(", ");
 });
 
-// 分配金额计算
+// 分配金额计算 - 修复多类别编辑模式下分配信息不更新的问题
 const allocatedAmount = computed(() => {
-  return localFormData.value.categories.reduce((sum, item) => {
+  // 在多类别编辑模式下，使用tempCategories，否则使用localFormData.categories
+  const targetCategories = isEditingMultiCategory.value
+    ? tempCategories.value
+    : localFormData.value.categories;
+
+  const total = targetCategories.reduce((sum, item) => {
     const amount = parseFloat(item.amount) || 0;
     return sum + amount;
   }, 0);
+
+  console.log("计算分配金额:", {
+    isEditingMultiCategory: isEditingMultiCategory.value,
+    categoriesCount: targetCategories.length,
+    categoriesData: targetCategories.map((cat) => ({ amount: cat.amount })),
+    totalAllocated: total,
+  });
+
+  return total;
 });
 
 const remainingAmount = computed(() => {
@@ -950,14 +964,13 @@ const onCategoryAmountInput = (index: number, value: string | number) => {
   // 直接更新分类金额，不影响总金额
   const stringValue = String(value || "");
 
-  // 使用 Vue 3 的响应式更新方式
-  targetCategories[index] = {
-    ...targetCategories[index],
-    amount: stringValue,
-  };
+  // 直接更新分类对象的amount属性，确保响应式更新
+  targetCategories[index].amount = stringValue;
 
   console.log(`Updated category ${index} amount to:`, stringValue);
   console.log("Current categories:", targetCategories);
+  console.log("Current allocated amount:", allocatedAmount.value);
+  console.log("Current remaining amount:", remainingAmount.value);
 };
 
 // 全屏交易对象选择器方法
