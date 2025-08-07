@@ -1,7 +1,7 @@
 <template>
   <div class="h5-reports">
     <!-- 报表类型选择 -->
-    <van-sticky>
+    <div class="tabs-fixed-container">
       <div class="report-type-selector">
         <van-tabs v-model:active="activeTab" @change="onTabChange" swipeable>
           <van-tab title="资产负债表" name="balance-sheet" />
@@ -10,523 +10,532 @@
           <van-tab title="月度报告" name="monthly" />
         </van-tabs>
       </div>
-    </van-sticky>
+    </div>
 
-    <!-- 资产负债表 -->
-    <div v-if="activeTab === 'balance-sheet'" class="report-content">
-      <!-- 日期选择 -->
-      <div class="date-selector">
-        <van-cell-group inset>
-          <van-cell
-            title="截止日期"
-            :value="formatDateDisplay(asOfDate)"
-            is-link
-            @click="showAsOfDateCalendar = true"
-          />
-        </van-cell-group>
+    <!-- 报表内容区域 -->
+    <div class="reports-content-wrapper">
+      <!-- 资产负债表 -->
+      <div v-if="activeTab === 'balance-sheet'" class="report-content">
+        <!-- 日期选择 -->
+        <div class="date-selector">
+          <van-cell-group inset>
+            <van-cell
+              title="截止日期"
+              :value="formatDateDisplay(asOfDate)"
+              is-link
+              @click="showAsOfDateCalendar = true"
+            />
+          </van-cell-group>
+        </div>
+
+        <!-- 资产负债表内容 -->
+        <div v-if="balanceSheet" class="balance-sheet">
+          <!-- 资产 -->
+          <van-cell-group title="资产" inset>
+            <van-collapse v-model="assetExpandedItems">
+              <van-collapse-item
+                v-for="category in groupedAssetCategories"
+                :key="category.name"
+                :name="category.name"
+                :title="category.name"
+                :value="formatCurrency(category.total)"
+              >
+                <div class="account-list">
+                  <template
+                    v-for="account in category.accounts"
+                    :key="account.fullName"
+                  >
+                    <!-- 如果是子分组，显示为可折叠的子分组 -->
+                    <div v-if="account.isSubGroup" class="sub-group">
+                      <van-collapse v-model="subGroupExpandedItems">
+                        <van-collapse-item
+                          :name="account.fullName"
+                          :title="account.name"
+                          :value="formatCurrency(account.balance)"
+                        >
+                          <div class="sub-account-list">
+                            <div
+                              v-for="subAccount in account.subAccounts"
+                              :key="subAccount.fullName"
+                              class="sub-account-item clickable-item"
+                              @click="
+                                goToAccountJournal(
+                                  subAccount.fullName,
+                                  '1990-01-01',
+                                  asOfDate
+                                )
+                              "
+                            >
+                              <span class="account-name">{{
+                                subAccount.name
+                              }}</span>
+                              <span class="account-amount">{{
+                                formatCurrency(subAccount.balance)
+                              }}</span>
+                            </div>
+                          </div>
+                        </van-collapse-item>
+                      </van-collapse>
+                    </div>
+                    <!-- 普通账户直接显示 -->
+                    <div
+                      v-else
+                      class="account-item clickable-item"
+                      @click="
+                        goToAccountJournal(
+                          account.fullName,
+                          '1990-01-01',
+                          asOfDate
+                        )
+                      "
+                    >
+                      <span class="account-name">{{ account.name }}</span>
+                      <span class="account-amount">{{
+                        formatCurrency(account.balance)
+                      }}</span>
+                    </div>
+                  </template>
+                </div>
+              </van-collapse-item>
+            </van-collapse>
+            <div class="total-row">
+              <span class="total-label">资产总计</span>
+              <span class="total-amount">{{
+                formatCurrency(balanceSheet.total_assets)
+              }}</span>
+            </div>
+          </van-cell-group>
+
+          <!-- 负债 -->
+          <van-cell-group title="负债" inset>
+            <van-collapse v-model="liabilityExpandedItems">
+              <van-collapse-item
+                v-for="category in groupedLiabilityCategories"
+                :key="category.name"
+                :name="category.name"
+                :title="category.name"
+                :value="formatCurrency(category.total)"
+              >
+                <div class="account-list">
+                  <template
+                    v-for="account in category.accounts"
+                    :key="account.fullName"
+                  >
+                    <!-- 如果是子分组，显示为可折叠的子分组 -->
+                    <div v-if="account.isSubGroup" class="sub-group">
+                      <van-collapse v-model="subGroupExpandedItems">
+                        <van-collapse-item
+                          :name="account.fullName"
+                          :title="account.name"
+                          :value="formatCurrency(Math.abs(account.balance))"
+                        >
+                          <div class="sub-account-list">
+                            <div
+                              v-for="subAccount in account.subAccounts"
+                              :key="subAccount.fullName"
+                              class="sub-account-item clickable-item"
+                              @click="
+                                goToAccountJournal(
+                                  subAccount.fullName,
+                                  '1990-01-01',
+                                  asOfDate
+                                )
+                              "
+                            >
+                              <span class="account-name">{{
+                                subAccount.name
+                              }}</span>
+                              <span class="account-amount">{{
+                                formatCurrency(Math.abs(subAccount.balance))
+                              }}</span>
+                            </div>
+                          </div>
+                        </van-collapse-item>
+                      </van-collapse>
+                    </div>
+                    <!-- 普通账户直接显示 -->
+                    <div
+                      v-else
+                      class="account-item clickable-item"
+                      @click="
+                        goToAccountJournal(
+                          account.fullName,
+                          '1990-01-01',
+                          asOfDate
+                        )
+                      "
+                    >
+                      <span class="account-name">{{
+                        formatAccountName(account.name)
+                      }}</span>
+                      <span class="account-amount">{{
+                        formatCurrency(Math.abs(account.balance))
+                      }}</span>
+                    </div>
+                  </template>
+                </div>
+              </van-collapse-item>
+            </van-collapse>
+            <div class="total-row">
+              <span class="total-label">负债总计</span>
+              <span class="total-amount">{{
+                formatCurrency(Math.abs(balanceSheet.total_liabilities))
+              }}</span>
+            </div>
+          </van-cell-group>
+
+          <!-- 所有者权益 -->
+          <van-cell-group title="所有者权益" inset>
+            <van-collapse v-model="equityExpandedItems">
+              <van-collapse-item
+                v-for="category in groupedEquityCategories"
+                :key="category.name"
+                :name="category.name"
+                :title="category.name"
+                :value="formatCurrency(category.total)"
+              >
+                <div class="account-list">
+                  <template
+                    v-for="account in category.accounts"
+                    :key="account.fullName"
+                  >
+                    <!-- 如果是子分组，显示为可折叠的子分组 -->
+                    <div v-if="account.isSubGroup" class="sub-group">
+                      <van-collapse v-model="subGroupExpandedItems">
+                        <van-collapse-item
+                          :name="account.fullName"
+                          :title="account.name"
+                          :value="formatCurrency(account.balance)"
+                        >
+                          <div class="sub-account-list">
+                            <div
+                              v-for="subAccount in account.subAccounts"
+                              :key="subAccount.fullName"
+                              class="sub-account-item clickable-item"
+                              @click="
+                                goToAccountJournal(
+                                  subAccount.fullName,
+                                  '1990-01-01',
+                                  asOfDate
+                                )
+                              "
+                            >
+                              <span class="account-name">{{
+                                subAccount.name
+                              }}</span>
+                              <span class="account-amount">{{
+                                formatCurrency(subAccount.balance)
+                              }}</span>
+                            </div>
+                          </div>
+                        </van-collapse-item>
+                      </van-collapse>
+                    </div>
+                    <!-- 普通账户直接显示 -->
+                    <div
+                      v-else
+                      class="account-item clickable-item"
+                      @click="
+                        goToAccountJournal(
+                          account.fullName,
+                          '1990-01-01',
+                          asOfDate
+                        )
+                      "
+                    >
+                      <span class="account-name">{{ account.name }}</span>
+                      <span class="account-amount">{{
+                        formatCurrency(account.balance)
+                      }}</span>
+                    </div>
+                  </template>
+                </div>
+              </van-collapse-item>
+            </van-collapse>
+            <div class="total-row">
+              <span class="total-label">所有者权益总计</span>
+              <span class="total-amount">{{
+                formatCurrency(balanceSheet.total_equity)
+              }}</span>
+            </div>
+          </van-cell-group>
+        </div>
       </div>
 
-      <!-- 资产负债表内容 -->
-      <div v-if="balanceSheet" class="balance-sheet">
-        <!-- 资产 -->
-        <van-cell-group title="资产" inset>
-          <van-collapse v-model="assetExpandedItems">
-            <van-collapse-item
-              v-for="category in groupedAssetCategories"
-              :key="category.name"
-              :name="category.name"
-              :title="category.name"
-              :value="formatCurrency(category.total)"
-            >
-              <div class="account-list">
-                <template
-                  v-for="account in category.accounts"
-                  :key="account.fullName"
-                >
-                  <!-- 如果是子分组，显示为可折叠的子分组 -->
-                  <div v-if="account.isSubGroup" class="sub-group">
-                    <van-collapse v-model="subGroupExpandedItems">
-                      <van-collapse-item
-                        :name="account.fullName"
-                        :title="account.name"
-                        :value="formatCurrency(account.balance)"
-                      >
-                        <div class="sub-account-list">
-                          <div
-                            v-for="subAccount in account.subAccounts"
-                            :key="subAccount.fullName"
-                            class="sub-account-item clickable-item"
-                            @click="
-                              goToAccountJournal(
-                                subAccount.fullName,
-                                '1990-01-01',
-                                asOfDate
-                              )
-                            "
-                          >
-                            <span class="account-name">{{
-                              subAccount.name
-                            }}</span>
-                            <span class="account-amount">{{
-                              formatCurrency(subAccount.balance)
-                            }}</span>
-                          </div>
-                        </div>
-                      </van-collapse-item>
-                    </van-collapse>
-                  </div>
-                  <!-- 普通账户直接显示 -->
-                  <div
-                    v-else
-                    class="account-item clickable-item"
-                    @click="
-                      goToAccountJournal(
-                        account.fullName,
-                        '1990-01-01',
-                        asOfDate
-                      )
-                    "
-                  >
-                    <span class="account-name">{{ account.name }}</span>
-                    <span class="account-amount">{{
-                      formatCurrency(account.balance)
-                    }}</span>
-                  </div>
-                </template>
-              </div>
-            </van-collapse-item>
-          </van-collapse>
-          <div class="total-row">
-            <span class="total-label">资产总计</span>
-            <span class="total-amount">{{
-              formatCurrency(balanceSheet.total_assets)
-            }}</span>
-          </div>
-        </van-cell-group>
+      <!-- 损益表 -->
+      <div v-if="activeTab === 'income-statement'" class="report-content">
+        <!-- 日期范围选择 -->
+        <div class="date-range-selector">
+          <van-cell-group inset>
+            <van-cell
+              title="日期范围"
+              :value="formatDateRangeDisplay(startDate, endDate)"
+              is-link
+              @click="showDateRangeCalendar = true"
+            />
+          </van-cell-group>
+        </div>
 
-        <!-- 负债 -->
-        <van-cell-group title="负债" inset>
-          <van-collapse v-model="liabilityExpandedItems">
-            <van-collapse-item
-              v-for="category in groupedLiabilityCategories"
-              :key="category.name"
-              :name="category.name"
-              :title="category.name"
-              :value="formatCurrency(category.total)"
-            >
-              <div class="account-list">
-                <template
-                  v-for="account in category.accounts"
-                  :key="account.fullName"
-                >
-                  <!-- 如果是子分组，显示为可折叠的子分组 -->
-                  <div v-if="account.isSubGroup" class="sub-group">
-                    <van-collapse v-model="subGroupExpandedItems">
-                      <van-collapse-item
-                        :name="account.fullName"
-                        :title="account.name"
-                        :value="formatCurrency(Math.abs(account.balance))"
-                      >
-                        <div class="sub-account-list">
-                          <div
-                            v-for="subAccount in account.subAccounts"
-                            :key="subAccount.fullName"
-                            class="sub-account-item clickable-item"
-                            @click="
-                              goToAccountJournal(
-                                subAccount.fullName,
-                                '1990-01-01',
-                                asOfDate
-                              )
-                            "
-                          >
-                            <span class="account-name">{{
-                              subAccount.name
-                            }}</span>
-                            <span class="account-amount">{{
-                              formatCurrency(Math.abs(subAccount.balance))
-                            }}</span>
-                          </div>
-                        </div>
-                      </van-collapse-item>
-                    </van-collapse>
-                  </div>
-                  <!-- 普通账户直接显示 -->
+        <!-- 损益表内容 -->
+        <div v-if="incomeStatement" class="income-statement">
+          <!-- 收入 -->
+          <van-cell-group title="收入" inset>
+            <van-collapse v-model="incomeExpandedItems">
+              <van-collapse-item
+                v-for="category in groupedIncomeCategories"
+                :key="category.name"
+                :name="category.name"
+                :title="category.name"
+                :value="formatCurrency(category.total)"
+              >
+                <div class="account-list">
                   <div
-                    v-else
+                    v-for="account in category.accounts"
+                    :key="account.name"
                     class="account-item clickable-item"
                     @click="
-                      goToAccountJournal(
-                        account.fullName,
-                        '1990-01-01',
-                        asOfDate
-                      )
+                      goToAccountJournal(account.fullName, startDate, endDate)
                     "
                   >
                     <span class="account-name">{{
                       formatAccountName(account.name)
                     }}</span>
-                    <span class="account-amount">{{
+                    <span class="account-amount positive">{{
                       formatCurrency(Math.abs(account.balance))
                     }}</span>
                   </div>
-                </template>
-              </div>
-            </van-collapse-item>
-          </van-collapse>
-          <div class="total-row">
-            <span class="total-label">负债总计</span>
-            <span class="total-amount">{{
-              formatCurrency(Math.abs(balanceSheet.total_liabilities))
-            }}</span>
-          </div>
-        </van-cell-group>
+                </div>
+              </van-collapse-item>
+            </van-collapse>
+            <div class="total-row">
+              <span class="total-label">收入总计</span>
+              <span class="total-amount positive">{{
+                formatCurrency(Math.abs(incomeStatement.total_income))
+              }}</span>
+            </div>
+          </van-cell-group>
 
-        <!-- 所有者权益 -->
-        <van-cell-group title="所有者权益" inset>
-          <van-collapse v-model="equityExpandedItems">
-            <van-collapse-item
-              v-for="category in groupedEquityCategories"
-              :key="category.name"
-              :name="category.name"
-              :title="category.name"
-              :value="formatCurrency(category.total)"
-            >
-              <div class="account-list">
-                <template
-                  v-for="account in category.accounts"
-                  :key="account.fullName"
-                >
-                  <!-- 如果是子分组，显示为可折叠的子分组 -->
-                  <div v-if="account.isSubGroup" class="sub-group">
-                    <van-collapse v-model="subGroupExpandedItems">
-                      <van-collapse-item
-                        :name="account.fullName"
-                        :title="account.name"
-                        :value="formatCurrency(account.balance)"
-                      >
-                        <div class="sub-account-list">
-                          <div
-                            v-for="subAccount in account.subAccounts"
-                            :key="subAccount.fullName"
-                            class="sub-account-item clickable-item"
-                            @click="
-                              goToAccountJournal(
-                                subAccount.fullName,
-                                '1990-01-01',
-                                asOfDate
-                              )
-                            "
-                          >
-                            <span class="account-name">{{
-                              subAccount.name
-                            }}</span>
-                            <span class="account-amount">{{
-                              formatCurrency(subAccount.balance)
-                            }}</span>
-                          </div>
-                        </div>
-                      </van-collapse-item>
-                    </van-collapse>
-                  </div>
-                  <!-- 普通账户直接显示 -->
+          <!-- 支出 -->
+          <van-cell-group title="支出" inset>
+            <van-collapse v-model="expenseExpandedItems">
+              <van-collapse-item
+                v-for="category in groupedExpenseCategories"
+                :key="category.name"
+                :name="category.name"
+                :title="category.name"
+                :value="formatCurrency(category.total)"
+              >
+                <div class="account-list">
                   <div
-                    v-else
+                    v-for="account in category.accounts"
+                    :key="account.name"
                     class="account-item clickable-item"
                     @click="
-                      goToAccountJournal(
-                        account.fullName,
-                        '1990-01-01',
-                        asOfDate
-                      )
+                      goToAccountJournal(account.fullName, startDate, endDate)
                     "
                   >
-                    <span class="account-name">{{ account.name }}</span>
-                    <span class="account-amount">{{
-                      formatCurrency(account.balance)
+                    <span class="account-name">{{
+                      formatAccountName(account.name)
+                    }}</span>
+                    <span class="account-amount negative">{{
+                      formatCurrency(Math.abs(account.balance))
                     }}</span>
                   </div>
-                </template>
-              </div>
-            </van-collapse-item>
-          </van-collapse>
-          <div class="total-row">
-            <span class="total-label">所有者权益总计</span>
-            <span class="total-amount">{{
-              formatCurrency(balanceSheet.total_equity)
-            }}</span>
-          </div>
-        </van-cell-group>
-      </div>
-    </div>
-
-    <!-- 损益表 -->
-    <div v-if="activeTab === 'income-statement'" class="report-content">
-      <!-- 日期范围选择 -->
-      <div class="date-range-selector">
-        <van-cell-group inset>
-          <van-cell
-            title="日期范围"
-            :value="formatDateRangeDisplay(startDate, endDate)"
-            is-link
-            @click="showDateRangeCalendar = true"
-          />
-        </van-cell-group>
-      </div>
-
-      <!-- 损益表内容 -->
-      <div v-if="incomeStatement" class="income-statement">
-        <!-- 收入 -->
-        <van-cell-group title="收入" inset>
-          <van-collapse v-model="incomeExpandedItems">
-            <van-collapse-item
-              v-for="category in groupedIncomeCategories"
-              :key="category.name"
-              :name="category.name"
-              :title="category.name"
-              :value="formatCurrency(category.total)"
-            >
-              <div class="account-list">
-                <div
-                  v-for="account in category.accounts"
-                  :key="account.name"
-                  class="account-item clickable-item"
-                  @click="
-                    goToAccountJournal(account.fullName, startDate, endDate)
-                  "
-                >
-                  <span class="account-name">{{
-                    formatAccountName(account.name)
-                  }}</span>
-                  <span class="account-amount positive">{{
-                    formatCurrency(Math.abs(account.balance))
-                  }}</span>
                 </div>
-              </div>
-            </van-collapse-item>
-          </van-collapse>
-          <div class="total-row">
-            <span class="total-label">收入总计</span>
-            <span class="total-amount positive">{{
-              formatCurrency(Math.abs(incomeStatement.total_income))
-            }}</span>
-          </div>
-        </van-cell-group>
-
-        <!-- 支出 -->
-        <van-cell-group title="支出" inset>
-          <van-collapse v-model="expenseExpandedItems">
-            <van-collapse-item
-              v-for="category in groupedExpenseCategories"
-              :key="category.name"
-              :name="category.name"
-              :title="category.name"
-              :value="formatCurrency(category.total)"
-            >
-              <div class="account-list">
-                <div
-                  v-for="account in category.accounts"
-                  :key="account.name"
-                  class="account-item clickable-item"
-                  @click="
-                    goToAccountJournal(account.fullName, startDate, endDate)
-                  "
-                >
-                  <span class="account-name">{{
-                    formatAccountName(account.name)
-                  }}</span>
-                  <span class="account-amount negative">{{
-                    formatCurrency(Math.abs(account.balance))
-                  }}</span>
-                </div>
-              </div>
-            </van-collapse-item>
-          </van-collapse>
-          <div class="total-row">
-            <span class="total-label">支出总计</span>
-            <span class="total-amount negative">{{
-              formatCurrency(Math.abs(incomeStatement.total_expenses))
-            }}</span>
-          </div>
-        </van-cell-group>
-
-        <!-- 净收益 -->
-        <van-cell-group title="汇总" inset>
-          <div class="net-income-card">
-            <div
-              class="net-income-value"
-              :class="incomeStatement.net_income >= 0 ? 'positive' : 'negative'"
-            >
-              {{ formatCurrency(incomeStatement.net_income) }}
+              </van-collapse-item>
+            </van-collapse>
+            <div class="total-row">
+              <span class="total-label">支出总计</span>
+              <span class="total-amount negative">{{
+                formatCurrency(Math.abs(incomeStatement.total_expenses))
+              }}</span>
             </div>
-            <div class="net-income-label">净收益</div>
-          </div>
-        </van-cell-group>
-      </div>
-    </div>
+          </van-cell-group>
 
-    <!-- 趋势分析 -->
-    <div v-if="activeTab === 'trends'" class="report-content">
-      <!-- 时间范围选择 -->
-      <div class="trends-selector">
-        <van-cell-group inset>
-          <van-cell
-            title="统计周期"
-            :value="trendsOptions.find((opt: any) => opt.value === trendsMonths)?.text"
-            is-link
-            @click="showTrendsPicker = true"
-          />
-        </van-cell-group>
-      </div>
-
-      <!-- 趋势图表 -->
-      <div v-if="trendsOption" class="trends-chart">
-        <van-cell-group title="收支趋势" inset>
-          <div class="chart-container">
-            <v-chart :option="trendsOption" style="height: 300px" />
-          </div>
-        </van-cell-group>
-      </div>
-    </div>
-
-    <!-- 月度报告 -->
-    <div v-if="activeTab === 'monthly'" class="report-content">
-      <!-- 年月选择 -->
-      <div class="monthly-selector">
-        <van-cell-group inset>
-          <van-cell
-            title="年份"
-            :value="`${selectedYear}年`"
-            is-link
-            @click="showYearPicker = true"
-          />
-          <van-cell
-            title="月份"
-            :value="`${selectedMonth}月`"
-            is-link
-            @click="showMonthPicker = true"
-          />
-        </van-cell-group>
-      </div>
-
-      <!-- 月度汇总 -->
-      <div v-if="monthlySummary" class="monthly-summary">
-        <!-- 概览卡片 -->
-        <div class="summary-cards">
-          <van-row gutter="8">
-            <van-col span="12">
-              <div class="summary-card income">
-                <div class="card-value">
-                  {{
-                    formatCurrency(monthlySummary.income_statement.total_income)
-                  }}
-                </div>
-                <div class="card-label">本月收入</div>
+          <!-- 净收益 -->
+          <van-cell-group title="汇总" inset>
+            <div class="net-income-card">
+              <div
+                class="net-income-value"
+                :class="
+                  incomeStatement.net_income >= 0 ? 'positive' : 'negative'
+                "
+              >
+                {{ formatCurrency(incomeStatement.net_income) }}
               </div>
-            </van-col>
-            <van-col span="12">
-              <div class="summary-card expense">
-                <div class="card-value">
-                  {{
-                    formatCurrency(
-                      Math.abs(monthlySummary.income_statement.total_expenses)
-                    )
-                  }}
-                </div>
-                <div class="card-label">本月支出</div>
-              </div>
-            </van-col>
-          </van-row>
-          <div class="net-card">
-            <div
-              class="net-value"
-              :class="
-                monthlySummary.income_statement.net_income >= 0
-                  ? 'positive'
-                  : 'negative'
-              "
-            >
-              {{ formatCurrency(monthlySummary.income_statement.net_income) }}
+              <div class="net-income-label">净收益</div>
             </div>
-            <div class="net-label">本月净收益</div>
-          </div>
-          <div class="assets-card">
-            <div class="assets-value">
-              {{ formatCurrency(monthlySummary.balance_sheet.total_assets) }}
-            </div>
-            <div class="assets-label">月末总资产</div>
-          </div>
+          </van-cell-group>
         </div>
+      </div>
 
-        <!-- 年度至今汇总 -->
-        <div v-if="yearToDateSummary" class="ytd-summary">
-          <van-cell-group :title="`${selectedYear}年度至今汇总`" inset>
+      <!-- 趋势分析 -->
+      <div v-if="activeTab === 'trends'" class="report-content">
+        <!-- 时间范围选择 -->
+        <div class="trends-selector">
+          <van-cell-group inset>
             <van-cell
-              title="累计收入"
-              :value="
-                formatCurrency(yearToDateSummary.income_statement.total_income)
-              "
-              value-class="positive"
-            />
-            <van-cell
-              title="累计支出"
-              :value="
-                formatCurrency(
-                  Math.abs(yearToDateSummary.income_statement.total_expenses)
-                )
-              "
-              value-class="negative"
-            />
-            <van-cell
-              title="累计净收益"
-              :value="
-                formatCurrency(yearToDateSummary.income_statement.net_income)
-              "
-              :value-class="
-                yearToDateSummary.income_statement.net_income >= 0
-                  ? 'positive'
-                  : 'negative'
-              "
+              title="统计周期"
+              :value="trendsOptions.find((opt: any) => opt.value === trendsMonths)?.text"
+              is-link
+              @click="showTrendsPicker = true"
             />
           </van-cell-group>
         </div>
 
-        <!-- 月度明细 -->
-        <van-cell-group :title="`${selectedMonth}月收入明细`" inset>
-          <van-cell
-            v-for="account in sortedMonthlyIncomeAccounts"
-            :key="account.name"
-            :title="formatAccountName(account.name.replace('Income:', ''))"
-            :value="formatCurrency(Math.abs(account.balance))"
-            value-class="positive"
-            is-link
-            @click="
-              goToAccountJournal(
-                account.name,
-                getMonthDateRange(selectedYear, selectedMonth).start,
-                getMonthDateRange(selectedYear, selectedMonth).end
-              )
-            "
-          />
-        </van-cell-group>
+        <!-- 趋势图表 -->
+        <div v-if="trendsOption" class="trends-chart">
+          <van-cell-group title="收支趋势" inset>
+            <div class="chart-container">
+              <v-chart :option="trendsOption" style="height: 300px" />
+            </div>
+          </van-cell-group>
+        </div>
+      </div>
 
-        <van-cell-group :title="`${selectedMonth}月支出明细`" inset>
-          <van-cell
-            v-for="account in sortedMonthlyExpenseAccounts"
-            :key="account.name"
-            :title="formatAccountName(account.name.replace('Expenses:', ''))"
-            :value="formatCurrency(Math.abs(account.balance))"
-            value-class="negative"
-            is-link
-            @click="
-              goToAccountJournal(
-                account.name,
-                getMonthDateRange(selectedYear, selectedMonth).start,
-                getMonthDateRange(selectedYear, selectedMonth).end
-              )
-            "
-          />
-        </van-cell-group>
+      <!-- 月度报告 -->
+      <div v-if="activeTab === 'monthly'" class="report-content">
+        <!-- 年月选择 -->
+        <div class="monthly-selector">
+          <van-cell-group inset>
+            <van-cell
+              title="年份"
+              :value="`${selectedYear}年`"
+              is-link
+              @click="showYearPicker = true"
+            />
+            <van-cell
+              title="月份"
+              :value="`${selectedMonth}月`"
+              is-link
+              @click="showMonthPicker = true"
+            />
+          </van-cell-group>
+        </div>
+
+        <!-- 月度汇总 -->
+        <div v-if="monthlySummary" class="monthly-summary">
+          <!-- 概览卡片 -->
+          <div class="summary-cards">
+            <van-row gutter="8">
+              <van-col span="12">
+                <div class="summary-card income">
+                  <div class="card-value">
+                    {{
+                      formatCurrency(
+                        monthlySummary.income_statement.total_income
+                      )
+                    }}
+                  </div>
+                  <div class="card-label">本月收入</div>
+                </div>
+              </van-col>
+              <van-col span="12">
+                <div class="summary-card expense">
+                  <div class="card-value">
+                    {{
+                      formatCurrency(
+                        Math.abs(monthlySummary.income_statement.total_expenses)
+                      )
+                    }}
+                  </div>
+                  <div class="card-label">本月支出</div>
+                </div>
+              </van-col>
+            </van-row>
+            <div class="net-card">
+              <div
+                class="net-value"
+                :class="
+                  monthlySummary.income_statement.net_income >= 0
+                    ? 'positive'
+                    : 'negative'
+                "
+              >
+                {{ formatCurrency(monthlySummary.income_statement.net_income) }}
+              </div>
+              <div class="net-label">本月净收益</div>
+            </div>
+            <div class="assets-card">
+              <div class="assets-value">
+                {{ formatCurrency(monthlySummary.balance_sheet.total_assets) }}
+              </div>
+              <div class="assets-label">月末总资产</div>
+            </div>
+          </div>
+
+          <!-- 年度至今汇总 -->
+          <div v-if="yearToDateSummary" class="ytd-summary">
+            <van-cell-group :title="`${selectedYear}年度至今汇总`" inset>
+              <van-cell
+                title="累计收入"
+                :value="
+                  formatCurrency(
+                    yearToDateSummary.income_statement.total_income
+                  )
+                "
+                value-class="positive"
+              />
+              <van-cell
+                title="累计支出"
+                :value="
+                  formatCurrency(
+                    Math.abs(yearToDateSummary.income_statement.total_expenses)
+                  )
+                "
+                value-class="negative"
+              />
+              <van-cell
+                title="累计净收益"
+                :value="
+                  formatCurrency(yearToDateSummary.income_statement.net_income)
+                "
+                :value-class="
+                  yearToDateSummary.income_statement.net_income >= 0
+                    ? 'positive'
+                    : 'negative'
+                "
+              />
+            </van-cell-group>
+          </div>
+
+          <!-- 月度明细 -->
+          <van-cell-group :title="`${selectedMonth}月收入明细`" inset>
+            <van-cell
+              v-for="account in sortedMonthlyIncomeAccounts"
+              :key="account.name"
+              :title="formatAccountName(account.name.replace('Income:', ''))"
+              :value="formatCurrency(Math.abs(account.balance))"
+              value-class="positive"
+              is-link
+              @click="
+                goToAccountJournal(
+                  account.name,
+                  getMonthDateRange(selectedYear, selectedMonth).start,
+                  getMonthDateRange(selectedYear, selectedMonth).end
+                )
+              "
+            />
+          </van-cell-group>
+
+          <van-cell-group :title="`${selectedMonth}月支出明细`" inset>
+            <van-cell
+              v-for="account in sortedMonthlyExpenseAccounts"
+              :key="account.name"
+              :title="formatAccountName(account.name.replace('Expenses:', ''))"
+              :value="formatCurrency(Math.abs(account.balance))"
+              value-class="negative"
+              is-link
+              @click="
+                goToAccountJournal(
+                  account.name,
+                  getMonthDateRange(selectedYear, selectedMonth).start,
+                  getMonthDateRange(selectedYear, selectedMonth).end
+                )
+              "
+            />
+          </van-cell-group>
+        </div>
       </div>
     </div>
 
@@ -1225,10 +1234,25 @@ onMounted(() => {
   padding-bottom: 20px;
 }
 
-/* 报表类型选择器 */
-.report-type-selector {
+/* 固定标签页容器 */
+.tabs-fixed-container {
+  position: fixed;
+  top: 46px; /* 导航栏的高度 */
+  left: 0;
+  right: 0;
+  z-index: 999;
   background-color: var(--bg-color);
   border-bottom: 1px solid var(--border-color);
+}
+
+/* 报表类型选择器 */
+.report-type-selector {
+  background-color: transparent;
+}
+
+/* 报表内容包装器 */
+.reports-content-wrapper {
+  margin-top: 50px; /* 为固定标签页留出空间 */
 }
 .report-type-selector :deep(.van-tabs__nav) {
   background-color: var(--bg-color);

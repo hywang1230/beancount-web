@@ -1,7 +1,7 @@
 <template>
   <div class="h5-transactions">
     <!-- 筛选栏 -->
-    <van-sticky>
+    <div class="filter-fixed-container">
       <div class="filter-bar">
         <van-dropdown-menu>
           <van-dropdown-item v-model="filterType" :options="typeOptions" />
@@ -33,77 +33,79 @@
           </van-dropdown-item>
         </van-dropdown-menu>
       </div>
-    </van-sticky>
+    </div>
 
     <!-- 交易列表 -->
-    <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
-      <van-list
-        v-model:loading="loading"
-        :finished="finished"
-        finished-text="没有更多了"
-        @load="onLoad"
-      >
-        <div
-          v-for="group in groupedTransactions"
-          :key="group.date"
-          class="transaction-group"
+    <div class="transactions-content-wrapper">
+      <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+        <van-list
+          v-model:loading="loading"
+          :finished="finished"
+          finished-text="没有更多了"
+          @load="onLoad"
         >
-          <!-- 日期分组头 - 可点击折叠 -->
           <div
-            class="group-header"
-            :class="{ collapsed: isGroupCollapsed(group.date) }"
-            @click="toggleGroupCollapse(group.date)"
+            v-for="group in groupedTransactions"
+            :key="group.date"
+            class="transaction-group"
           >
-            <div class="group-header-left">
-              <van-icon :name="getCollapseIcon()" class="collapse-icon" />
-              <span class="group-date">{{ group.date }}</span>
+            <!-- 日期分组头 - 可点击折叠 -->
+            <div
+              class="group-header"
+              :class="{ collapsed: isGroupCollapsed(group.date) }"
+              @click="toggleGroupCollapse(group.date)"
+            >
+              <div class="group-header-left">
+                <van-icon :name="getCollapseIcon()" class="collapse-icon" />
+                <span class="group-date">{{ group.date }}</span>
+              </div>
+              <span
+                class="group-amount"
+                :class="getGroupAmountClass(group.totalAmount)"
+                >{{ formatAmount(group.totalAmount) }}</span
+              >
             </div>
-            <span
-              class="group-amount"
-              :class="getGroupAmountClass(group.totalAmount)"
-              >{{ formatAmount(group.totalAmount) }}</span
-            >
+
+            <!-- 交易项 - 支持折叠 -->
+            <van-cell-group v-show="!isGroupCollapsed(group.date)">
+              <van-swipe-cell
+                v-for="transaction in group.transactions"
+                :key="transaction.id"
+              >
+                <van-cell
+                  :title="formatAccountName(transaction.account)"
+                  :label="transaction.payee || transaction.date"
+                  :value="formatTransactionAmount(transaction)"
+                  :value-class="getTransactionAmountClass(transaction)"
+                  :class="{
+                    'highlighted-transaction':
+                      transaction.transaction_id === highlightTransactionId,
+                  }"
+                  is-link
+                  @click="viewTransaction(transaction)"
+                />
+
+                <!-- 滑动操作 -->
+                <template #right>
+                  <van-button
+                    square
+                    type="primary"
+                    text="编辑"
+                    @click="editTransaction(transaction)"
+                  />
+                  <van-button
+                    square
+                    type="danger"
+                    text="删除"
+                    @click="deleteTransaction(transaction)"
+                  />
+                </template>
+              </van-swipe-cell>
+            </van-cell-group>
           </div>
-
-          <!-- 交易项 - 支持折叠 -->
-          <van-cell-group v-show="!isGroupCollapsed(group.date)">
-            <van-swipe-cell
-              v-for="transaction in group.transactions"
-              :key="transaction.id"
-            >
-              <van-cell
-                :title="formatAccountName(transaction.account)"
-                :label="transaction.payee || transaction.date"
-                :value="formatTransactionAmount(transaction)"
-                :value-class="getTransactionAmountClass(transaction)"
-                :class="{
-                  'highlighted-transaction':
-                    transaction.transaction_id === highlightTransactionId,
-                }"
-                is-link
-                @click="viewTransaction(transaction)"
-              />
-
-              <!-- 滑动操作 -->
-              <template #right>
-                <van-button
-                  square
-                  type="primary"
-                  text="编辑"
-                  @click="editTransaction(transaction)"
-                />
-                <van-button
-                  square
-                  type="danger"
-                  text="删除"
-                  @click="deleteTransaction(transaction)"
-                />
-              </template>
-            </van-swipe-cell>
-          </van-cell-group>
-        </div>
-      </van-list>
-    </van-pull-refresh>
+        </van-list>
+      </van-pull-refresh>
+    </div>
 
     <!-- 悬浮按钮 -->
     <van-floating-bubble
@@ -1019,10 +1021,25 @@ onMounted(async () => {
   transition: background-color 0.3s ease;
 }
 
-.filter-bar {
+/* 固定筛选栏容器 */
+.filter-fixed-container {
+  position: fixed;
+  top: 46px; /* 导航栏的高度 */
+  left: 0;
+  right: 0;
+  z-index: 999;
   background-color: var(--van-background-2);
   border-bottom: 1px solid var(--van-border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.filter-bar {
+  background-color: transparent;
+}
+
+/* 交易内容包装器 */
+.transactions-content-wrapper {
+  margin-top: 50px; /* 为固定筛选栏留出空间 */
 }
 
 /* 日期筛选面板 */

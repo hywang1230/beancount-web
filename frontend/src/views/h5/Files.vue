@@ -103,8 +103,8 @@
     <!-- 文件查看/编辑对话框 -->
     <van-popup
       v-model:show="showFileDialog"
-      :style="{ height: '90%' }"
-      position="bottom"
+      position="right"
+      :style="{ width: '100%', height: '100%' }"
       :close-on-click-overlay="false"
       teleport="body"
     >
@@ -125,7 +125,6 @@
             v-model="fileContent"
             type="textarea"
             :readonly="dialogMode === 'view'"
-            :rows="20"
             placeholder="文件内容"
             autosize
           />
@@ -550,6 +549,9 @@ onMounted(() => {
   background-color: var(--bg-color-secondary);
   min-height: 100vh;
   transition: background-color 0.3s ease;
+  /* 移除自己的滚动，让父容器 main-content 处理 */
+  height: 100%;
+  overflow: visible;
 }
 
 .search-section {
@@ -605,7 +607,7 @@ onMounted(() => {
 }
 
 .file-dialog {
-  height: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background-color: var(--bg-color-secondary);
@@ -621,6 +623,12 @@ onMounted(() => {
   flex: 1;
   padding: 16px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch; /* 解决 iOS 滚动问题 */
+  min-height: 0; /* 修复 flex + overflow 在 iOS 上的问题 */
+  /* iOS 专门修复 */
+  height: calc(100vh - 120px); /* 固定高度而不是依赖flex */
+  position: relative;
+  touch-action: pan-y; /* 只允许垂直滚动 */
 }
 
 .file-content :deep(.van-field__control) {
@@ -634,5 +642,25 @@ onMounted(() => {
 .file-content :deep(.van-field__control--disabled) {
   background-color: var(--bg-color-tertiary);
   color: var(--text-color-secondary);
+}
+
+/* iOS van-field textarea 滚动修复 */
+.file-content :deep(.van-field) {
+  height: calc(100vh - 180px);
+  overflow: hidden;
+}
+
+.file-content :deep(.van-field__control) {
+  height: 100% !important;
+  min-height: calc(100vh - 200px) !important;
+  overflow-y: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+  resize: none !important;
+  /* iOS Safari 特定修复 */
+  -webkit-appearance: none;
+  appearance: none;
+  border-radius: 0;
+  touch-action: pan-y;
+  position: relative;
 }
 </style>
