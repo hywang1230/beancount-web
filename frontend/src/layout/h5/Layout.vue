@@ -13,7 +13,7 @@
     </van-nav-bar>
 
     <!-- 主内容 -->
-    <div class="main-content">
+    <div class="main-content" ref="mainContentRef">
       <router-view />
     </div>
 
@@ -65,6 +65,7 @@ const router = useRouter();
 
 const showMenuPopup = ref(false);
 const activeTab = ref("dashboard");
+const mainContentRef = ref<HTMLElement>();
 
 const tabbarItems = [
   { name: "dashboard", title: "首页", icon: "home-o", path: "/h5/dashboard" },
@@ -100,6 +101,22 @@ watch(
     }
   },
   { immediate: true }
+);
+
+// 监听路由变化，滚动到顶部
+watch(
+  () => route.path,
+  () => {
+    // 使用nextTick确保DOM更新完成后再滚动
+    setTimeout(() => {
+      if (mainContentRef.value) {
+        mainContentRef.value.scrollTo({
+          top: 0,
+          behavior: "smooth",
+        });
+      }
+    }, 0);
+  }
 );
 
 const currentPageTitle = computed(() => {
