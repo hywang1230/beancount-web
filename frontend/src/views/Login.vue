@@ -48,19 +48,13 @@
           {{ authStore.isLoading ? "登录中..." : "登录" }}
         </button>
       </form>
-
-      <div class="login-footer">
-        <p class="default-hint">
-          默认用户名: <strong>admin</strong><br />
-          默认密码: <strong>admin123</strong>
-        </p>
-      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
 import { useAuthStore } from "@/stores/auth";
+import { getDefaultRoute } from "@/utils/device";
 import { onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 
@@ -80,9 +74,9 @@ const handleLogin = async () => {
   try {
     await authStore.login(loginForm.value);
 
-    // 登录成功，跳转到首页
+    // 登录成功，根据设备类型跳转到对应页面
     const redirectPath =
-      (router.currentRoute.value.query.redirect as string) || "/dashboard";
+      (router.currentRoute.value.query.redirect as string) || getDefaultRoute();
     router.push(redirectPath);
   } catch (error: any) {
     errorMessage.value = error.message || "登录失败，请重试";
@@ -92,7 +86,7 @@ const handleLogin = async () => {
 // 如果已经登录，直接跳转
 onMounted(() => {
   if (authStore.isAuthenticated) {
-    router.push("/dashboard");
+    router.push(getDefaultRoute());
   }
 });
 </script>

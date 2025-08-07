@@ -77,6 +77,7 @@
 
 <script setup lang="ts">
 import { useAuthStore } from "@/stores/auth";
+import { showConfirmDialog, showToast } from "vant";
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -177,12 +178,7 @@ const currentPageTitle = computed(() => {
 });
 
 const showMenu = computed(() => {
-  // 设置页面显示菜单按钮
-  if (route.path === "/h5/settings") {
-    return true;
-  }
-
-  // 底部导航栏的其他页面不显示菜单按钮
+  // 底部导航栏的页面不显示菜单按钮
   const isTabbarPage = tabbarItems.some((item) => item.path === route.path);
   if (isTabbarPage) {
     return false;

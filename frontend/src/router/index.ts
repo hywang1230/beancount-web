@@ -1,6 +1,7 @@
 import H5Layout from "@/layout/h5/Layout.vue";
 import PcLayout from "@/layout/pc/Layout.vue";
 import { useAuthStore } from "@/stores/auth";
+import { getDefaultRoute } from "@/utils/device";
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 
 const routes: RouteRecordRaw[] = [
@@ -11,12 +12,11 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/views/Login.vue"),
     meta: { requiresAuth: false, title: "登录" },
   },
-  // 根路由重定向逻辑在App.vue中处理
+  // 根路由重定向逻辑，根据设备类型跳转
   {
     path: "/",
     redirect: () => {
-      // 这里的重定向逻辑将在App.vue中处理
-      return "/dashboard";
+      return getDefaultRoute();
     },
   },
   // PC端路由
@@ -212,8 +212,8 @@ router.beforeEach(async (to, _from, next) => {
       return;
     }
   } else if (to.path === "/login" && authStore.isAuthenticated) {
-    // 已登录用户访问登录页，重定向到首页
-    next("/dashboard");
+    // 已登录用户访问登录页，根据设备类型重定向到对应首页
+    next(getDefaultRoute());
     return;
   }
 
