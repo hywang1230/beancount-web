@@ -6,7 +6,7 @@
         <el-icon v-if="isCollapse" size="24"><Wallet /></el-icon>
         <span v-else>Beancount Web</span>
       </div>
-      
+
       <el-menu
         :default-active="activeMenu"
         :collapse="isCollapse"
@@ -26,29 +26,43 @@
         </el-menu-item>
       </el-menu>
     </el-aside>
-    
+
     <!-- 主内容区 -->
     <el-container>
       <!-- 顶栏 -->
       <el-header class="header">
         <div class="header-left">
-          <el-button 
-            link
-            @click="toggleCollapse"
-            class="collapse-btn"
-          >
+          <el-button link @click="toggleCollapse" class="collapse-btn">
             <el-icon size="20">
               <Menu />
             </el-icon>
           </el-button>
-          
+
           <el-breadcrumb separator="/">
             <el-breadcrumb-item>首页</el-breadcrumb-item>
             <el-breadcrumb-item>{{ currentPageTitle }}</el-breadcrumb-item>
           </el-breadcrumb>
         </div>
+
+        <div class="header-right">
+          <el-dropdown @command="handleCommand">
+            <span class="user-info">
+              <el-icon><User /></el-icon>
+              <span>{{ authStore.user?.username || "用户" }}</span>
+              <el-icon class="el-icon--right"><ArrowDown /></el-icon>
+            </span>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="logout">
+                  <el-icon><SwitchButton /></el-icon>
+                  登出
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
+        </div>
       </el-header>
-      
+
       <!-- 主内容 -->
       <el-main class="main-content">
         <router-view />
@@ -58,43 +72,70 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useAuthStore } from "@/stores/auth";
 import {
-  Wallet,
-  Menu,
+  ArrowDown,
   DataAnalysis,
-  Money,
-  Plus,
-  User,
   Folder,
+  Menu,
+  Money,
   Odometer,
-  Refresh
-} from '@element-plus/icons-vue'
+  Plus,
+  Refresh,
+  SwitchButton,
+  User,
+  Wallet,
+} from "@element-plus/icons-vue";
+import { ElMessage, ElMessageBox } from "element-plus";
+import { computed, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 
-const route = useRoute()
-const isCollapse = ref(false)
+const route = useRoute();
+const router = useRouter();
+const authStore = useAuthStore();
+const isCollapse = ref(false);
 
 const menuItems = [
-  { path: '/dashboard', title: '仪表盘', icon: Odometer },
-  { path: '/transactions', title: '交易流水', icon: Money },
-  { path: '/add-transaction', title: '新增交易', icon: Plus },
-  { path: '/recurring', title: '周期记账', icon: Refresh },
-  { path: '/reports', title: '报表分析', icon: DataAnalysis },
-  { path: '/accounts', title: '账户管理', icon: User },
-  { path: '/files', title: '文件管理', icon: Folder }
-]
+  { path: "/dashboard", title: "仪表盘", icon: Odometer },
+  { path: "/transactions", title: "交易流水", icon: Money },
+  { path: "/add-transaction", title: "新增交易", icon: Plus },
+  { path: "/recurring", title: "周期记账", icon: Refresh },
+  { path: "/reports", title: "报表分析", icon: DataAnalysis },
+  { path: "/accounts", title: "账户管理", icon: User },
+  { path: "/files", title: "文件管理", icon: Folder },
+];
 
-const activeMenu = computed(() => route.path)
+const activeMenu = computed(() => route.path);
 
 const currentPageTitle = computed(() => {
-  const currentItem = menuItems.find(item => item.path === route.path)
-  return currentItem?.title || '首页'
-})
+  const currentItem = menuItems.find((item) => item.path === route.path);
+  return currentItem?.title || "首页";
+});
 
 const toggleCollapse = () => {
-  isCollapse.value = !isCollapse.value
-}
+  isCollapse.value = !isCollapse.value;
+};
+
+const handleCommand = async (command: string) => {
+  if (command === "logout") {
+    try {
+      await ElMessageBox.confirm("确定要登出吗？", "确认登出", {
+        confirmButtonText: "确定",
+        cancelButtonText: "取消",
+        type: "warning",
+      });
+
+      await authStore.logout();
+      ElMessage.success("登出成功");
+      router.push("/login");
+    } catch (error: any) {
+      if (error !== "cancel") {
+        console.error("登出失败:", error);
+        ElMessage.error("登出失败");
+      }
+    }
+  }
+};
 </script>
 
 <style scoped>
@@ -127,6 +168,7 @@ const toggleCollapse = () => {
   border-bottom: 1px solid #e6e6e6;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   padding: 0 20px;
 }
 
@@ -144,4 +186,24 @@ const toggleCollapse = () => {
   background-color: #f5f7fa;
   padding: 0;
 }
-</style> 
+
+.header-right {
+  display: flex;
+  align-items: center;
+}
+
+.user-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  color: #606266;
+  padding: 8px 12px;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.user-info:hover {
+  background-color: #f5f7fa;
+}
+</style>

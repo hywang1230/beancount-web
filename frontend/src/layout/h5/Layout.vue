@@ -41,6 +41,16 @@
           <h3>Beancount Web</h3>
           <van-icon name="cross" @click="showMenuPopup = false" />
         </div>
+
+        <!-- 用户信息 -->
+        <div class="user-section">
+          <van-cell
+            :title="authStore.user?.username || '用户'"
+            icon="user-o"
+            :label="`当前登录用户`"
+          />
+        </div>
+
         <van-cell-group>
           <van-cell
             v-for="item in allMenuItems"
@@ -50,6 +60,15 @@
             is-link
             @click="navigateTo(item.path)"
           />
+
+          <!-- 登出选项 -->
+          <van-cell
+            title="登出"
+            icon="sign-out"
+            is-link
+            @click="handleLogout"
+            class="logout-cell"
+          />
         </van-cell-group>
       </div>
     </van-popup>
@@ -57,11 +76,14 @@
 </template>
 
 <script setup lang="ts">
+import { useAuthStore } from "@/stores/auth";
+import { showConfirmDialog, showToast } from "vant";
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const route = useRoute();
 const router = useRouter();
+const authStore = useAuthStore();
 
 const showMenuPopup = ref(false);
 const activeTab = ref("dashboard");
@@ -204,6 +226,27 @@ const navigateTo = (path: string) => {
   showMenuPopup.value = false;
   router.push(path);
 };
+
+const handleLogout = async () => {
+  try {
+    await showConfirmDialog({
+      title: "确认登出",
+      message: "确定要登出吗？",
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+    });
+
+    await authStore.logout();
+    showMenuPopup.value = false;
+    showToast("登出成功");
+    router.push("/login");
+  } catch (error: any) {
+    if (error !== "cancel") {
+      console.error("登出失败:", error);
+      showToast("登出失败");
+    }
+  }
+};
 </script>
 
 <style scoped>
@@ -264,5 +307,15 @@ const navigateTo = (path: string) => {
   font-size: 18px;
   font-weight: 500;
   transition: color 0.3s ease;
+}
+
+.user-section {
+  padding: 16px 0;
+  border-bottom: 1px solid var(--van-border-color);
+  margin-bottom: 8px;
+}
+
+.logout-cell {
+  color: var(--van-danger-color);
 }
 </style>

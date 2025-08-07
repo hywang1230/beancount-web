@@ -2,28 +2,12 @@ version: '3.8'
 
 services:
   beancount-web:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    image: pionnerwang/beancount-web:latest
     ports:
       - "8000:8000"
     volumes:
-      - ./data:/app/data
+      - beancount-data:/app/data
     environment:
-      - PYTHONPATH=/app
-      - PORT=8000
-      - DATA_DIR=/app/data
-      - ALLOWED_ORIGINS=http://localhost:8000
+      - USERNAME=admin
+      - PASSWORD=admin123
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-    networks:
-      - beancount-network
-
-networks:
-  beancount-network:
-    driver: bridge 

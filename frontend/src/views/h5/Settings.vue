@@ -55,6 +55,17 @@
       </van-cell>
     </van-cell-group>
 
+    <van-cell-group inset title="账户管理">
+      <van-cell
+        title="登出"
+        icon="sign-out"
+        is-link
+        :border="false"
+        @click="handleLogout"
+        class="logout-cell"
+      />
+    </van-cell-group>
+
     <van-cell-group inset title="应用信息">
       <van-cell
         title="版本信息"
@@ -89,13 +100,15 @@
 </template>
 
 <script setup lang="ts">
+import { useAuthStore } from "@/stores/auth";
 import { useThemeStore, type ThemeSetting } from "@/stores/theme";
-import { showToast } from "vant";
+import { showConfirmDialog, showToast } from "vant";
 import { computed, ref } from "vue";
 import { useRouter } from "vue-router";
 
 const router = useRouter();
 const themeStore = useThemeStore();
+const authStore = useAuthStore();
 const showAbout = ref(false);
 const version = ref("1.0.0");
 
@@ -121,6 +134,26 @@ const handleThemeChange = (value: ThemeSetting) => {
     message: `已切换到${themeNames[value]}`,
     duration: 1500,
   });
+};
+
+const handleLogout = async () => {
+  try {
+    await showConfirmDialog({
+      title: "确认登出",
+      message: "确定要登出吗？",
+      confirmButtonText: "确定",
+      cancelButtonText: "取消",
+    });
+
+    await authStore.logout();
+    showToast("登出成功");
+    router.push("/login");
+  } catch (error: any) {
+    if (error !== "cancel") {
+      console.error("登出失败:", error);
+      showToast("登出失败");
+    }
+  }
 };
 </script>
 
@@ -180,5 +213,9 @@ const handleThemeChange = (value: ThemeSetting) => {
   margin: 16px 0;
   border-radius: 8px;
   overflow: hidden;
+}
+
+.logout-cell {
+  color: var(--van-danger-color);
 }
 </style>

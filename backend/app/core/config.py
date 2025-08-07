@@ -21,6 +21,15 @@ class Settings(BaseSettings):
     # Beancount配置
     default_currency: str = "CNY"
     
+    # 认证配置
+    secret_key: str = "your-secret-key-change-this-in-production"
+    algorithm: str = "HS256"
+    access_token_expire_minutes: int = 60 * 24 * 7  # 7天
+    
+    # 单用户登录配置
+    username: str = os.getenv("USERNAME", "admin")
+    password: str = os.getenv("PASSWORD", "admin123")  # 这里可以设置默认密码
+    
     model_config = {
         "env_file": ".env",
         "case_sensitive": False,

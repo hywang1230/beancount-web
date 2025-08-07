@@ -9,7 +9,7 @@
 
 一个基于 **Beancount 3** 的现代化复式记账系统，提供直观的 Web 界面进行记账、流水查看和报表分析。
 
-🎯 **单用户系统** - 专为个人记账设计，无需用户认证，开箱即用
+🎯 **单用户系统** - 专为个人记账设计，支持用户认证，安全可靠
 
 📱 **跨端体验** - PC端和移动端分离式设计，自动适配不同设备
 
@@ -88,7 +88,8 @@ beancount-web/
 - 🏷️ **高级筛选** - 按日期、金额、账户等多条件筛选
 - 📋 **交易模板** - 常用交易保存为模板，快速复用
 - 🎨 **个性化设置** - 主题切换、界面布局自定义
-- 🔐 **数据安全** - 本地部署，数据完全掌控
+- 🔐 **数据安全** - 本地部署，用户认证保护，数据完全掌控
+- 📱 **PWA支持** - 支持安装为桌面/移动应用，离线使用
 
 </td>
 </tr>
@@ -97,25 +98,27 @@ beancount-web/
 ## 技术栈
 
 ### 前端
-- **框架**: Vue 3.x + TypeScript
-- **构建工具**: Vite 5.x
-- **PC端UI**: Element Plus + @element-plus/icons
-- **移动端UI**: Vant 4.x + @vant/icons
-- **路由**: Vue Router 4.x
-- **状态管理**: Pinia
-- **图表**: ECharts + Vue-ECharts
-- **HTTP客户端**: Axios
-- **日期处理**: Day.js
+- **框架**: Vue 3.3.8 + TypeScript 5.2.2
+- **构建工具**: Vite 5.0.0
+- **PC端UI**: Element Plus 2.4.4 + @element-plus/icons 2.1.0
+- **移动端UI**: Vant 4.8.0 + @vant/icons 1.2.2
+- **路由**: Vue Router 4.2.5
+- **状态管理**: Pinia 2.1.7
+- **图表**: ECharts 5.4.3 + Vue-ECharts 6.6.1
+- **HTTP客户端**: Axios 1.6.2
+- **日期处理**: Day.js 1.11.10
+- **PWA支持**: Vite-plugin-pwa 1.0.2
 
 ### 后端
-- **框架**: Python 3.8+ + FastAPI
-- **记账引擎**: Beancount 3.x
-- **异步支持**: Uvicorn + asyncio
-- **数据处理**: Pandas
-- **任务调度**: APScheduler
-- **文件处理**: aiofiles
+- **框架**: Python 3.11+ + FastAPI 0.104.1
+- **记账引擎**: Beancount 3.0.0
+- **异步支持**: Uvicorn 0.24.0 + asyncio
+- **数据处理**: Pandas 2.1.4
+- **任务调度**: APScheduler 3.10.4
+- **文件处理**: aiofiles 23.2.0
 - **数据验证**: Pydantic 2.x
-- **配置管理**: pydantic-settings
+- **配置管理**: pydantic-settings 2.1.0
+- **认证系统**: python-jose 3.3.0 + passlib 1.7.4
 
 ## 🚀 快速开始
 
@@ -178,25 +181,29 @@ npm run dev
 git clone <your-repo-url>
 cd beancount-web
 
-# 开发环境
+# 使用docker-compose启动
 docker-compose up -d
-
-# 生产环境
-docker-compose -f docker-compose.prod.yml up -d
 ```
 
 🌐 访问地址: **http://localhost:8000**
+
+**默认登录信息:**
+- 用户名: `admin`
+- 密码: `admin123`
+
+> 💡 可通过环境变量 `USERNAME` 和 `PASSWORD` 自定义登录信息
 
 ---
 
 ### 📱 首次使用指南
 
-1. **📁 上传账本文件**: 进入"文件管理"页面，上传你的 `.beancount` 文件
-2. **💰 开始记账**: 点击"添加交易"，输入你的第一笔记录
-3. **📊 查看报表**: 在仪表板查看你的财务概览
-4. **🔄 设置周期交易**: 为房租、工资等定期项目设置自动记账
+1. **🔐 登录系统**: 使用默认用户名 `admin` 和密码 `admin123` 登录
+2. **📁 管理账本文件**: 进入"文件管理"页面，上传你的 `.beancount` 文件或使用系统自动创建的示例文件
+3. **💰 开始记账**: 点击"添加交易"，输入你的第一笔记录
+4. **📊 查看报表**: 在仪表板查看你的财务概览
+5. **🔄 设置周期交易**: 为房租、工资等定期项目设置自动记账
 
-> 🆕 **新用户?** 系统会自动创建示例账本文件，你可以直接开始体验！
+> 🆕 **新用户?** 系统会自动创建示例账本文件，包含基础账户结构和示例交易，你可以直接开始体验！
 
 ## 跨端支持
 
@@ -263,10 +270,11 @@ kill -9 <PID>
 <details>
 <summary><strong>Q: 前端页面显示空白</strong></summary>
 
-**A:** 通常是后端服务未启动或连接失败
+**A:** 通常是后端服务未启动或认证失败
 1. 确认后端服务正常运行 (http://localhost:8000/docs)
-2. 检查浏览器控制台是否有错误信息
-3. 尝试清除浏览器缓存后重新访问
+2. 检查是否已正确登录系统
+3. 检查浏览器控制台是否有错误信息
+4. 尝试清除浏览器缓存后重新访问
 </details>
 
 <details>
@@ -304,6 +312,16 @@ kill -9 <PID>
 1. **文件备份**: 定期下载 `data/` 目录下的所有文件
 2. **自动备份**: 系统会在每次修改时自动创建备份
 3. **导出备份**: 使用导出功能生成CSV等格式的备份
+4. **Docker数据卷**: 如使用Docker部署，确保挂载数据卷到宿主机
+</details>
+
+<details>
+<summary><strong>Q: 如何修改登录密码</strong></summary>
+
+**A:** 可通过环境变量修改默认登录信息
+1. **Docker环境**: 在docker-compose.yml中设置 `USERNAME` 和 `PASSWORD` 环境变量
+2. **本地部署**: 在 `.env` 文件中设置相应变量
+3. **重启服务**: 修改后需要重启服务使配置生效
 </details>
 
 ---
