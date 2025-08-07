@@ -1,8 +1,23 @@
-# Beancount Web 记账系统
+<div align="center">
 
-一个基于 Beancount 3 的现代化复式记账系统，提供直观的 Web 界面进行记账、流水查看和报表分析。
+# 💰 Beancount Web 记账系统
 
-**单用户系统** - 专为个人记账设计，无需用户认证，开箱即用。
+[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](https://opensource.org/licenses/MIT)
+[![Python](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
+[![Vue.js](https://img.shields.io/badge/vue-3.x-green.svg)](https://vuejs.org/)
+[![FastAPI](https://img.shields.io/badge/fastapi-latest-009688.svg)](https://fastapi.tiangolo.com/)
+
+一个基于 **Beancount 3** 的现代化复式记账系统，提供直观的 Web 界面进行记账、流水查看和报表分析。
+
+🎯 **单用户系统** - 专为个人记账设计，无需用户认证，开箱即用
+
+📱 **跨端体验** - PC端和移动端分离式设计，自动适配不同设备
+
+🚀 **快速部署** - 支持Docker一键部署，5分钟即可启动
+
+</div>
+
+---
 
 ## 项目结构
 
@@ -26,38 +41,58 @@ beancount-web/
 └── logs/             # 应用日志
 ```
 
-## 功能特性
+## ✨ 功能特性
+
+<table>
+<tr>
+<td width="50%">
 
 ### 💰 核心记账功能
-- **复式记账** - 支持完整的Beancount复式记账系统
-- **多账户管理** - 资产、负债、收入、支出账户全方位管理
-- **快速记账** - 直观的记账界面，支持转账、收入、支出等多种类型
+- 🏦 **完整复式记账** - 基于Beancount标准的双分录记账系统
+- 📋 **智能账户管理** - 支持资产、负债、收入、支出、权益五大类账户
+- ⚡ **快速记账** - 一键添加收入、支出、转账等常用交易
+- 🏷️ **标签分类** - 支持多级分类和自定义标签，精细化管理
+- 💱 **多币种支持** - 完整的外币和汇率管理
 
 ### 📊 报表分析
-- **收支统计** - 按时间、分类的详细收支分析
-- **资产负债表** - 实时资产负债情况一目了然
-- **趋势分析** - 图表展示财务趋势变化
+- 📈 **实时财务仪表板** - 关键财务指标一目了然
+- 📉 **趋势分析图表** - 收支趋势、资产变化可视化展示
+- 🏦 **资产负债表** - 实时更新的财务状况报告
+- 💸 **收支损益表** - 按期间的详细收支分析
+- 📊 **自定义报表** - 支持按时间、账户、分类等多维度分析
 
-### 📁 文件管理
-- 支持 `.beancount` 和 `.bean` 文件格式
-- 文件上传、下载、在线编辑
-- 语法验证和错误检查
-- 自动备份机制
+### 🔄 智能周期记账
+- ⏰ **自动化记账** - 设置后自动执行周期性交易
+- 📅 **灵活周期设置** - 支持日、周、月、年等多种周期
+- 🎯 **智能提醒** - 到期前自动提醒，避免遗漏
+- 🔧 **批量管理** - 批量创建、编辑、暂停周期交易
 
-### 🔄 周期记账
-- **自动化记账** - 支持按日、周、月的周期性交易
-- **智能执行** - 自动检测并执行到期的周期交易
-- **灵活配置** - 支持复杂的周期规则设置
+</td>
+<td width="50%">
 
-### 📱 移动端支持
-- **跨端体验** - PC端和移动端分离式设计，体验更优
-- **智能适配** - 自动检测设备类型，使用对应UI组件
-- **触摸优化** - 移动端触摸交互优化，支持手势操作
+### 📱 跨端体验
+- 💻 **PC端优雅界面** - Element Plus设计，专业财务软件体验
+- 📱 **移动端专用设计** - Vant UI组件，原生移动体验
+- 🔄 **智能设备识别** - 自动适配PC/移动端，无缝切换
+- ✋ **触摸手势优化** - 移动端滑动、长按等交互优化
 
-### 🔍 其他功能
-- **强大搜索** - 支持多维度的交易搜索和过滤
-- **数据导出** - 支持CSV等格式的数据导出
-- **单用户模式** - 专为个人使用设计，无需认证，开箱即用
+### 📁 文件管理系统
+- 📄 **多格式支持** - `.beancount`、`.bean` 文件完全兼容
+- ☁️ **在线编辑器** - 内置语法高亮的编辑器
+- ✅ **实时语法检查** - 自动验证Beancount语法
+- 💾 **自动备份** - 文件变更自动备份，数据安全保障
+- 📤 **导入导出** - 支持CSV等格式的批量导入导出
+
+### 🔍 高级功能
+- 🔎 **全文搜索** - 支持交易描述、账户名称等全文搜索
+- 🏷️ **高级筛选** - 按日期、金额、账户等多条件筛选
+- 📋 **交易模板** - 常用交易保存为模板，快速复用
+- 🎨 **个性化设置** - 主题切换、界面布局自定义
+- 🔐 **数据安全** - 本地部署，数据完全掌控
+
+</td>
+</tr>
+</table>
 
 ## 技术栈
 
@@ -82,39 +117,67 @@ beancount-web/
 - **数据验证**: Pydantic 2.x
 - **配置管理**: pydantic-settings
 
-## 快速开始
+## 🚀 快速开始
 
-### 方式一：使用启动脚本（推荐）
+> 💡 **提示**: 第一次启动需要安装依赖，大约需要3-5分钟。建议使用方式一的启动脚本，会自动处理所有依赖。
+
+### 🎯 方式一：一键启动（推荐新手）
 
 ```bash
-# Linux/macOS
+# Linux/macOS 用户
+chmod +x start.sh
 ./start.sh
 
-# Windows
+# Windows 用户
 start.bat
 ```
 
-等待服务启动后，访问: http://localhost:5173
+🎉 启动成功后，浏览器会自动打开: **http://localhost:5173**
 
-### 方式二：手动启动
+---
 
-**后端服务**
+### 🔧 方式二：手动启动（开发者）
+
+<details>
+<summary>👆 点击展开详细步骤</summary>
+
+**1. 启动后端服务**
 ```bash
 cd backend
+# 创建虚拟环境（推荐）
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+
+# 安装依赖
 pip install -r requirements.txt
+
+# 启动服务
 python main.py
 ```
 
-**前端服务**
+**2. 启动前端服务**
 ```bash
 cd frontend
+# 安装依赖
 npm install
+
+# 启动开发服务器
 npm run dev
 ```
 
-### 方式三：Docker部署
+✅ 访问地址: **http://localhost:5173**
+
+</details>
+
+---
+
+### 🐳 方式三：Docker部署（生产环境）
 
 ```bash
+# 克隆项目
+git clone <your-repo-url>
+cd beancount-web
+
 # 开发环境
 docker-compose up -d
 
@@ -122,7 +185,18 @@ docker-compose up -d
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-访问: http://localhost:8000
+🌐 访问地址: **http://localhost:8000**
+
+---
+
+### 📱 首次使用指南
+
+1. **📁 上传账本文件**: 进入"文件管理"页面，上传你的 `.beancount` 文件
+2. **💰 开始记账**: 点击"添加交易"，输入你的第一笔记录
+3. **📊 查看报表**: 在仪表板查看你的财务概览
+4. **🔄 设置周期交易**: 为房租、工资等定期项目设置自动记账
+
+> 🆕 **新用户?** 系统会自动创建示例账本文件，你可以直接开始体验！
 
 ## 跨端支持
 
@@ -168,6 +242,132 @@ docker-compose -f docker-compose.prod.yml up -d
 - 支持多种格式的Beancount文件
 - 建议定期备份数据目录
 
-## 许可证
+---
 
-MIT License
+## ❓ 常见问题
+
+<details>
+<summary><strong>Q: 启动时报错 "端口被占用"</strong></summary>
+
+**A:** 检查是否有其他服务占用了端口
+```bash
+# 检查端口占用情况
+lsof -i :5173  # 前端端口
+lsof -i :8000  # 后端端口
+
+# 杀死占用进程
+kill -9 <PID>
+```
+</details>
+
+<details>
+<summary><strong>Q: 前端页面显示空白</strong></summary>
+
+**A:** 通常是后端服务未启动或连接失败
+1. 确认后端服务正常运行 (http://localhost:8000/docs)
+2. 检查浏览器控制台是否有错误信息
+3. 尝试清除浏览器缓存后重新访问
+</details>
+
+<details>
+<summary><strong>Q: Beancount文件语法错误</strong></summary>
+
+**A:** 使用内置的语法检查功能
+1. 在"文件管理"页面上传文件
+2. 系统会自动进行语法验证
+3. 根据错误提示修改文件内容
+4. 也可以使用官方 `bean-check` 命令验证
+</details>
+
+<details>
+<summary><strong>Q: 如何导入已有的财务数据</strong></summary>
+
+**A:** 支持多种导入方式
+1. **标准Beancount文件**: 直接上传 `.beancount` 文件
+2. **CSV格式**: 使用导入功能，支持自定义字段映射
+3. **其他记账软件**: 先导出为CSV，再导入本系统
+</details>
+
+<details>
+<summary><strong>Q: 移动端和PC端数据不同步</strong></summary>
+
+**A:** 移动端和PC端使用同一个后端数据源
+1. 确认访问的是同一个服务器地址
+2. 尝试刷新页面或清除缓存
+3. 检查网络连接是否正常
+</details>
+
+<details>
+<summary><strong>Q: 如何备份我的账本数据</strong></summary>
+
+**A:** 多种备份方式保证数据安全
+1. **文件备份**: 定期下载 `data/` 目录下的所有文件
+2. **自动备份**: 系统会在每次修改时自动创建备份
+3. **导出备份**: 使用导出功能生成CSV等格式的备份
+</details>
+
+---
+
+## 🛠️ 故障排除
+
+### 安装问题
+- **Python版本**: 确保使用Python 3.8+
+- **Node.js版本**: 确保使用Node.js 16+
+- **网络问题**: 如遇到下载慢，可考虑使用国内镜像源
+
+### 运行问题
+- **内存不足**: 关闭其他占用内存的应用
+- **磁盘空间**: 确保有足够的磁盘空间存储账本文件
+- **权限问题**: 确保对项目目录有读写权限
+
+### 数据问题
+- **编码问题**: 确保Beancount文件使用UTF-8编码
+- **路径问题**: 避免使用包含特殊字符的文件路径
+- **文件大小**: 过大的账本文件可能导致加载缓慢
+
+> 💡 **获得帮助**: 如果遇到其他问题，欢迎提交 [Issue](https://github.com/your-repo/issues) 或查看项目文档。
+
+---
+
+## 🤝 贡献指南
+
+我们欢迎各种形式的贡献！
+
+### 💻 代码贡献
+1. Fork 本项目
+2. 创建特性分支 (`git checkout -b feature/AmazingFeature`)
+3. 提交更改 (`git commit -m 'Add some AmazingFeature'`)
+4. 推送到分支 (`git push origin feature/AmazingFeature`)
+5. 开启 Pull Request
+
+### 🐛 问题反馈
+- 使用 [Issue模板](https://github.com/your-repo/issues/new) 提交Bug报告
+- 详细描述问题现象和复现步骤
+- 提供系统环境信息
+
+### 📖 文档改进
+- 改进现有文档
+- 添加使用示例
+- 翻译文档到其他语言
+
+### 💡 功能建议
+- 在Issues中提出新功能建议
+- 参与功能讨论
+- 帮助设计用户界面
+
+---
+
+
+## 📄 许可证
+
+本项目基于 [MIT License](LICENSE) 开源协议
+
+---
+
+<div align="center">
+
+**⭐ 如果这个项目对你有帮助，请给我们一个星星! ⭐**
+
+Made with ❤️ by Beancount Web Team
+
+</div>
