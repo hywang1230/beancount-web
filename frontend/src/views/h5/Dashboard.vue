@@ -71,24 +71,6 @@
       />
       <van-cell title="结余" :value="formatAmount(monthlyStats.balance)" />
     </van-cell-group>
-
-    <!-- 账户列表 -->
-    <van-cell-group title="账户概览">
-      <van-cell
-        v-for="account in mainAccounts"
-        :key="account.name"
-        :title="formatAccountName(account.name)"
-        :value="formatAmount(account.balance)"
-        is-link
-        @click="viewAccount(account)"
-      />
-
-      <van-cell
-        title="查看全部账户"
-        is-link
-        @click="$router.push('/h5/accounts')"
-      />
-    </van-cell-group>
   </div>
 </template>
 
@@ -128,18 +110,11 @@ const totalBalance = ref(0);
 const totalAssets = ref(0);
 const totalLiabilities = ref(0);
 
-interface Account {
-  id: number;
-  name: string;
-  balance: number;
-}
-
 const monthlyStats = ref({
   income: 0,
   expense: 0,
   balance: 0,
 });
-const mainAccounts = ref<Account[]>([]);
 
 // 趋势图表相关
 const chartContainer = ref<HTMLElement>();
@@ -183,28 +158,6 @@ const formatAmount = (amount: number) => {
     style: "currency",
     currency: "CNY",
   }).format(amount);
-};
-
-const formatAccountName = (accountName: string) => {
-  if (!accountName) return "未知账户";
-  // 去掉第一级账户名称（通常是Assets、Liabilities、Income、Expenses等）
-  const parts = accountName.split(":");
-  if (parts.length > 1) {
-    let formattedName = parts.slice(1).join(":");
-
-    // 进一步处理：去掉第一个"-"以及前面的字母部分
-    // 例如：JT-交通:过路费 -> 交通:过路费，然后替换":"为"-"变成：交通-过路费
-    const dashIndex = formattedName.indexOf("-");
-    if (dashIndex > 0) {
-      formattedName = formattedName.substring(dashIndex + 1);
-    }
-
-    // 将":"替换为"-"以提高可读性
-    formattedName = formattedName.replace(/:/g, "-");
-
-    return formattedName;
-  }
-  return accountName;
 };
 
 // 初始化图表
@@ -332,11 +285,6 @@ const generateTrendsOption = () => {
   }
 };
 
-const viewAccount = (account: any) => {
-  // 跳转到账户详情
-  router.push(`/h5/accounts/${account.id}`);
-};
-
 const loadDashboardData = async () => {
   try {
     // 并行加载各种数据
@@ -365,21 +313,6 @@ const loadDashboardData = async () => {
             (sum: number, acc: any) => sum + parseFloat(acc.balance),
             0
           ) || 0;
-
-      // 取前几个主要账户
-      const assetAccounts =
-        balanceData?.accounts
-          ?.filter(
-            (acc: any) =>
-              acc.account_type === "Assets" && parseFloat(acc.balance) > 0
-          )
-          .slice(0, 3) || [];
-
-      mainAccounts.value = assetAccounts.map((acc: any, index: number) => ({
-        id: index + 1,
-        name: acc.name,
-        balance: parseFloat(acc.balance),
-      }));
     } else {
       console.error("获取资产负债表失败:", balanceSheetRes.reason);
     }
