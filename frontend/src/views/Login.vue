@@ -2,7 +2,7 @@
   <div class="login-container">
     <div class="login-card">
       <div class="login-header">
-        <h1 class="login-title">豆瓣记账</h1>
+        <h1 class="login-title">Beancount Web</h1>
         <p class="login-subtitle">请登录您的账户</p>
       </div>
 

@@ -27,8 +27,8 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60 * 24 * 7  # 7天
     
     # 单用户登录配置
-    username: str = "admin"
-    password: str = "admin123"  # 这里可以设置默认密码
+    username: str = os.getenv("USERNAME", "admin")
+    password: str = os.getenv("PASSWORD", "admin123")  # 这里可以设置默认密码
     
     model_config = {
         "env_file": ".env",
