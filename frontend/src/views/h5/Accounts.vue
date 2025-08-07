@@ -150,8 +150,7 @@
     <van-popup
       v-model:show="showCreateDialog"
       position="bottom"
-      :style="{ height: '70%' }"
-      round
+      :style="{ height: '100%' }"
       closeable
       close-icon-position="top-right"
     >
