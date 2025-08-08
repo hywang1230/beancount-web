@@ -36,15 +36,22 @@
           placeholder="搜索周期记账"
           @search="onSearch"
         />
-        <van-dropdown-menu>
+        <van-dropdown-menu
+          class="recurring-filter-menu"
+          active-color="#1989fa"
+          overlay
+          :close-on-click-overlay="true"
+        >
           <van-dropdown-item
             v-model="filterStatus"
             :options="statusOptions"
+            :title="getStatusTitle()"
             @change="onFilterChange"
           />
           <van-dropdown-item
             v-model="filterFrequency"
             :options="frequencyOptions"
+            :title="getFrequencyTitle()"
             @change="onFilterChange"
           />
         </van-dropdown-menu>
@@ -343,6 +350,20 @@ const getFrequencyText = (frequency: string) => {
   return textMap[frequency] || frequency;
 };
 
+// 获取状态筛选的标题
+const getStatusTitle = () => {
+  const option = statusOptions.find((opt) => opt.value === filterStatus.value);
+  return option ? option.text : "全部状态";
+};
+
+// 获取频率筛选的标题
+const getFrequencyTitle = () => {
+  const option = frequencyOptions.find(
+    (opt) => opt.value === filterFrequency.value
+  );
+  return option ? option.text : "全部频率";
+};
+
 const getRecurringIcon = (type: string) => {
   const iconMap: Record<string, string> = {
     income: "arrow-up",
@@ -404,7 +425,7 @@ const executeNow = async () => {
     // 刷新列表
     await loadRecurringList(true);
   } catch (error) {
-    console.error("执行周期记账失败:", error);
+    // console.error("执行周期记账失败:", error);
     showToast("执行失败");
   } finally {
     executeLoading.value = false;
@@ -422,7 +443,7 @@ const viewLogs = async (item: any) => {
     executionLogs.value = logs;
     logsFinished.value = true;
   } catch (error) {
-    console.error("加载日志失败:", error);
+    // console.error("加载日志失败:", error);
     showToast("加载日志失败");
   } finally {
     logsLoading.value = false;
@@ -440,7 +461,7 @@ const showExecutionLogs = async () => {
     executionLogs.value = logs;
     logsFinished.value = true;
   } catch (error) {
-    console.error("加载全部日志失败:", error);
+    // console.error("加载全部日志失败:", error);
     showToast("加载日志失败");
   } finally {
     logsLoading.value = false;
@@ -478,7 +499,7 @@ const showSchedulerJobs = async () => {
     schedulerJobs.value = jobs;
     jobsFinished.value = true;
   } catch (error) {
-    console.error("加载定时任务状态失败:", error);
+    // console.error("加载定时任务状态失败:", error);
     showToast("加载定时任务状态失败");
   } finally {
     jobsLoading.value = false;
@@ -496,7 +517,7 @@ const triggerScheduler = async () => {
     await showSchedulerJobs();
     await loadRecurringList(true);
   } catch (error) {
-    console.error("触发定时任务失败:", error);
+    // console.error("触发定时任务失败:", error);
     showToast("触发定时任务失败");
   } finally {
     triggerLoading.value = false;
@@ -524,7 +545,7 @@ const toggleStatus = async (item: any) => {
     if (error !== "cancel") {
       // 不是用户取消
       // showToast(`${newStatus === 'active' ? '启用' : '暂停'}失败`)
-      console.error("切换状态失败:", error);
+      // console.error("切换状态失败:", error);
     }
   }
 };
@@ -550,7 +571,7 @@ const deleteRecurring = async (item: any) => {
     if (error !== "cancel") {
       // 不是用户取消
       showToast("删除失败");
-      console.error("删除周期记账失败:", error);
+      // console.error("删除周期记账失败:", error);
     }
   }
 };
@@ -638,7 +659,7 @@ const loadRecurringList = async (isRefresh = false) => {
     // 所有数据一次性加载完成
     finished.value = true;
   } catch (error) {
-    console.error("加载周期记账列表失败:", error);
+    // console.error("加载周期记账列表失败:", error);
     showToast("加载周期记账数据失败");
   } finally {
     loading.value = false;
@@ -688,6 +709,129 @@ onMounted(() => {
 .filter-section :deep(.van-search__content) {
   background-color: var(--bg-color-secondary);
 }
+/* 周期记账筛选菜单样式 */
+.recurring-filter-menu {
+  background-color: var(--van-background);
+}
+
+/* 自定义筛选菜单栏样式 */
+:deep(.recurring-filter-menu .van-dropdown-menu__bar) {
+  background-color: var(--van-background);
+  box-shadow: none;
+  border-bottom: none;
+  height: 48px;
+  display: flex;
+}
+
+/* 确保筛选项宽度平均分配 */
+:deep(.recurring-filter-menu .van-dropdown-menu__item) {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 筛选项标题样式 */
+:deep(.recurring-filter-menu .van-dropdown-menu__title) {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--van-text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  padding: 0 32px 0 12px;
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* 筛选项激活状态 */
+:deep(.recurring-filter-menu .van-dropdown-menu__title--active) {
+  color: #1989fa;
+}
+
+/* 下拉箭头样式 - 收起状态（向下箭头）*/
+:deep(.recurring-filter-menu .van-dropdown-menu__title::after) {
+  border-color: #969799 transparent transparent;
+  border-width: 4px 4px 0;
+  border-style: solid;
+  content: "";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-25%);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+}
+
+/* 展开状态（向上箭头）*/
+:deep(.recurring-filter-menu .van-dropdown-menu__title--active::after) {
+  border-color: #1989fa transparent transparent;
+  transform: translateY(-75%) rotate(180deg);
+}
+
+/* 下拉选项样式优化 */
+:deep(.recurring-filter-menu .van-dropdown-item__content) {
+  max-height: 50vh;
+  overflow-y: auto;
+  border-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* 移除下拉容器的圆角 */
+:deep(.recurring-filter-menu .van-dropdown-item) {
+  border-radius: 0 !important;
+}
+
+:deep(.recurring-filter-menu .van-dropdown-item__wrapper) {
+  border-radius: 0 !important;
+}
+
+/* 选项样式 */
+:deep(.recurring-filter-menu .van-dropdown-item__option) {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--van-text-color);
+  border-bottom: 1px solid var(--van-border-color);
+  transition: all 0.3s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  border-left: 3px solid transparent;
+  position: relative;
+}
+
+:deep(.recurring-filter-menu .van-dropdown-item__option:last-child) {
+  border-bottom: none;
+}
+
+:deep(.recurring-filter-menu .van-dropdown-item__option:not([disabled]):hover) {
+  background-color: var(--van-gray-1);
+  border-left-color: transparent;
+}
+
+:deep(.recurring-filter-menu .van-dropdown-item__option--active) {
+  background-color: var(--van-blue-light) !important;
+  color: #1989fa !important;
+  border-left-color: transparent !important;
+  font-weight: 500;
+}
+
+/* 移除选中选项的对勾图标 */
+:deep(.recurring-filter-menu .van-dropdown-item__option--active::after) {
+  display: none;
+}
+
 .filter-section :deep(.van-dropdown-menu__bar) {
   background-color: var(--bg-color);
   box-shadow: none;

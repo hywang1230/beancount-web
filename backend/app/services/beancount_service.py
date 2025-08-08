@@ -32,9 +32,9 @@ class BeancountService:
             self._entries, self._errors, self._options_map = loader.load_file(str(self.main_file))
             
             if self._errors:
-                print(f"警告: 加载账本时发现 {len(self._errors)} 个错误")
+                # print(f"警告: 加载账本时发现 {len(self._errors)} 个错误")
                 for error in self._errors[:5]:  # 只显示前5个错误
-                    print(f"  - {error}")
+                    pass  # Error logging disabled
                     
         return self._entries, self._errors, self._options_map
     
@@ -794,7 +794,7 @@ class BeancountService:
             return True
             
         except Exception as e:
-            print(f"添加交易失败: {e}")
+            # Transaction addition failed
             return False
     
     def _build_transaction_string(self, data: Dict) -> str:
@@ -927,7 +927,7 @@ class BeancountService:
             return True
             
         except Exception as e:
-            print(f"归档账户失败: {e}")
+            # Account archiving failed
             return False
 
     def restore_account(self, account_name: str) -> bool:
@@ -994,7 +994,7 @@ class BeancountService:
                 raise ValueError(f"无法找到账户 {account_name} 的close指令")
             
         except Exception as e:
-            print(f"恢复账户失败: {e}")
+            # Account restoration failed
             raise ValueError(f"恢复账户失败: {str(e)}")
 
     def _validate_account_name(self, account_name: str) -> tuple[bool, str]:
@@ -1078,7 +1078,7 @@ class BeancountService:
             return None
             
         except Exception as e:
-            print(f"获取交易失败: {e}")
+            # Transaction retrieval failed
             return None
 
     def update_transaction_by_location(self, filename: str, lineno: int, transaction_data: Dict) -> bool:
@@ -1101,13 +1101,13 @@ class BeancountService:
                             break
             
             if not target_entry:
-                print(f"未找到要更新的交易: {filename}:{lineno}")
+                # print(f"未找到要更新的交易: {filename}:{lineno}")
                 return False
             
             # 读取原始文件内容
             target_filename = target_entry.meta.get('filename')
             if not target_filename:
-                print("无法获取交易所在的文件名")
+                # print("无法获取交易所在的文件名")
                 return False
             
             with open(target_filename, 'r', encoding='utf-8') as f:
@@ -1135,7 +1135,7 @@ class BeancountService:
                     # 这是交易的一部分（posting行）
                     end_line = i
             
-            print(f"更新交易范围: 行 {start_line + 1} 到 {end_line + 1}")
+            # print(f"更新交易范围: 行 {start_line + 1} 到 {end_line + 1}")
             
             # 替换整个交易块
             if start_line < len(lines):
@@ -1155,7 +1155,7 @@ class BeancountService:
                 with open(target_filename, 'w', encoding='utf-8') as f:
                     f.writelines(lines)
                 
-                print(f"交易更新成功，新内容：\n{new_transaction_str}")
+                # print(f"交易更新成功，新内容：\n{new_transaction_str}")
                 
                 # 重新加载条目
                 self._load_entries(force_reload=True)
@@ -1164,9 +1164,9 @@ class BeancountService:
             return False
             
         except Exception as e:
-            print(f"更新交易失败: {e}")
+            # print(f"更新交易失败: {e}")
             import traceback
-            traceback.print_exc()
+            # traceback.print_exc()
             return False
 
     def delete_transaction_by_location(self, filename: str, lineno: int) -> bool:
@@ -1189,13 +1189,13 @@ class BeancountService:
                             break
             
             if not target_entry:
-                print(f"未找到要删除的交易: {filename}:{lineno}")
+                # print(f"未找到要删除的交易: {filename}:{lineno}")
                 return False
             
             # 读取原始文件内容
             target_filename = target_entry.meta.get('filename')
             if not target_filename:
-                print("无法获取交易所在的文件名")
+                # print("无法获取交易所在的文件名")
                 return False
             
             with open(target_filename, 'r', encoding='utf-8') as f:
@@ -1220,7 +1220,7 @@ class BeancountService:
                     # 这是交易的一部分（posting行）
                     end_line = i
             
-            print(f"删除交易范围: 行 {start_line + 1} 到 {end_line + 1}")
+            # print(f"删除交易范围: 行 {start_line + 1} 到 {end_line + 1}")
             
             # 直接删除整个交易块
             if start_line < len(lines):
@@ -1231,7 +1231,7 @@ class BeancountService:
                 with open(target_filename, 'w', encoding='utf-8') as f:
                     f.writelines(lines)
                 
-                print(f"交易删除成功，删除了 {end_line - start_line + 1} 行")
+                # print(f"交易删除成功，删除了 {end_line - start_line + 1} 行")
                 
                 # 重新加载条目
                 self._load_entries(force_reload=True)
@@ -1240,9 +1240,9 @@ class BeancountService:
             return False
             
         except Exception as e:
-            print(f"删除交易失败: {e}")
+            # print(f"删除交易失败: {e}")
             import traceback
-            traceback.print_exc()
+            # traceback.print_exc()
             return False
 
     def _convert_entry_to_response(self, entry: Transaction) -> TransactionResponse:

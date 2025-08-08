@@ -1,5 +1,6 @@
 /**
  * 设备类型检测工具
+ * 注意：由于已移除PC端支持，所有设备都使用H5页面
  */
 
 /**
@@ -54,14 +55,6 @@ export const isTablet = (): boolean => {
 };
 
 /**
- * 检测是否为桌面设备
- * @returns boolean
- */
-export const isDesktop = (): boolean => {
-  return !isMobile() && !isTablet();
-};
-
-/**
  * 获取设备类型
  * @returns 'mobile' | 'tablet' | 'desktop'
  */
@@ -72,18 +65,10 @@ export const getDeviceType = (): "mobile" | "tablet" | "desktop" => {
 };
 
 /**
- * 根据设备类型获取默认路由路径
+ * 获取默认路由路径
+ * 注意：由于已移除PC端支持，所有设备都返回H5路由
  * @returns string
  */
 export const getDefaultRoute = (): string => {
-  const deviceType = getDeviceType();
-
-  switch (deviceType) {
-    case "mobile":
-    case "tablet":
-      return "/h5/dashboard";
-    case "desktop":
-    default:
-      return "/dashboard";
-  }
+  return "/h5/dashboard";
 };

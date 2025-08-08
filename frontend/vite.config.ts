@@ -55,6 +55,7 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ["**/*.{js,css,html,ico,png,svg}"],
+        navigateFallback: null,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/api\..*/i,
@@ -82,7 +83,15 @@ export default defineConfig({
             },
           },
           {
-            urlPattern: /\.(?:js|css)$/,
+            // 排除node_modules，只缓存应用自身的JS/CSS文件
+            urlPattern: ({ url }) => {
+              return (
+                (url.pathname.endsWith(".js") ||
+                  url.pathname.endsWith(".css")) &&
+                !url.pathname.includes("node_modules") &&
+                !url.pathname.includes("/@")
+              );
+            },
             handler: "StaleWhileRevalidate",
             options: {
               cacheName: "static-resources",
@@ -92,6 +101,8 @@ export default defineConfig({
       },
       devOptions: {
         enabled: true,
+        type: "module",
+        navigateFallback: "index.html",
       },
     }),
   ],

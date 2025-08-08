@@ -246,7 +246,7 @@ const toggleStatus = async () => {
   } catch (error) {
     if (error !== "cancel") {
       showToast("操作失败");
-      console.error("切换状态失败:", error);
+      // console.error("切换状态失败:", error);
     }
   } finally {
     toggleLoading.value = false;
@@ -270,7 +270,7 @@ const deleteRecurring = async () => {
   } catch (error) {
     if (error !== "cancel") {
       showToast("删除失败");
-      console.error("删除失败:", error);
+      // console.error("删除失败:", error);
     }
   } finally {
     deleteLoading.value = false;
@@ -288,7 +288,7 @@ const viewLogs = async () => {
     executionLogs.value = logs;
     logsFinished.value = true;
   } catch (error) {
-    console.error("加载日志失败:", error);
+    // console.error("加载日志失败:", error);
     showToast("加载日志失败");
   } finally {
     logsLoading.value = false;
@@ -302,7 +302,7 @@ const loadRecurringData = async () => {
     const id = route.params.id as string;
     recurringData.value = await recurringApi.get(id);
   } catch (error) {
-    console.error("加载周期记账详情失败:", error);
+    // console.error("加载周期记账详情失败:", error);
     showToast("加载数据失败");
     router.back();
   } finally {

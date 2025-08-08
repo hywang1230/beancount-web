@@ -18,8 +18,10 @@
   <van-notify
     v-model:show="showOfflineReady"
     type="success"
-    message="应用已缓存，可离线使用"
-    duration="3000"
+    message="✓ 应用已缓存，可离线使用"
+    :duration="0"
+    @click="hideOfflineNotification"
+    teleport="body"
   />
 </template>
 
@@ -41,6 +43,11 @@ const dismissUpdate = () => {
   showUpdatePrompt.value = false;
 };
 
+// 自动隐藏离线通知
+const hideOfflineNotification = () => {
+  showOfflineReady.value = false;
+};
+
 onMounted(async () => {
   try {
     const { registerSW } = await import("virtual:pwa-register");
@@ -51,16 +58,20 @@ onMounted(async () => {
       },
       onOfflineReady() {
         showOfflineReady.value = true;
+        // 3秒后自动隐藏通知
+        setTimeout(() => {
+          hideOfflineNotification();
+        }, 3000);
       },
-      onRegistered(r: ServiceWorkerRegistration | undefined) {
-        console.log("Service Worker 注册成功", r);
+      onRegistered(_r: ServiceWorkerRegistration | undefined) {
+        // console.log("Service Worker 注册成功", _r);
       },
-      onRegisterError(error: any) {
-        console.error("Service Worker 注册失败", error);
+      onRegisterError(_error: any) {
+        // console.error("Service Worker 注册失败", _error);
       },
     });
   } catch (error) {
-    console.warn("PWA 功能不可用", error);
+    // console.warn("PWA 功能不可用", error);
   }
 });
 </script>

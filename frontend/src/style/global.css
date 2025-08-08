@@ -1,416 +1,75 @@
-/* 全局样式重置 */
+/* 全局样式 */
 * {
-  margin: 0;
   padding: 0;
+  margin: 0;
   box-sizing: border-box;
 }
 
 html, body {
   height: 100%;
-  font-family: 'Helvetica Neue', Helvetica, 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', '微软雅黑', Arial, sans-serif;
-  background-color: #f5f7fa;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--van-background-color);
+  color: var(--van-text-color);
 }
 
-/* 移动端触摸优化 */
-@media (max-width: 768px) {
-  * {
-    -webkit-tap-highlight-color: transparent;
-    -webkit-touch-callout: none;
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-  }
-  
-  input, textarea, [contenteditable] {
-    -webkit-user-select: text;
-    -moz-user-select: text;
-    -ms-user-select: text;
-    user-select: text;
-  }
-  
-  /* Vant 组件优化 */
-  .van-cell {
-    min-height: 46px; /* 减小触摸目标大小 */
-    padding: 10px 16px; /* 减小内边距 */
-  }
-  
-  .van-button {
-    min-height: 42px; /* 减小按钮触摸目标大小 */
-    border-radius: 8px;
-  }
-  
-  .van-button--large {
-    min-height: 46px; /* 减小大按钮高度 */
-    font-size: 16px; /* 减小字体 */
-    font-weight: 600;
-  }
-  
-  .van-popup {
-    border-radius: 20px 20px 0 0 !important; /* 增大圆角 */
-  }
-  
-  .van-picker__confirm {
-    font-size: 16px !important;
-    font-weight: 600 !important;
-  }
-  
-  .van-picker__cancel {
-    font-size: 16px !important;
-  }
+/* Vant对话框优化 - 确保H5页面弹窗完全显示 */
+.van-dialog {
+  max-height: 80vh !important; /* 限制最大高度为视口的80% */
+  margin: auto !important; /* 确保垂直居中 */
+  position: fixed !important; /* 确保固定定位 */
+  top: 50% !important; /* 垂直居中 */
+  left: 50% !important; /* 水平居中 */
+  transform: translate(-50%, -50%) !important; /* 完全居中 */
+  overflow: hidden !important; /* 防止内容溢出 */
+  border-radius: 12px !important; /* 圆角美化 */
 }
 
-/* 滚动条样式 */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* 对话框内容区域 */
+.van-dialog__content {
+  max-height: 60vh !important; /* 限制内容区域高度 */
+  overflow-y: auto !important; /* 允许垂直滚动 */
+  padding: 16px !important; /* 增加内边距 */
 }
 
-::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 4px;
+/* Vant通知栏优化 */
+.van-notify {
+  font-size: 14px !important;
+  border-radius: 8px !important;
+  margin: 8px !important;
+  width: calc(100% - 16px) !important;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 4px;
+/* 输入框样式 */
+.van-field__control {
+  font-size: 16px !important; /* 防止iOS缩放 */
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+/* 统计卡片样式 */
+.stat-card {
+  background: var(--van-white);
+  border-radius: 8px;
+  padding: 16px;
+  margin: 8px 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
 }
 
-/* 移动端隐藏滚动条 */
-@media (max-width: 768px) {
-  ::-webkit-scrollbar {
-    width: 0px;
-    height: 0px;
-  }
+.stat-card:hover {
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
 }
 
-/* 自定义类 */
-.page-container {
-  padding: 20px;
-  min-height: calc(100vh - 60px);
-}
-
-.page-title {
+.stat-value {
   font-size: 24px;
   font-weight: 600;
-  color: #303133;
-  margin-bottom: 20px;
+  margin-bottom: 4px;
 }
 
-.card-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.text-center {
-  text-align: center;
-}
-
-.text-right {
-  text-align: right;
-}
-
-.mb-4 {
-  margin-bottom: 16px;
-}
-
-.mt-4 {
-  margin-top: 16px;
-}
-
-.full-width {
-  width: 100%;
-}
-
-/* 响应式布局 */
-@media (max-width: 768px) {
-  .page-container {
-    padding: 16px; /* 增加内边距 */
-    min-height: calc(100vh - 110px); /* 考虑底部导航栏 */
-  }
-  
-  .page-title {
-    font-size: 20px;
-    margin-bottom: 16px;
-  }
-  
-  .card-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-  }
-  
-  .card-header .header-actions {
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-  }
-}
-
-/* 超小屏幕优化 */
-@media (max-width: 480px) {
-  .page-container {
-    padding: 12px; /* 保持足够的内边距 */
-  }
-  
-  .page-title {
-    font-size: 18px;
-    margin-bottom: 12px;
-  }
-}
-
-/* Element Plus 组件移动端优化 */
-@media (max-width: 768px) {
-  /* 表格优化 */
-  .el-table {
-    font-size: 12px;
-  }
-  
-  .el-table .cell {
-    padding: 8px 4px;
-  }
-  
-  .el-table th {
-    padding: 8px 0;
-  }
-  
-  .el-table td {
-    padding: 8px 0;
-  }
-  
-  /* 按钮优化 */
-  .el-button {
-    min-height: 44px; /* 增加触摸目标大小 */
-    padding: 8px 16px;
-  }
-  
-  .el-button--small {
-    min-height: 36px;
-    padding: 6px 12px;
-  }
-  
-  .el-button--mini {
-    min-height: 32px;
-    padding: 4px 8px;
-  }
-  
-  /* 输入框优化 */
-  .el-input__inner {
-    min-height: 44px;
-    font-size: 16px; /* 防止iOS缩放 */
-  }
-  
-  .el-textarea__inner {
-    font-size: 16px;
-    min-height: 80px;
-  }
-  
-  /* 选择器优化 */
-  .el-select .el-input__inner {
-    min-height: 44px;
-  }
-  
-  /* 日期选择器优化 */
-  .el-date-editor.el-input {
-    width: 100% !important;
-  }
-  
-  .el-date-editor .el-input__inner {
-    min-height: 44px;
-  }
-  
-  /* 卡片优化 */
-  .el-card {
-    margin-bottom: 12px;
-    border-radius: 8px;
-  }
-  
-  .el-card__header {
-    padding: 12px 16px;
-  }
-  
-  .el-card__body {
-    padding: 16px;
-  }
-  
-  /* 表单优化 */
-  .el-form-item {
-    margin-bottom: 16px;
-  }
-  
-  .el-form-item__label {
-    font-size: 14px;
-    line-height: 32px;
-  }
-  
-  /* 对话框优化 */
-  .el-dialog {
-    width: 95% !important;
-    margin-top: 5vh !important;
-  }
-  
-  /* Vant对话框优化 - 确保H5页面弹窗完全显示 */
-  .van-dialog {
-    max-height: 80vh !important; /* 限制最大高度为视口的80% */
-    margin: auto !important; /* 确保垂直居中 */
-    position: fixed !important; /* 确保固定定位 */
-    top: 50% !important; /* 垂直居中 */
-    left: 50% !important; /* 水平居中 */
-    transform: translate(-50%, -50%) !important; /* 完全居中 */
-    overflow: hidden !important; /* 防止内容溢出 */
-    border-radius: 12px !important; /* 圆角美化 */
-  }
-  
-  .van-dialog__content {
-    max-height: 60vh !important; /* 内容区域最大高度 */
-    overflow-y: auto !important; /* 内容过多时可滚动 */
-    -webkit-overflow-scrolling: touch !important; /* iOS平滑滚动 */
-  }
-  
-  /* 确保对话框在所有其他元素之上 */
-  .van-overlay,
-  .van-dialog {
-    z-index: 2000 !important; /* 高于底部导航栏 */
-  }
-  
-  /* Vant Toast 优化 - 确保H5页面Toast完全显示且居中 */
-  .van-toast {
-    position: fixed !important; /* 确保固定定位 */
-    z-index: 2100 !important; /* 高于对话框 */
-    max-width: calc(100vw - 40px) !important; /* 限制最大宽度，留出边距 */
-    min-width: auto !important; /* 重置最小宽度 */
-    word-wrap: break-word !important; /* 长文本换行 */
-    white-space: pre-wrap !important; /* 保持换行格式 */
-    border-radius: 8px !important; /* 圆角美化 */
-    box-sizing: border-box !important; /* 盒模型计算 */
-    
-    /* 使用更精确的居中定位 */
-    top: 50% !important;
-    left: 50% !important;
-    right: auto !important; /* 重置right属性 */
-    bottom: auto !important; /* 重置bottom属性 */
-    margin: 0 !important; /* 重置外边距 */
-    padding: 12px 16px !important; /* 设置内边距 */
-    transform: translate(-50%, -50%) !important; /* 完全居中 */
-    
-    /* 强制覆盖任何可能的偏移 */
-    margin-left: 0 !important;
-    margin-right: 0 !important;
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-  }
-  
-  /* 确保Toast文本内容也居中 */
-  .van-toast .van-toast__text {
-    text-align: center !important;
-  }
-  
-  /* Toast 加载状态优化 */
-  .van-toast--loading {
-    padding: 16px !important; /* 增加内边距 */
-    text-align: center !important; /* 文本居中 */
-  }
-  
-  /* Toast 文本样式优化 */
-  .van-toast__text {
-    line-height: 1.4 !important; /* 改善行高 */
-    font-size: 14px !important; /* 适当的字体大小 */
-  }
-  
-  /* 其他Vant组件定位优化 */
-  .van-action-sheet,
-  .van-picker {
-    z-index: 2000 !important; /* 确保在底部导航栏之上 */
-  }
-  
-  .van-notify {
-    z-index: 2100 !important; /* 通知在最上层 */
-    position: fixed !important;
-    top: 20px !important; /* 距离顶部20px */
-    left: 50% !important;
-    transform: translateX(-50%) !important;
-    max-width: calc(100vw - 40px) !important;
-  }
-  
-  /* 确保Loading Toast在页面中央显示 */
-  .van-toast--loading .van-loading {
-    margin-bottom: 8px !important;
-  }
-  
-  /* 抽屉优化 */
-  .el-drawer {
-    width: 90% !important;
-  }
-  
-  /* 分页器优化 */
-  .el-pagination {
-    text-align: center;
-    margin-top: 16px;
-  }
-  
-  .el-pagination .el-pager li {
-    min-width: 36px;
-    height: 36px;
-    line-height: 36px;
-  }
-  
-  /* 菜单优化 */
-  .el-menu-item {
-    min-height: 48px;
-    line-height: 48px;
-  }
-  
-  /* 标签优化 */
-  .el-tag {
-    height: 28px;
-    line-height: 26px;
-    font-size: 12px;
-  }
-}
-
-/* 移动端表格容器 */
-@media (max-width: 768px) {
-  .mobile-table-container {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-  
-  .mobile-table-container .el-table {
-    min-width: 600px;
-  }
-}
-
-/* 移动端筛选器布局 */
-@media (max-width: 768px) {
-  .mobile-filter-form .el-form {
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .mobile-filter-form .el-form-item {
-    margin-bottom: 0;
-  }
-  
-  .mobile-filter-form .el-form-item__content {
-    margin-left: 0 !important;
-  }
-  
-  .mobile-filter-actions {
-    display: flex;
-    gap: 8px;
-    margin-top: 12px;
-  }
-  
-  .mobile-filter-actions .el-button {
-    flex: 1;
-  }
+.stat-label {
+  font-size: 14px;
+  color: var(--van-gray-6);
 }
 
 /* 金额显示样式 */
@@ -426,16 +85,6 @@ html, body {
 
 .amount-zero {
   color: #909399;
-}
-
-/* 移动端金额显示优化 */
-@media (max-width: 768px) {
-  .amount-positive,
-  .amount-negative,
-  .amount-zero {
-    font-size: 14px;
-    font-weight: 500;
-  }
 }
 
 /* 状态标签样式 */
@@ -456,13 +105,6 @@ html, body {
   box-shadow: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
 }
 
-/* 移动端减少阴影 */
-@media (max-width: 768px) {
-  .card-shadow {
-    box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.1);
-  }
-}
-
 /* 加载状态 */
 .loading-container {
   display: flex;
@@ -475,284 +117,148 @@ html, body {
 .empty-container {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
-  height: 200px;
-  color: #909399;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  color: var(--van-gray-6);
 }
 
-.empty-container .empty-icon {
+.empty-icon {
   font-size: 48px;
   margin-bottom: 16px;
 }
 
-.empty-container .empty-text {
+.empty-text {
+  font-size: 16px;
+  margin-bottom: 8px;
+}
+
+.empty-description {
   font-size: 14px;
-}
-
-/* 移动端空状态优化 */
-@media (max-width: 768px) {
-  .empty-container {
-    height: 150px;
-    padding: 20px;
-  }
-  
-  .empty-container .empty-icon {
-    font-size: 36px;
-    margin-bottom: 12px;
-  }
-  
-  .empty-container .empty-text {
-    font-size: 12px;
-    text-align: center;
-  }
-}
-
-/* 移动端统计卡片样式 */
-@media (max-width: 768px) {
-  .stat-card {
-    margin-bottom: 12px;
-  }
-  
-  .stat-content {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-  }
-  
-  .stat-icon {
-    width: 40px;
-    height: 40px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 20px;
-    color: #fff;
-  }
-  
-  .stat-info {
-    flex: 1;
-  }
-  
-  .stat-value {
-    font-size: 18px;
-    font-weight: 600;
-    color: #303133;
-    line-height: 1.2;
-  }
-  
-  .stat-label {
-    font-size: 12px;
-    color: #909399;
-    margin-top: 2px;
-  }
+  color: var(--van-gray-5);
 }
 
 /* 移动端浮动操作按钮 */
-@media (max-width: 768px) {
-  .mobile-fab {
-    position: fixed;
-    bottom: 80px;
-    right: 20px;
-    width: 56px;
-    height: 56px;
-    border-radius: 50%;
-    background-color: #409eff;
-    color: #fff;
-    border: none;
-    box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 24px;
-    z-index: 998;
-    transition: all 0.3s;
-  }
-  
-  .mobile-fab:hover {
-    background-color: #337ecc;
-    transform: scale(1.05);
-  }
-  
-  .mobile-fab:active {
-    transform: scale(0.95);
-  }
+.mobile-fab {
+  position: fixed;
+  bottom: 80px;
+  right: 20px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background-color: #409eff;
+  color: #fff;
+  border: none;
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  z-index: 998;
+  transition: all 0.3s;
+}
+
+.mobile-fab:hover {
+  background-color: #337ecc;
+  transform: scale(1.05);
+}
+
+.mobile-fab:active {
+  transform: scale(0.95);
 }
 
 /* 移动端轻触反馈 */
-@media (max-width: 768px) {
-  .el-button:active,
-  .nav-item:active,
-  .el-table__row:active {
-    background-color: rgba(0, 0, 0, 0.05);
-    transform: scale(0.98);
-    transition: all 0.1s ease;
-  }
-  
-  /* 增强的触摸反馈 */
-  .el-card:active,
-  .stat-card:active {
-    background-color: rgba(0, 0, 0, 0.02);
-    transform: translateY(1px);
-    transition: all 0.1s ease;
-  }
-  
-  /* 移动端滑动优化 */
-  .el-table__body-wrapper,
-  .mobile-table-container,
-  .el-scrollbar__wrap {
-    -webkit-overflow-scrolling: touch;
-    scroll-behavior: smooth;
-  }
-  
-  /* 防止双击缩放 */
-  .el-input__inner,
-  .el-textarea__inner,
-  .el-select__input {
-    touch-action: manipulation;
-  }
-  
-  /* 移动端按钮触摸区域优化 */
-  .el-button {
-    position: relative;
-  }
-  
-  .el-button::after {
-    content: '';
-    position: absolute;
-    top: -8px;
-    left: -8px;
-    right: -8px;
-    bottom: -8px;
-    border-radius: inherit;
-  }
-  
-  /* 移动端导航项触摸优化 */
-  .nav-item {
-    position: relative;
-    transition: all 0.2s ease;
-  }
-  
-  .nav-item:active {
-    transform: scale(0.95);
-  }
-  
-  /* 移动端表格行触摸优化 */
-  .el-table__row {
-    transition: background-color 0.2s ease;
-  }
-  
-  /* 移动端浮动按钮触摸优化 */
-  .mobile-fab {
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  }
-  
-  .mobile-fab:active {
-    transform: scale(0.9);
-  }
-  
-  /* 防止长按选择文本 */
-  .stat-card,
-  .el-card__header,
-  .nav-item,
-  .mobile-fab {
-    -webkit-user-select: none;
-    -moz-user-select: none;
-    -ms-user-select: none;
-    user-select: none;
-  }
+.nav-item:active {
+  background-color: rgba(0, 0, 0, 0.05);
+  transform: scale(0.98);
+  transition: all 0.1s ease;
 }
 
-/* 安全区域适配（适配刘海屏等） */
-@supports (padding: max(0px)) {
-  @media (max-width: 768px) {
-    .page-container {
-      padding-left: max(12px, env(safe-area-inset-left));
-      padding-right: max(12px, env(safe-area-inset-right));
-    }
-    
-    .mobile-bottom-nav {
-      padding-bottom: env(safe-area-inset-bottom);
-    }
-  }
+/* 增强的触摸反馈 */
+.stat-card:active {
+  background-color: rgba(0, 0, 0, 0.02);
+  transform: translateY(1px);
+  transition: all 0.1s ease;
 }
 
-/* PWA模式专用优化 */
-@media (display-mode: standalone) {
-  /* 确保PWA模式下的整体布局适配 */
-  .page-container {
-    padding-bottom: calc(80px + env(safe-area-inset-bottom, 0px)) !important;
-  }
-  
-  /* PWA模式下的导航栏优化 */
-  .van-tabbar {
-    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 5px) !important;
-  }
-  
-  /* PWA模式下的主内容区域优化 */
-  .main-content {
-    padding-bottom: calc(70px + env(safe-area-inset-bottom, 0px)) !important;
-  }
+/* 移动端滑动优化 */
+.mobile-table-container {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scroll-snap-type: x mandatory;
 }
 
-/* iOS PWA专用优化 */
-@supports (-webkit-appearance: none) {
-  @media (display-mode: standalone) {
-    /* iOS PWA模式下的特殊处理 */
-    .van-tabbar {
-      border-top: 1px solid var(--van-border-color) !important;
-      backdrop-filter: blur(10px) !important;
-      -webkit-backdrop-filter: blur(10px) !important;
-      background-color: rgba(var(--van-background-2-rgb, 255, 255, 255), 0.9) !important;
-    }
-    
-    html[data-theme="dark"] .van-tabbar {
-      background-color: rgba(var(--van-background-2-rgb, 0, 0, 0), 0.9) !important;
-    }
-  }
+/* 导航项触摸优化 */
+.nav-item {
+  position: relative;
+  transition: all 0.2s ease;
 }
 
-/* 数字键盘样式 */
-.van-number-keyboard {
-  /* 确保数字键盘显示在底部导航上方 */
-  z-index: 999 !important;
-  bottom: 30px !important; /* 减少间隙，让数字键盘更贴近底部导航 */
+.nav-item:active {
+  transform: scale(0.95);
 }
 
-/* 当数字键盘显示时，确保底部导航始终可见 */
-.van-tabbar {
-  z-index: 1000 !important;
+/* 防止长按选择文本 */
+.stat-card,
+.nav-item,
+.mobile-fab {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
-/* PWA模式下的动态类样式 */
-.pwa-mode {
-  /* PWA模式下的根元素样式调整 */
+/* 移动端金额显示优化 */
+.amount-positive,
+.amount-negative,
+.amount-zero {
+  font-size: 14px;
+  font-weight: 500;
 }
 
-.pwa-mode .action-buttons {
-  /* PWA模式下按钮位置的JavaScript动态调整 */
-  bottom: calc(70px + env(safe-area-inset-bottom, 10px)) !important;
+/* 移动端减少阴影 */
+.card-shadow {
+  box-shadow: 0 1px 4px 0 rgba(0, 0, 0, 0.1);
 }
 
-.pwa-ios .action-buttons {
-  /* iOS PWA模式下的特殊按钮位置 */
-  bottom: calc(75px + env(safe-area-inset-bottom, 15px)) !important;
-  transition: bottom 0.3s ease-in-out;
+/* 统计卡片移动端优化 */
+.stat-value {
+  font-size: 20px;
+  font-weight: 600;
 }
 
-.pwa-android .action-buttons {
-  /* Android PWA模式下的按钮位置 */
-  bottom: calc(65px + env(safe-area-inset-bottom, 5px)) !important;
+.stat-label {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 2px;
 }
 
-/* 横屏模式下的优化 */
-@media (orientation: landscape) {
-  .pwa-mode .action-buttons {
-    bottom: calc(50px + env(safe-area-inset-bottom, 5px)) !important;
-  }
-  
-  .pwa-mode .tab-content {
-    padding-bottom: 120px !important;
-  }
-} 
+/* 账户级别样式 */
+.account-level-0 {
+  font-weight: 600;
+  color: var(--van-text-color);
+}
+
+.account-level-1 {
+  padding-left: 20px;
+  color: var(--van-gray-7);
+}
+
+.account-level-2 {
+  padding-left: 40px;
+  color: var(--van-gray-6);
+}
+
+.account-level-3 {
+  padding-left: 60px;
+  color: var(--van-gray-5);
+}
+
+/* 自定义按钮样式 */
+.cancel-btn {
+  background-color: var(--van-gray-3) !important;
+  color: var(--van-text-color) !important;
+  border-color: var(--van-gray-3) !important;
+}

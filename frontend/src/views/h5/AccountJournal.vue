@@ -66,7 +66,7 @@ const fetchTransactions = async () => {
       toDate.value
     );
   } catch (error) {
-    console.error("获取交易记录失败:", error);
+    // console.error("获取交易记录失败:", error);
     showToast("获取交易记录失败");
   } finally {
     loading.value = false;

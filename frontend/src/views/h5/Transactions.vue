@@ -3,32 +3,77 @@
     <!-- 筛选栏 -->
     <div class="filter-fixed-container">
       <div class="filter-bar">
-        <van-dropdown-menu>
-          <van-dropdown-item v-model="filterType" :options="typeOptions" />
+        <van-dropdown-menu
+          class="transaction-filter-menu"
+          active-color="#1989fa"
+          overlay
+          :close-on-click-overlay="true"
+        >
+          <van-dropdown-item
+            v-model="filterType"
+            :options="typeOptions"
+            :title="getTypeTitle()"
+          />
           <van-dropdown-item
             v-model="filterAccount"
             :options="accountOptions"
+            :title="getAccountTitle()"
           />
           <van-dropdown-item
             :title="formatDateRangeDisplay(startDate, endDate)"
             ref="dateFilterDropdown"
           >
             <div class="date-filter-panel">
-              <van-cell
-                title="日期范围"
-                :value="formatDateRangeDisplay(startDate, endDate)"
-                is-link
-                @click="showDateRangeCalendar = true"
-              />
-              <van-button
-                v-if="startDate || endDate"
-                type="default"
-                size="small"
-                @click="clearDateRange"
-                style="margin-top: 12px; width: 100%"
-              >
-                清除日期筛选
-              </van-button>
+              <div class="date-filter-header">
+                <span class="filter-title">选择日期范围</span>
+              </div>
+              <van-cell-group class="date-options">
+                <van-cell
+                  title="自定义日期范围"
+                  :value="formatDateRangeValue(startDate, endDate)"
+                  is-link
+                  icon="calendar-o"
+                  @click="showDateRangeCalendar = true"
+                  class="date-range-cell"
+                />
+                <van-cell
+                  title="最近一周"
+                  is-link
+                  @click="setDateRange('week')"
+                  :class="{ 'active-date-option': isActiveRange('week') }"
+                />
+                <van-cell
+                  title="最近一个月"
+                  is-link
+                  @click="setDateRange('month')"
+                  :class="{ 'active-date-option': isActiveRange('month') }"
+                />
+                <van-cell
+                  title="最近三个月"
+                  is-link
+                  @click="setDateRange('quarter')"
+                  :class="{ 'active-date-option': isActiveRange('quarter') }"
+                />
+              </van-cell-group>
+              <div class="date-filter-actions">
+                <van-button
+                  v-if="startDate || endDate"
+                  type="default"
+                  size="normal"
+                  @click="clearDateRange"
+                  class="clear-btn"
+                >
+                  清除筛选
+                </van-button>
+                <van-button
+                  type="primary"
+                  size="normal"
+                  @click="applyDateFilter"
+                  class="apply-btn"
+                >
+                  确定
+                </van-button>
+              </div>
             </div>
           </van-dropdown-item>
         </van-dropdown-menu>
@@ -134,14 +179,21 @@
 import {
   deleteTransaction as deleteTransactionApi,
   getAccounts,
-  getTransactions,
 } from "@/api/transactions";
+import {
+  createCancellableGet,
+  createDebounce,
+  RequestManager,
+} from "@/utils/api";
 import { showConfirmDialog, showToast } from "vant";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const router = useRouter();
 const route = useRoute();
+
+// 请求管理器
+const requestManager = new RequestManager();
 
 // 高亮显示的交易ID（从URL参数获取）
 const highlightTransactionId = ref((route.query.highlight as string) || "");
@@ -162,12 +214,14 @@ const totalPages = ref(1);
 // 筛选条件
 const filterType = ref("all");
 const filterAccount = ref("all");
-const sortBy = ref("date_desc");
 
 // 日期筛选相关
 const startDate = ref("");
 const endDate = ref("");
 const showDateRangeCalendar = ref(false);
+
+// 引用日期筛选下拉项
+const dateFilterDropdown = ref();
 
 // 选项数据
 const typeOptions = [
@@ -199,17 +253,19 @@ interface Transaction {
   type: string;
 }
 
-// 数据
-const transactions = ref<Transaction[]>([]);
+// 使用 shallowRef 减少深层响应式追踪
+const transactions = shallowRef<Transaction[]>([]);
 
-// 计算属性 - 过滤后的交易（用于前端显示，服务端已过滤大部分）
-const filteredTransactions = computed(() => {
-  let filtered = transactions.value;
+// 使用 Map 进行增量分组，避免重复计算
+const groupMap = shallowRef(
+  new Map<
+    string,
+    { date: string; transactions: Transaction[]; totalAmount: number }
+  >()
+);
 
-  // 所有类型筛选现在都在后端完成，前端不需要额外过滤
-
-  return filtered;
-});
+// 初始化标志
+const isInitialized = ref(false);
 
 // 计算交易的显示金额（用于合计计算）- 只统计收入和支出，排除转账
 const getTransactionDisplayAmount = (transaction: any) => {
@@ -225,44 +281,74 @@ const getTransactionDisplayAmount = (transaction: any) => {
   }
 };
 
-// 计算属性 - 分组交易
+// 优化的分组计算 - 使用增量更新
 const groupedTransactions = computed(() => {
-  const groups: Record<
-    string,
-    { date: string; transactions: Transaction[]; totalAmount: number }
-  > = {};
-
-  filteredTransactions.value.forEach((transaction) => {
-    const date = transaction.date;
-    if (!groups[date]) {
-      groups[date] = {
-        date,
-        transactions: [],
-        totalAmount: 0,
-      };
-    }
-    groups[date].transactions.push(transaction);
-    // 使用显示金额计算每日合计
-    groups[date].totalAmount += getTransactionDisplayAmount(transaction);
-  });
-
-  // 对每个日期组内的交易按行号倒序排列
-  Object.values(groups).forEach((group) => {
-    group.transactions.sort((a, b) => {
-      const linenoA = a.lineno || 0;
-      const linenoB = b.lineno || 0;
-      return linenoB - linenoA; // 倒序排列
-    });
-  });
-
-  return Object.values(groups).sort(
+  return Array.from(groupMap.value.values()).sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 });
 
+// 增量更新分组数据
+const updateGroupMap = (newTransactions: Transaction[], isRefresh = false) => {
+  if (isRefresh) {
+    groupMap.value.clear();
+  }
+
+  newTransactions.forEach((transaction) => {
+    const date = transaction.date;
+    let group = groupMap.value.get(date);
+
+    if (!group) {
+      group = {
+        date,
+        transactions: [],
+        totalAmount: 0,
+      };
+      groupMap.value.set(date, group);
+    }
+
+    group.transactions.push(transaction);
+    group.totalAmount += getTransactionDisplayAmount(transaction);
+  });
+
+  // 对每个组内的交易按行号排序
+  groupMap.value.forEach((group) => {
+    group.transactions.sort((a, b) => {
+      const linenoA = a.lineno || 0;
+      const linenoB = b.lineno || 0;
+      return linenoB - linenoA;
+    });
+  });
+
+  // 触发响应式更新
+  groupMap.value = new Map(groupMap.value);
+};
+
+// 创建防抖的加载函数
+const debouncedLoadTransactions = createDebounce(
+  async (isRefresh = false, pageToLoad?: number) => {
+    await loadTransactionsInternal(isRefresh, pageToLoad);
+  },
+  300
+);
+
+// 获取类型筛选的标题
+const getTypeTitle = () => {
+  const option = typeOptions.find((opt) => opt.value === filterType.value);
+  return option ? option.text : "全部类型";
+};
+
+// 获取账户筛选的标题
+const getAccountTitle = () => {
+  const option = accountOptions.value.find(
+    (opt) => opt.value === filterAccount.value
+  );
+  return option ? option.text.replace(/　/g, "") : "全部账户";
+};
+
 // 格式化日期范围显示
 const formatDateRangeDisplay = (startDateStr: string, endDateStr: string) => {
-  if (!startDateStr && !endDateStr) return "按日期筛选";
+  if (!startDateStr && !endDateStr) return "日期筛选";
   if (startDateStr && endDateStr) {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
@@ -274,7 +360,7 @@ const formatDateRangeDisplay = (startDateStr: string, endDateStr: string) => {
       month: "short",
       day: "numeric",
     });
-    return `${startFormatted} 至 ${endFormatted}`;
+    return `${startFormatted} - ${endFormatted}`;
   }
   if (startDateStr) {
     const startDate = new Date(startDateStr);
@@ -292,7 +378,82 @@ const formatDateRangeDisplay = (startDateStr: string, endDateStr: string) => {
     });
     return `到 ${endFormatted}`;
   }
-  return "按日期筛选";
+  return "日期筛选";
+};
+
+// 格式化日期范围值显示
+const formatDateRangeValue = (startDateStr: string, endDateStr: string) => {
+  if (!startDateStr && !endDateStr) return "点击选择";
+  if (startDateStr && endDateStr) {
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+    const startFormatted = startDate.toLocaleDateString("zh-CN");
+    const endFormatted = endDate.toLocaleDateString("zh-CN");
+    return `${startFormatted} - ${endFormatted}`;
+  }
+  if (startDateStr) {
+    return `从 ${new Date(startDateStr).toLocaleDateString("zh-CN")}`;
+  }
+  if (endDateStr) {
+    return `到 ${new Date(endDateStr).toLocaleDateString("zh-CN")}`;
+  }
+  return "点击选择";
+};
+
+// 设置预设日期范围
+const setDateRange = (range: string) => {
+  const today = new Date();
+  const start = new Date();
+
+  switch (range) {
+    case "week":
+      start.setDate(today.getDate() - 7);
+      break;
+    case "month":
+      start.setMonth(today.getMonth() - 1);
+      break;
+    case "quarter":
+      start.setMonth(today.getMonth() - 3);
+      break;
+  }
+
+  startDate.value = start.toLocaleDateString("en-CA");
+  endDate.value = today.toLocaleDateString("en-CA");
+
+  // 关闭下拉菜单
+  dateFilterDropdown.value?.toggle();
+};
+
+// 检查是否是当前激活的日期范围
+const isActiveRange = (range: string) => {
+  if (!startDate.value || !endDate.value) return false;
+
+  const today = new Date();
+  const start = new Date();
+
+  switch (range) {
+    case "week":
+      start.setDate(today.getDate() - 7);
+      break;
+    case "month":
+      start.setMonth(today.getMonth() - 1);
+      break;
+    case "quarter":
+      start.setMonth(today.getMonth() - 3);
+      break;
+    default:
+      return false;
+  }
+
+  const startExpected = start.toLocaleDateString("en-CA");
+  const endExpected = today.toLocaleDateString("en-CA");
+
+  return startDate.value === startExpected && endDate.value === endExpected;
+};
+
+// 应用日期筛选
+const applyDateFilter = () => {
+  dateFilterDropdown.value?.toggle();
 };
 
 // 方法
@@ -466,99 +627,104 @@ const deleteTransaction = async (transaction: any) => {
     const transactionId = transaction.transaction_id || transaction.id;
     await deleteTransactionApi(transactionId);
 
-    // 从列表中移除
-    const index = transactions.value.findIndex(
+    // 从分组中移除
+    const group = groupMap.value.get(transaction.date);
+    if (group) {
+      const index = group.transactions.findIndex(
+        (t) =>
+          (t.transaction_id && t.transaction_id === transactionId) ||
+          t.id === transaction.id
+      );
+      if (index > -1) {
+        group.transactions.splice(index, 1);
+        group.totalAmount -= getTransactionDisplayAmount(transaction);
+
+        // 如果组为空，删除组
+        if (group.transactions.length === 0) {
+          groupMap.value.delete(transaction.date);
+        }
+
+        // 触发响应式更新
+        groupMap.value = new Map(groupMap.value);
+      }
+    }
+
+    // 从原始数组中移除
+    const transactionIndex = transactions.value.findIndex(
       (t) =>
         (t.transaction_id && t.transaction_id === transactionId) ||
         t.id === transaction.id
     );
-    if (index > -1) {
-      transactions.value.splice(index, 1);
+    if (transactionIndex > -1) {
+      transactions.value.splice(transactionIndex, 1);
+      transactions.value = [...transactions.value]; // 触发响应式更新
     }
 
     showToast("删除成功");
   } catch (error) {
     if (error !== "cancel") {
-      console.error("删除交易失败:", error);
+      if ((import.meta as any).env?.DEV) {
+        // console.error("删除交易失败:", error);
+      }
       showToast("删除交易失败");
     }
   }
 };
 
 const onRefresh = async () => {
-  console.log("🔄 onRefresh called: resetting state and loading page 1");
+  // Refresh transaction list
+
+  // 取消所有进行中的请求
+  requestManager.cancelAll();
 
   // 重置到初始状态
-  currentPage.value = 1; // 重置为第一页
+  currentPage.value = 1;
   finished.value = false;
-  loading.value = false; // 确保loading状态正确
+  loading.value = false;
   totalPages.value = 1;
-  transactions.value = []; // 清空现有数据
+  transactions.value = [];
+  groupMap.value.clear();
 
-  console.log("🚀 onRefresh: state reset, loading page 1");
-  // 直接加载第一页
   try {
-    await loadTransactions(true);
+    await loadTransactionsInternal(true);
   } catch (error) {
-    console.error("刷新失败:", error);
+    if (!(error as any)?.cancelled) {
+      // console.error("刷新失败:", error);
+    }
   } finally {
     refreshing.value = false;
   }
 };
 
 const onLoad = async () => {
-  console.log("🔄 onLoad called:", {
-    finished: finished.value,
-    loading: loading.value,
-    currentPage: currentPage.value,
-    totalPages: totalPages.value,
-    transactionsCount: transactions.value.length,
-  });
+  // Load more transactions on scroll
 
-  // 检查是否已经完成加载
   if (finished.value) {
-    console.log("⛔ onLoad early return: finished");
     return;
   }
 
-  // 检查是否还有更多页面
   if (currentPage.value >= totalPages.value && totalPages.value > 0) {
-    console.log(
-      "⛔ onLoad: no more pages to load, currentPage:",
-      currentPage.value,
-      "totalPages:",
-      totalPages.value
-    );
     finished.value = true;
     return;
   }
 
-  // 立即设置 loading 状态，让 van-list 知道开始加载
   loading.value = true;
-  console.log(
-    "📄 onLoad: set loading=true, loading page",
-    currentPage.value + 1
-  );
 
   try {
-    // 加载下一页数据
     const nextPage = currentPage.value + 1;
-    await loadTransactions(false, nextPage);
+    await loadTransactionsInternal(false, nextPage);
   } catch (error) {
-    console.error("onLoad failed:", error);
+    if (!(error as any)?.cancelled) {
+      // console.error("onLoad failed:", error);
+    }
     loading.value = false;
   }
 };
 
-const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
-  console.log("📥 loadTransactions called:", {
-    isRefresh,
-    pageToLoad,
-    currentLoading: loading.value,
-    currentPage: currentPage.value,
-    finished: finished.value,
-  });
-
+const loadTransactionsInternal = async (
+  isRefresh = false,
+  pageToLoad?: number
+) => {
   // 如果不是刷新，且还没有设置 loading 状态，则设置它
   if (!isRefresh && !loading.value) {
     loading.value = true;
@@ -583,17 +749,6 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
       page: targetPage,
       page_size: 20,
     };
-
-    console.log("🚀 About to call API with params:", params);
-    console.log("🔍 Current filter state:", {
-      filterType: filterType.value,
-      filterAccount: filterAccount.value,
-      sortBy: sortBy.value,
-      startDate: startDate.value,
-      endDate: endDate.value,
-      isRefresh,
-      targetPage,
-    });
 
     // 类型筛选
     if (filterType.value !== "all") {
@@ -622,21 +777,12 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
       params.end_date = today.toLocaleDateString("en-CA");
     }
 
-    console.log(
-      "🌐 Making API call to getTransactions with final params:",
-      params
-    );
-    const response = await getTransactions(params);
-    console.log("🎯 API call completed successfully");
-    console.log("📡 API response received:", {
-      requested_page: targetPage,
-      current_page: currentPage.value,
-      total_pages: response.total_pages,
-      total: response.total,
-      data_length: response.data?.length,
-      response_keys: Object.keys(response),
-      params,
-    });
+    // 创建可取消的请求
+    const requestKey = `load-transactions-${targetPage}`;
+    const request = createCancellableGet<any>("/transactions/", { params });
+    requestManager.add(requestKey, request);
+
+    const response = await request.promise;
 
     // 更新分页信息
     totalPages.value = response.total_pages;
@@ -657,11 +803,12 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
 
     if (isRefresh) {
       transactions.value = convertedTransactions;
+      updateGroupMap(convertedTransactions, true);
     } else {
       transactions.value.push(...convertedTransactions);
+      transactions.value = [...transactions.value]; // 触发响应式更新
+      updateGroupMap(convertedTransactions, false);
     }
-
-    // 统计数据现在通过计算属性自动更新
 
     // 判断是否还有更多数据
     const hasMoreData = currentPage.value < response.total_pages;
@@ -671,34 +818,26 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
       response.total_pages === 0 ||
       (currentPage.value === 1 && convertedTransactions.length === 0)
     ) {
-      // 没有数据或第一页没有数据
       finished.value = true;
-      console.log("📄 No data available, marking as finished");
+      // No more data available
     } else {
       finished.value = !hasMoreData;
     }
-
-    console.log("📊 Pagination check:", {
-      currentPage: currentPage.value,
-      totalPages: response.total_pages,
-      convertedTransactions: convertedTransactions.length,
-      hasMoreData,
-      finished: finished.value,
-      totalTransactions: transactions.value.length,
-      isRefresh,
-    });
-
-    // 移除临时测试代码
   } catch (error) {
-    console.error("加载交易数据失败:", error);
-    showToast("加载交易数据失败");
-    // 发生错误时，如果是加载新页面失败，则设置finished为true停止继续加载
-    if (!isRefresh && pageToLoad && pageToLoad > currentPage.value) {
-      finished.value = true;
+    if (!(error as any)?.cancelled) {
+      showToast("加载交易数据失败");
+      if (!isRefresh && pageToLoad && pageToLoad > currentPage.value) {
+        finished.value = true;
+      }
     }
   } finally {
     loading.value = false;
   }
+};
+
+// 立即加载函数（不防抖）
+const loadTransactions = (isRefresh = false, pageToLoad?: number) => {
+  return loadTransactionsInternal(isRefresh, pageToLoad);
 };
 
 // 格式化单个账户名称段（去掉字母前缀和连字符）
@@ -766,7 +905,7 @@ const loadAccountOptions = async () => {
       const accountType = getAccountType(accountName);
 
       const parts = accountName.split(":");
-      console.log(`处理筛选账户: ${accountName}, parts:`, parts);
+      // Processing filter account
 
       if (parts.length < 2) {
         // 如果层级不够，归类到其他
@@ -796,7 +935,7 @@ const loadAccountOptions = async () => {
 
       // 从第三级开始构建子层级
       const remainingParts = parts.slice(2);
-      console.log(`  筛选remainingParts:`, remainingParts);
+      // Processing remaining account parts
 
       if (remainingParts.length === 0) {
         // 如果没有更多层级，直接添加到accounts中
@@ -815,7 +954,7 @@ const loadAccountOptions = async () => {
       } else {
         // 有多级子账户，按第一级分组
         const subGroupName = remainingParts[0];
-        console.log(`  筛选创建子分组: ${subGroupName}`);
+        // Creating account subgroup
 
         if (
           !accountsByType[accountType][categoryName].subGroups[subGroupName]
@@ -829,7 +968,7 @@ const loadAccountOptions = async () => {
           .slice(1)
           .map((part: string) => formatAccountNameSegment(part))
           .join("-");
-        console.log(`  筛选子账户名称: ${finalAccountName}`);
+        // Processing sub-account name
 
         accountsByType[accountType][categoryName].subGroups[subGroupName].push({
           name: finalAccountName,
@@ -839,7 +978,7 @@ const loadAccountOptions = async () => {
       }
     });
 
-    console.log("筛选按类型和分类分组的账户:", accountsByType);
+    // Account filter options grouped by type
 
     // 构建分层选项
     const options: AccountOption[] = [{ text: "全部账户", value: "all" }];
@@ -920,14 +1059,6 @@ const loadAccountOptions = async () => {
     });
 
     accountOptions.value = options;
-    console.log(
-      "账户筛选选项加载成功:",
-      accounts.length,
-      "个账户，按",
-      typeOrder.filter((type) => Object.keys(accountsByType[type]).length > 0)
-        .length,
-      "种类型分组"
-    );
   } catch (error) {
     console.error("加载账户筛选选项失败:", error);
   }
@@ -946,71 +1077,45 @@ const onDateRangeConfirm = (dates: Date[]) => {
 const clearDateRange = () => {
   startDate.value = "";
   endDate.value = "";
+
+  // 关闭下拉菜单
+  dateFilterDropdown.value?.toggle();
 };
 
-// 组件是否已初始化完成
-const isInitialized = ref(false);
-// 是否正在处理筛选变化
-const isHandlingFilterChange = ref(false);
-
-// 监听筛选条件变化
+// 监听筛选条件变化，使用防抖
 watch(
-  [filterType, filterAccount, sortBy, startDate, endDate],
-  async () => {
-    // 只有在组件初始化完成后才响应筛选条件变化
-    if (isInitialized.value && !isHandlingFilterChange.value) {
-      isHandlingFilterChange.value = true;
-      console.log("🔄 Filter changed, refreshing data:", {
-        filterType: filterType.value,
-        filterAccount: filterAccount.value,
-        sortBy: sortBy.value,
-        startDate: startDate.value,
-        endDate: endDate.value,
-      });
-      try {
-        await onRefresh();
-      } finally {
-        isHandlingFilterChange.value = false;
-      }
-    }
+  [filterType, filterAccount, startDate, endDate],
+  () => {
+    if (!isInitialized.value) return;
+
+    // Filter changed, reloading data
+
+    // 取消当前请求
+    requestManager.cancelAll();
+
+    // 重置状态
+    currentPage.value = 1;
+    finished.value = false;
+    loading.value = false;
+
+    // 防抖加载
+    debouncedLoadTransactions(true);
   },
   { deep: true }
 );
 
 onMounted(async () => {
-  console.log("🚀 Component mounting, initializing state");
-
-  // 确保初始状态正确
-  finished.value = false;
-  loading.value = false;
-  currentPage.value = 1; // 直接从1开始
-  totalPages.value = 1;
-  transactions.value = [];
-
-  console.log("📊 Initial state set:", {
-    finished: finished.value,
-    loading: loading.value,
-    currentPage: currentPage.value,
-    totalPages: totalPages.value,
-    transactionsLength: transactions.value.length,
-  });
-
-  console.log("🚀 Loading account options and initial data");
+  // Component mounted
 
   loadAccountOptions();
-
-  // 初始加载第一页
-  await loadTransactions(true); // 直接调用loadTransactions作为初始加载
-
-  // 标记组件已初始化完成，现在可以响应筛选条件变化
+  await loadTransactions(true);
   isInitialized.value = true;
-  console.log("✅ Component initialization completed:", {
-    finished: finished.value,
-    loading: loading.value,
-    currentPage: currentPage.value,
-    totalPages: totalPages.value,
-    transactionsLength: transactions.value.length,
-  });
+});
+
+// 组件卸载时清理
+onUnmounted(() => {
+  requestManager.cancelAll();
+  debouncedLoadTransactions.cancel();
 });
 </script>
 
@@ -1028,49 +1133,221 @@ onMounted(async () => {
   left: 0;
   right: 0;
   z-index: 999;
-  background-color: var(--van-background-2);
+  background-color: var(--van-background);
   border-bottom: 1px solid var(--van-border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .filter-bar {
   background-color: transparent;
 }
 
+/* 交易筛选菜单样式 */
+.transaction-filter-menu {
+  background-color: var(--van-background);
+}
+
+/* 自定义筛选菜单栏样式 */
+:deep(.transaction-filter-menu .van-dropdown-menu__bar) {
+  background-color: var(--van-background);
+  box-shadow: none;
+  border-bottom: none;
+  height: 48px;
+  display: flex;
+}
+
+/* 确保筛选项宽度平均分配 */
+:deep(.transaction-filter-menu .van-dropdown-menu__item) {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 筛选项标题样式 */
+:deep(.transaction-filter-menu .van-dropdown-menu__title) {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--van-text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  padding: 0 32px 0 12px;
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* 筛选项激活状态 */
+:deep(.transaction-filter-menu .van-dropdown-menu__title--active) {
+  color: #1989fa;
+}
+
+/* 下拉箭头样式 - 收起状态（向下箭头）*/
+:deep(.transaction-filter-menu .van-dropdown-menu__title::after) {
+  border-color: #969799 transparent transparent;
+  border-width: 4px 4px 0;
+  border-style: solid;
+  content: "";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-25%);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+}
+
+/* 展开状态（向上箭头）*/
+:deep(.transaction-filter-menu .van-dropdown-menu__title--active::after) {
+  border-color: #1989fa transparent transparent;
+  transform: translateY(-75%) rotate(180deg);
+}
+
 /* 交易内容包装器 */
 .transactions-content-wrapper {
-  margin-top: 50px; /* 为固定筛选栏留出空间 */
+  margin-top: 48px; /* 为固定筛选栏留出空间，调整为精确高度 */
 }
 
 /* 日期筛选面板 */
 .date-filter-panel {
+  background-color: var(--van-background);
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 0;
+}
+
+.date-filter-header {
+  padding: 16px 16px 8px;
+  border-bottom: 1px solid var(--van-border-color);
+  background-color: var(--van-background);
+}
+
+.filter-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--van-text-color);
+}
+
+.date-options {
+  margin: 0;
+}
+
+.date-range-cell {
+  border-bottom: 1px solid var(--van-border-color);
+}
+
+.active-date-option {
+  background-color: var(--van-blue-light) !important;
+  color: #1989fa !important;
+}
+
+:deep(.active-date-option .van-cell__title) {
+  color: #1989fa !important;
+  font-weight: 500;
+}
+
+:deep(.active-date-option::after) {
+  border-color: #1989fa;
+}
+
+.date-filter-actions {
   padding: 16px;
-  background-color: var(--van-background-2);
-  transition: background-color 0.3s ease;
+  display: flex;
+  gap: 12px;
+  background-color: var(--van-background);
+  border-top: 1px solid var(--van-border-color);
+}
+
+.clear-btn {
+  flex: 1;
+  border: 1px solid var(--van-border-color);
+  background-color: var(--van-background);
+  color: var(--van-text-color-2);
+}
+
+.apply-btn {
+  flex: 2;
+  background-color: #1989fa;
+  border: none;
+}
+
+/* 下拉选项样式优化 */
+:deep(.van-dropdown-item__content) {
+  max-height: 50vh;
+  overflow-y: auto;
+  border-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* 移除下拉容器的圆角 */
+:deep(.van-dropdown-item) {
+  border-radius: 0 !important;
+}
+
+:deep(.van-dropdown-item__wrapper) {
+  border-radius: 0 !important;
 }
 
 /* 账户分组样式 */
 :deep(.van-dropdown-item__option) {
-  padding: 10px 16px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--van-text-color);
+  border-bottom: 1px solid var(--van-border-color);
+  transition: all 0.3s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+}
+
+:deep(.van-dropdown-item__option:last-child) {
+  border-bottom: none;
 }
 
 /* 账户类型标题样式 */
 :deep(.van-dropdown-item__option[disabled]) {
-  background-color: #f7f8fa !important;
-  color: #646566 !important;
-  font-weight: 500;
+  background-color: var(--van-gray-1) !important;
+  color: var(--van-text-color-2) !important;
+  font-weight: 600;
   font-size: 13px;
-  padding: 8px 16px;
+  padding: 10px 16px;
   cursor: default;
+  border-bottom: 1px solid var(--van-border-color);
+  letter-spacing: 0.5px;
 }
 
 /* 账户选项缩进样式 */
 :deep(.van-dropdown-item__option:not([disabled])) {
-  border-left: 2px solid transparent;
+  border-left: 3px solid transparent;
+  position: relative;
 }
 
-:deep(.van-dropdown-item__option:hover:not([disabled])) {
-  border-left-color: #1989fa;
+:deep(.van-dropdown-item__option:not([disabled]):hover) {
+  background-color: var(--van-gray-1);
+  border-left-color: transparent;
+}
+
+:deep(.van-dropdown-item__option--active) {
+  background-color: var(--van-blue-light) !important;
+  color: #1989fa !important;
+  border-left-color: transparent !important;
+  font-weight: 500;
+}
+
+/* 移除选中选项的对勾图标 */
+:deep(.van-dropdown-item__option--active::after) {
+  display: none;
 }
 
 .transaction-group {

@@ -14,7 +14,12 @@
 
     <!-- 主内容 -->
     <div class="main-content" ref="mainContentRef">
-      <router-view />
+      <!-- 添加 keep-alive 缓存关键页面 -->
+      <router-view v-slot="{ Component, route }">
+        <keep-alive include="H5Transactions,H5Reports,H5Accounts,H5Dashboard">
+          <component :is="Component" :key="route.fullPath" />
+        </keep-alive>
+      </router-view>
     </div>
 
     <!-- 底部导航 -->
@@ -129,7 +134,7 @@ watch(
 watch(
   () => route.path,
   () => {
-    // 使用nextTick确保DOM更新完成后再滚动
+    // 切换路由时始终滚动到顶部
     setTimeout(() => {
       if (mainContentRef.value) {
         mainContentRef.value.scrollTo({
@@ -242,7 +247,7 @@ const handleLogout = async () => {
     router.push("/login");
   } catch (error: any) {
     if (error !== "cancel") {
-      console.error("登出失败:", error);
+      // console.error("登出失败:", error);
       showToast("登出失败");
     }
   }

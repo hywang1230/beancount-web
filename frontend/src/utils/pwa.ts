@@ -103,12 +103,12 @@ export function setupPWAEventListeners(): void {
   // 监听beforeinstallprompt事件
   window.addEventListener("beforeinstallprompt", (e) => {
     e.preventDefault();
-    console.log("PWA可以安装");
+    // PWA installation available
   });
 
   // 监听appinstalled事件
   window.addEventListener("appinstalled", () => {
-    console.log("PWA已安装");
+    // PWA already installed
     applyPWAStyles();
   });
 }

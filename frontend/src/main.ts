@@ -4,13 +4,6 @@ import App from "./App.vue";
 import router from "./router";
 import { useAuthStore } from "./stores/auth";
 
-// Element Plus 样式
-import "element-plus/dist/index.css";
-import "element-plus/theme-chalk/dark/css-vars.css";
-
-// Vant 样式
-import "vant/lib/index.css";
-
 // 全局样式
 import "./style/global.css";
 import "./style/theme.css";
@@ -27,7 +20,14 @@ app.use(router);
 // 初始化认证状态
 const authStore = useAuthStore();
 authStore.loadToken();
+// 如果有token但没有用户信息，尝试获取用户信息
+if (authStore.isAuthenticated && !authStore.user) {
+  authStore.fetchUserInfo().catch(() => {
+    // 静默处理错误，路由守卫会处理认证失败的情况
+  });
+}
 
+// 直接挂载应用，样式通过vite插件自动处理
 app.mount("#app");
 
 // 应用PWA样式优化

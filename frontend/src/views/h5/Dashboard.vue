@@ -314,7 +314,7 @@ const loadDashboardData = async () => {
             0
           ) || 0;
     } else {
-      console.error("获取资产负债表失败:", balanceSheetRes.reason);
+      // console.error("获取资产负债表失败:", balanceSheetRes.reason);
     }
 
     // 处理月度统计数据
@@ -326,7 +326,7 @@ const loadDashboardData = async () => {
         balance: monthlyData?.income_statement?.net_income || 0,
       };
     } else {
-      console.error("获取月度统计失败:", monthlySummaryRes.reason);
+      // console.error("获取月度统计失败:", monthlySummaryRes.reason);
     }
 
     // 处理趋势数据
@@ -337,23 +337,23 @@ const loadDashboardData = async () => {
       await nextTick();
       initChart();
     } else {
-      console.error("获取趋势数据失败:", trendsRes.reason);
+      // console.error("获取趋势数据失败:", trendsRes.reason);
     }
   } catch (error: any) {
-    console.error("加载仪表盘数据失败:", error);
+    // console.error("加载仪表盘数据失败:", error);
 
     // 详细错误信息
     if (error.response) {
       // 服务器响应了错误状态码
-      console.error("API错误响应:", error.response.status, error.response.data);
+      // console.error("API错误响应:", error.response.status, error.response.data);
       showToast(`API错误: ${error.response.status}`);
     } else if (error.request) {
       // 请求发出了但没有收到响应
-      console.error("网络错误:", error.request);
+      // console.error("网络错误:", error.request);
       showToast("网络连接失败，请检查后端服务");
     } else {
       // 其他错误
-      console.error("未知错误:", error.message);
+      // console.error("未知错误:", error.message);
       showToast("加载数据失败");
     }
   }

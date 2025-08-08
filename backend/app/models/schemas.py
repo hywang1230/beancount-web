@@ -9,8 +9,8 @@ class TransactionBase(BaseModel):
     flag: str = "*"
     payee: Optional[str] = None
     narration: str
-    tags: Optional[List[str]] = []
-    links: Optional[List[str]] = []
+    tags: Optional[List[str]] = Field(default_factory=list)
+    links: Optional[List[str]] = Field(default_factory=list)
 
 class PostingBase(BaseModel):
     account: str

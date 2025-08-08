@@ -230,7 +230,7 @@ const viewFile = async (file: any) => {
   } catch (error) {
     closeToast();
     showToast("获取文件内容失败");
-    console.error("获取文件内容失败:", error);
+    // console.error("获取文件内容失败:", error);
   }
 };
 
@@ -255,7 +255,7 @@ const editFile = async (file: any) => {
   } catch (error) {
     closeToast();
     showToast("获取文件内容失败");
-    console.error("获取文件内容失败:", error);
+    // console.error("获取文件内容失败:", error);
   }
 };
 
@@ -281,7 +281,7 @@ const saveFile = async () => {
   } catch (error) {
     closeToast();
     showToast("保存文件失败");
-    console.error("保存文件失败:", error);
+    // console.error("保存文件失败:", error);
   } finally {
     saving.value = false;
   }
@@ -317,7 +317,7 @@ const validateFileHandler = async (file: any) => {
     }
   } catch (error) {
     showToast("验证文件失败");
-    console.error("验证文件失败:", error);
+    // console.error("验证文件失败:", error);
   } finally {
     file.validating = false;
   }
@@ -349,7 +349,7 @@ const downloadFile = async (file: FileItem) => {
   } catch (error) {
     closeToast();
     showToast("下载失败");
-    console.error("下载文件失败:", error);
+    // console.error("下载文件失败:", error);
   }
 };
 
@@ -378,7 +378,7 @@ const deleteFileHandler = async (file: any) => {
   } catch (error) {
     closeToast();
     showToast("删除失败");
-    console.error("删除文件失败:", error);
+    // console.error("删除文件失败:", error);
   }
 };
 
@@ -452,7 +452,7 @@ const afterRead = async (file: any) => {
   } catch (error) {
     closeToast();
     showToast("上传失败");
-    console.error("上传文件失败:", error);
+    // console.error("上传文件失败:", error);
     fileList.value = [];
   }
 };
@@ -523,7 +523,7 @@ const loadFiles = async (isRefresh = false) => {
     // 所有文件一次性加载完成
     finished.value = true;
   } catch (error) {
-    console.error("加载文件列表失败:", error);
+    // console.error("加载文件列表失败:", error);
 
     // 提供更详细的错误信息
     if (error instanceof TypeError) {
