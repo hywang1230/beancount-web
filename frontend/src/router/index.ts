@@ -201,7 +201,14 @@ router.beforeEach(async (to, _from, next) => {
       return;
     }
 
-    // 已有token，验证有效性
+    // 优化：先检查是否有有效的会话缓存
+    if (authStore.isValidSession()) {
+      // 有效会话，直接放行
+      next();
+      return;
+    }
+
+    // 没有缓存的用户信息，需要验证token有效性
     const isValid = await authStore.checkAuth();
     if (!isValid) {
       // token无效，重定向到登录页

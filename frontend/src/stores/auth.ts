@@ -20,6 +20,8 @@ export const useAuthStore = defineStore("auth", () => {
   const token = ref<string | null>(null);
   const user = ref<User | null>(null);
   const isLoading = ref(false);
+  const lastAuthCheck = ref<number>(0); // 上次认证检查的时间戳
+  const authCheckInterval = 5 * 60 * 1000; // 认证检查间隔：5分钟
 
   // 计算属性
   const isAuthenticated = computed(() => !!token.value);
@@ -42,6 +44,7 @@ export const useAuthStore = defineStore("auth", () => {
   const clearToken = () => {
     token.value = null;
     user.value = null;
+    lastAuthCheck.value = 0;
     localStorage.removeItem("beancount-auth-token");
   };
 
@@ -120,17 +123,38 @@ export const useAuthStore = defineStore("auth", () => {
     }
   };
 
-  // 检查token有效性
-  const checkAuth = async (): Promise<boolean> => {
+  // 检查token有效性（优化版本）
+  const checkAuth = async (forceCheck = false): Promise<boolean> => {
     if (!token.value) return false;
+
+    // 如果用户信息已存在且不是强制检查，直接返回true
+    if (user.value && !forceCheck) {
+      return true;
+    }
+
+    // 检查是否需要重新验证（基于时间间隔）
+    const now = Date.now();
+    if (
+      !forceCheck &&
+      user.value &&
+      now - lastAuthCheck.value < authCheckInterval
+    ) {
+      return true;
+    }
 
     try {
       await fetchUserInfo();
+      lastAuthCheck.value = now;
       return !!user.value;
     } catch (error) {
       clearToken();
       return false;
     }
+  };
+
+  // 轻量级认证检查（仅验证token存在和用户信息缓存）
+  const isValidSession = (): boolean => {
+    return !!(token.value && user.value);
   };
 
   return {
@@ -148,5 +172,6 @@ export const useAuthStore = defineStore("auth", () => {
     logout,
     fetchUserInfo,
     checkAuth,
+    isValidSession,
   };
 });

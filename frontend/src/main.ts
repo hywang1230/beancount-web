@@ -20,6 +20,12 @@ app.use(router);
 // 初始化认证状态
 const authStore = useAuthStore();
 authStore.loadToken();
+// 如果有token但没有用户信息，尝试获取用户信息
+if (authStore.isAuthenticated && !authStore.user) {
+  authStore.fetchUserInfo().catch(() => {
+    // 静默处理错误，路由守卫会处理认证失败的情况
+  });
+}
 
 // 动态加载平台特定样式
 const loadPlatformStyles = async () => {
