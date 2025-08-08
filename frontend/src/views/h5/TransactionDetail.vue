@@ -293,7 +293,9 @@ onMounted(async () => {
 
 .action-buttons {
   position: fixed;
-  bottom: 50px; /* 为底部导航栏留出空间 */
+  bottom: calc(
+    60px + env(safe-area-inset-bottom, 0px)
+  ); /* 适配安全区域和底部导航栏 */
   left: 0;
   right: 0;
   padding: 16px;
@@ -302,6 +304,25 @@ onMounted(async () => {
   z-index: 999; /* 确保在内容之上，但在导航栏之下 */
   transition: background-color 0.3s ease, border-color 0.3s ease,
     bottom 0.3s ease, transform 0.3s ease; /* 添加过渡动画 */
+}
+
+/* PWA模式优化 */
+@media (display-mode: standalone) {
+  .action-buttons {
+    /* PWA模式下，进一步调整底部按钮位置 */
+    bottom: calc(70px + env(safe-area-inset-bottom, 0px));
+  }
+}
+
+/* iOS Safari PWA优化 */
+@supports (-webkit-appearance: none) {
+  @media (display-mode: standalone) {
+    .action-buttons {
+      /* iOS PWA模式下的特殊处理 */
+      bottom: calc(65px + env(safe-area-inset-bottom, 5px));
+      transition: all 0.3s ease-in-out;
+    }
+  }
 }
 
 /* 检测到键盘弹出时隐藏固定按钮（通过CSS媒体查询） */
