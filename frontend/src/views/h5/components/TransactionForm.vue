@@ -1437,12 +1437,9 @@ onMounted(() => {
   flex: 1;
   margin-right: 10px; /* 减小右边距 */
   line-height: 1.4; /* 减小行高 */
-  max-height: 2.8em; /* 减小最大高度 */
-  overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
-  -webkit-box-orient: vertical;
+  word-wrap: break-word; /* 允许长单词换行 */
+  word-break: break-all; /* 在任何字符间断行 */
+  white-space: normal; /* 允许换行 */
   transition: color 0.3s ease;
 }
 
