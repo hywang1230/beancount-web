@@ -3,32 +3,77 @@
     <!-- 筛选栏 -->
     <div class="filter-fixed-container">
       <div class="filter-bar">
-        <van-dropdown-menu>
-          <van-dropdown-item v-model="filterType" :options="typeOptions" />
+        <van-dropdown-menu
+          class="transaction-filter-menu"
+          active-color="#1989fa"
+          overlay
+          :close-on-click-overlay="true"
+        >
+          <van-dropdown-item
+            v-model="filterType"
+            :options="typeOptions"
+            :title="getTypeTitle()"
+          />
           <van-dropdown-item
             v-model="filterAccount"
             :options="accountOptions"
+            :title="getAccountTitle()"
           />
           <van-dropdown-item
             :title="formatDateRangeDisplay(startDate, endDate)"
             ref="dateFilterDropdown"
           >
             <div class="date-filter-panel">
-              <van-cell
-                title="日期范围"
-                :value="formatDateRangeDisplay(startDate, endDate)"
-                is-link
-                @click="showDateRangeCalendar = true"
-              />
-              <van-button
-                v-if="startDate || endDate"
-                type="default"
-                size="small"
-                @click="clearDateRange"
-                style="margin-top: 12px; width: 100%"
-              >
-                清除日期筛选
-              </van-button>
+              <div class="date-filter-header">
+                <span class="filter-title">选择日期范围</span>
+              </div>
+              <van-cell-group class="date-options">
+                <van-cell
+                  title="自定义日期范围"
+                  :value="formatDateRangeValue(startDate, endDate)"
+                  is-link
+                  icon="calendar-o"
+                  @click="showDateRangeCalendar = true"
+                  class="date-range-cell"
+                />
+                <van-cell
+                  title="最近一周"
+                  is-link
+                  @click="setDateRange('week')"
+                  :class="{ 'active-date-option': isActiveRange('week') }"
+                />
+                <van-cell
+                  title="最近一个月"
+                  is-link
+                  @click="setDateRange('month')"
+                  :class="{ 'active-date-option': isActiveRange('month') }"
+                />
+                <van-cell
+                  title="最近三个月"
+                  is-link
+                  @click="setDateRange('quarter')"
+                  :class="{ 'active-date-option': isActiveRange('quarter') }"
+                />
+              </van-cell-group>
+              <div class="date-filter-actions">
+                <van-button
+                  v-if="startDate || endDate"
+                  type="default"
+                  size="normal"
+                  @click="clearDateRange"
+                  class="clear-btn"
+                >
+                  清除筛选
+                </van-button>
+                <van-button
+                  type="primary"
+                  size="normal"
+                  @click="applyDateFilter"
+                  class="apply-btn"
+                >
+                  确定
+                </van-button>
+              </div>
             </div>
           </van-dropdown-item>
         </van-dropdown-menu>
@@ -176,6 +221,9 @@ const startDate = ref("");
 const endDate = ref("");
 const showDateRangeCalendar = ref(false);
 
+// 引用日期筛选下拉项
+const dateFilterDropdown = ref();
+
 // 选项数据
 const typeOptions = [
   { text: "全部类型", value: "all" },
@@ -219,11 +267,6 @@ const groupMap = shallowRef(
 
 // 初始化标志
 const isInitialized = ref(false);
-
-// 计算属性 - 过滤后的交易（用于前端显示，服务端已过滤大部分）
-const filteredTransactions = computed(() => {
-  return transactions.value;
-});
 
 // 计算交易的显示金额（用于合计计算）- 只统计收入和支出，排除转账
 const getTransactionDisplayAmount = (transaction: any) => {
@@ -290,9 +333,23 @@ const debouncedLoadTransactions = createDebounce(
   300
 );
 
+// 获取类型筛选的标题
+const getTypeTitle = () => {
+  const option = typeOptions.find((opt) => opt.value === filterType.value);
+  return option ? option.text : "全部类型";
+};
+
+// 获取账户筛选的标题
+const getAccountTitle = () => {
+  const option = accountOptions.value.find(
+    (opt) => opt.value === filterAccount.value
+  );
+  return option ? option.text.replace(/　/g, "") : "全部账户";
+};
+
 // 格式化日期范围显示
 const formatDateRangeDisplay = (startDateStr: string, endDateStr: string) => {
-  if (!startDateStr && !endDateStr) return "按日期筛选";
+  if (!startDateStr && !endDateStr) return "日期筛选";
   if (startDateStr && endDateStr) {
     const startDate = new Date(startDateStr);
     const endDate = new Date(endDateStr);
@@ -304,7 +361,7 @@ const formatDateRangeDisplay = (startDateStr: string, endDateStr: string) => {
       month: "short",
       day: "numeric",
     });
-    return `${startFormatted} 至 ${endFormatted}`;
+    return `${startFormatted} - ${endFormatted}`;
   }
   if (startDateStr) {
     const startDate = new Date(startDateStr);
@@ -322,7 +379,82 @@ const formatDateRangeDisplay = (startDateStr: string, endDateStr: string) => {
     });
     return `到 ${endFormatted}`;
   }
-  return "按日期筛选";
+  return "日期筛选";
+};
+
+// 格式化日期范围值显示
+const formatDateRangeValue = (startDateStr: string, endDateStr: string) => {
+  if (!startDateStr && !endDateStr) return "点击选择";
+  if (startDateStr && endDateStr) {
+    const startDate = new Date(startDateStr);
+    const endDate = new Date(endDateStr);
+    const startFormatted = startDate.toLocaleDateString("zh-CN");
+    const endFormatted = endDate.toLocaleDateString("zh-CN");
+    return `${startFormatted} - ${endFormatted}`;
+  }
+  if (startDateStr) {
+    return `从 ${new Date(startDateStr).toLocaleDateString("zh-CN")}`;
+  }
+  if (endDateStr) {
+    return `到 ${new Date(endDateStr).toLocaleDateString("zh-CN")}`;
+  }
+  return "点击选择";
+};
+
+// 设置预设日期范围
+const setDateRange = (range: string) => {
+  const today = new Date();
+  const start = new Date();
+
+  switch (range) {
+    case "week":
+      start.setDate(today.getDate() - 7);
+      break;
+    case "month":
+      start.setMonth(today.getMonth() - 1);
+      break;
+    case "quarter":
+      start.setMonth(today.getMonth() - 3);
+      break;
+  }
+
+  startDate.value = start.toLocaleDateString("en-CA");
+  endDate.value = today.toLocaleDateString("en-CA");
+
+  // 关闭下拉菜单
+  dateFilterDropdown.value?.toggle();
+};
+
+// 检查是否是当前激活的日期范围
+const isActiveRange = (range: string) => {
+  if (!startDate.value || !endDate.value) return false;
+
+  const today = new Date();
+  const start = new Date();
+
+  switch (range) {
+    case "week":
+      start.setDate(today.getDate() - 7);
+      break;
+    case "month":
+      start.setMonth(today.getMonth() - 1);
+      break;
+    case "quarter":
+      start.setMonth(today.getMonth() - 3);
+      break;
+    default:
+      return false;
+  }
+
+  const startExpected = start.toLocaleDateString("en-CA");
+  const endExpected = today.toLocaleDateString("en-CA");
+
+  return startDate.value === startExpected && endDate.value === endExpected;
+};
+
+// 应用日期筛选
+const applyDateFilter = () => {
+  dateFilterDropdown.value?.toggle();
 };
 
 // 方法
@@ -1018,10 +1150,7 @@ const clearDateRange = () => {
   endDate.value = "";
 
   // 关闭下拉菜单
-  const dropdown = document.querySelector(".van-dropdown-item__content") as any;
-  if (dropdown) {
-    dropdown.style.display = "none";
-  }
+  dateFilterDropdown.value?.toggle();
 };
 
 // 监听筛选条件变化，使用防抖
@@ -1089,49 +1218,221 @@ onUnmounted(() => {
   left: 0;
   right: 0;
   z-index: 999;
-  background-color: var(--van-background-2);
+  background-color: var(--van-background);
   border-bottom: 1px solid var(--van-border-color);
   transition: background-color 0.3s ease, border-color 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
 .filter-bar {
   background-color: transparent;
 }
 
+/* 交易筛选菜单样式 */
+.transaction-filter-menu {
+  background-color: var(--van-background);
+}
+
+/* 自定义筛选菜单栏样式 */
+:deep(.transaction-filter-menu .van-dropdown-menu__bar) {
+  background-color: var(--van-background);
+  box-shadow: none;
+  border-bottom: none;
+  height: 48px;
+  display: flex;
+}
+
+/* 确保筛选项宽度平均分配 */
+:deep(.transaction-filter-menu .van-dropdown-menu__item) {
+  flex: 1;
+  min-width: 0;
+}
+
+/* 筛选项标题样式 */
+:deep(.transaction-filter-menu .van-dropdown-menu__title) {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--van-text-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+  padding: 0 32px 0 12px;
+  position: relative;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* 筛选项激活状态 */
+:deep(.transaction-filter-menu .van-dropdown-menu__title--active) {
+  color: #1989fa;
+}
+
+/* 下拉箭头样式 - 收起状态（向下箭头）*/
+:deep(.transaction-filter-menu .van-dropdown-menu__title::after) {
+  border-color: #969799 transparent transparent;
+  border-width: 4px 4px 0;
+  border-style: solid;
+  content: "";
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-25%);
+  transition: all 0.3s ease;
+  flex-shrink: 0;
+  width: 0;
+  height: 0;
+}
+
+/* 展开状态（向上箭头）*/
+:deep(.transaction-filter-menu .van-dropdown-menu__title--active::after) {
+  border-color: #1989fa transparent transparent;
+  transform: translateY(-75%) rotate(180deg);
+}
+
 /* 交易内容包装器 */
 .transactions-content-wrapper {
-  margin-top: 50px; /* 为固定筛选栏留出空间 */
+  margin-top: 48px; /* 为固定筛选栏留出空间，调整为精确高度 */
 }
 
 /* 日期筛选面板 */
 .date-filter-panel {
+  background-color: var(--van-background);
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 0;
+}
+
+.date-filter-header {
+  padding: 16px 16px 8px;
+  border-bottom: 1px solid var(--van-border-color);
+  background-color: var(--van-background);
+}
+
+.filter-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--van-text-color);
+}
+
+.date-options {
+  margin: 0;
+}
+
+.date-range-cell {
+  border-bottom: 1px solid var(--van-border-color);
+}
+
+.active-date-option {
+  background-color: var(--van-blue-light) !important;
+  color: #1989fa !important;
+}
+
+:deep(.active-date-option .van-cell__title) {
+  color: #1989fa !important;
+  font-weight: 500;
+}
+
+:deep(.active-date-option::after) {
+  border-color: #1989fa;
+}
+
+.date-filter-actions {
   padding: 16px;
-  background-color: var(--van-background-2);
-  transition: background-color 0.3s ease;
+  display: flex;
+  gap: 12px;
+  background-color: var(--van-background);
+  border-top: 1px solid var(--van-border-color);
+}
+
+.clear-btn {
+  flex: 1;
+  border: 1px solid var(--van-border-color);
+  background-color: var(--van-background);
+  color: var(--van-text-color-2);
+}
+
+.apply-btn {
+  flex: 2;
+  background-color: #1989fa;
+  border: none;
+}
+
+/* 下拉选项样式优化 */
+:deep(.van-dropdown-item__content) {
+  max-height: 50vh;
+  overflow-y: auto;
+  border-radius: 0 !important;
+  border-top-left-radius: 0 !important;
+  border-top-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+/* 移除下拉容器的圆角 */
+:deep(.van-dropdown-item) {
+  border-radius: 0 !important;
+}
+
+:deep(.van-dropdown-item__wrapper) {
+  border-radius: 0 !important;
 }
 
 /* 账户分组样式 */
 :deep(.van-dropdown-item__option) {
-  padding: 10px 16px;
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--van-text-color);
+  border-bottom: 1px solid var(--van-border-color);
+  transition: all 0.3s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+}
+
+:deep(.van-dropdown-item__option:last-child) {
+  border-bottom: none;
 }
 
 /* 账户类型标题样式 */
 :deep(.van-dropdown-item__option[disabled]) {
-  background-color: #f7f8fa !important;
-  color: #646566 !important;
-  font-weight: 500;
+  background-color: var(--van-gray-1) !important;
+  color: var(--van-text-color-2) !important;
+  font-weight: 600;
   font-size: 13px;
-  padding: 8px 16px;
+  padding: 10px 16px;
   cursor: default;
+  border-bottom: 1px solid var(--van-border-color);
+  letter-spacing: 0.5px;
 }
 
 /* 账户选项缩进样式 */
 :deep(.van-dropdown-item__option:not([disabled])) {
-  border-left: 2px solid transparent;
+  border-left: 3px solid transparent;
+  position: relative;
 }
 
-:deep(.van-dropdown-item__option:hover:not([disabled])) {
-  border-left-color: #1989fa;
+:deep(.van-dropdown-item__option:not([disabled]):hover) {
+  background-color: var(--van-gray-1);
+  border-left-color: transparent;
+}
+
+:deep(.van-dropdown-item__option--active) {
+  background-color: var(--van-blue-light) !important;
+  color: #1989fa !important;
+  border-left-color: transparent !important;
+  font-weight: 500;
+}
+
+/* 移除选中选项的对勾图标 */
+:deep(.van-dropdown-item__option--active::after) {
+  display: none;
 }
 
 .transaction-group {
