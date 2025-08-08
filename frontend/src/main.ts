@@ -4,13 +4,6 @@ import App from "./App.vue";
 import router from "./router";
 import { useAuthStore } from "./stores/auth";
 
-// Element Plus 样式
-import "element-plus/dist/index.css";
-import "element-plus/theme-chalk/dark/css-vars.css";
-
-// Vant 样式
-import "vant/lib/index.css";
-
 // 全局样式
 import "./style/global.css";
 import "./style/theme.css";
@@ -28,7 +21,27 @@ app.use(router);
 const authStore = useAuthStore();
 authStore.loadToken();
 
-app.mount("#app");
+// 动态加载平台特定样式
+const loadPlatformStyles = async () => {
+  const isMobile =
+    /Mobile|Android|iPhone|iPad|iPod|BlackBerry|Windows Phone/i.test(
+      navigator.userAgent
+    ) || window.innerWidth <= 768;
+
+  if (isMobile) {
+    // H5 端只加载 Vant 样式
+    await import("vant/lib/index.css");
+  } else {
+    // PC 端加载 Element Plus 样式
+    await import("element-plus/dist/index.css");
+    await import("element-plus/theme-chalk/dark/css-vars.css");
+  }
+};
+
+// 在应用挂载前加载样式
+loadPlatformStyles().then(() => {
+  app.mount("#app");
+});
 
 // 应用PWA样式优化
 applyPWAStyles();

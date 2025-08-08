@@ -14,7 +14,12 @@
 
     <!-- 主内容 -->
     <div class="main-content" ref="mainContentRef">
-      <router-view />
+      <!-- 添加 keep-alive 缓存关键页面 -->
+      <keep-alive include="H5Transactions,H5Reports,H5Accounts,H5Dashboard">
+        <router-view v-slot="{ Component, route }">
+          <component :is="Component" :key="route.fullPath" />
+        </router-view>
+      </keep-alive>
     </div>
 
     <!-- 底部导航 -->
@@ -125,19 +130,30 @@ watch(
   { immediate: true }
 );
 
-// 监听路由变化，滚动到顶部
+// 监听路由变化，滚动到顶部（仅对非缓存页面）
 watch(
   () => route.path,
   () => {
-    // 使用nextTick确保DOM更新完成后再滚动
-    setTimeout(() => {
-      if (mainContentRef.value) {
-        mainContentRef.value.scrollTo({
-          top: 0,
-          behavior: "smooth",
-        });
-      }
-    }, 0);
+    // 对于缓存页面，不自动滚动到顶部，保持用户的滚动位置
+    const cachedPages = [
+      "/h5/transactions",
+      "/h5/reports",
+      "/h5/accounts",
+      "/h5/dashboard",
+    ];
+    const isFromCachedPage = cachedPages.includes(route.path);
+
+    if (!isFromCachedPage) {
+      // 使用nextTick确保DOM更新完成后再滚动
+      setTimeout(() => {
+        if (mainContentRef.value) {
+          mainContentRef.value.scrollTo({
+            top: 0,
+            behavior: "smooth",
+          });
+        }
+      }, 0);
+    }
   }
 );
 

@@ -134,14 +134,21 @@
 import {
   deleteTransaction as deleteTransactionApi,
   getAccounts,
-  getTransactions,
 } from "@/api/transactions";
+import {
+  createCancellableGet,
+  createDebounce,
+  RequestManager,
+} from "@/utils/api";
 import { showConfirmDialog, showToast } from "vant";
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, shallowRef, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const router = useRouter();
 const route = useRoute();
+
+// 请求管理器
+const requestManager = new RequestManager();
 
 // 高亮显示的交易ID（从URL参数获取）
 const highlightTransactionId = ref((route.query.highlight as string) || "");
@@ -199,16 +206,23 @@ interface Transaction {
   type: string;
 }
 
-// 数据
-const transactions = ref<Transaction[]>([]);
+// 使用 shallowRef 减少深层响应式追踪
+const transactions = shallowRef<Transaction[]>([]);
+
+// 使用 Map 进行增量分组，避免重复计算
+const groupMap = shallowRef(
+  new Map<
+    string,
+    { date: string; transactions: Transaction[]; totalAmount: number }
+  >()
+);
+
+// 初始化标志
+const isInitialized = ref(false);
 
 // 计算属性 - 过滤后的交易（用于前端显示，服务端已过滤大部分）
 const filteredTransactions = computed(() => {
-  let filtered = transactions.value;
-
-  // 所有类型筛选现在都在后端完成，前端不需要额外过滤
-
-  return filtered;
+  return transactions.value;
 });
 
 // 计算交易的显示金额（用于合计计算）- 只统计收入和支出，排除转账
@@ -225,40 +239,56 @@ const getTransactionDisplayAmount = (transaction: any) => {
   }
 };
 
-// 计算属性 - 分组交易
+// 优化的分组计算 - 使用增量更新
 const groupedTransactions = computed(() => {
-  const groups: Record<
-    string,
-    { date: string; transactions: Transaction[]; totalAmount: number }
-  > = {};
+  return Array.from(groupMap.value.values()).sort(
+    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
+  );
+});
 
-  filteredTransactions.value.forEach((transaction) => {
+// 增量更新分组数据
+const updateGroupMap = (newTransactions: Transaction[], isRefresh = false) => {
+  if (isRefresh) {
+    groupMap.value.clear();
+  }
+
+  newTransactions.forEach((transaction) => {
     const date = transaction.date;
-    if (!groups[date]) {
-      groups[date] = {
+    let group = groupMap.value.get(date);
+
+    if (!group) {
+      group = {
         date,
         transactions: [],
         totalAmount: 0,
       };
+      groupMap.value.set(date, group);
     }
-    groups[date].transactions.push(transaction);
-    // 使用显示金额计算每日合计
-    groups[date].totalAmount += getTransactionDisplayAmount(transaction);
+
+    group.transactions.push(transaction);
+    group.totalAmount += getTransactionDisplayAmount(transaction);
   });
 
-  // 对每个日期组内的交易按行号倒序排列
-  Object.values(groups).forEach((group) => {
+  // 对每个组内的交易按行号排序
+  groupMap.value.forEach((group) => {
     group.transactions.sort((a, b) => {
       const linenoA = a.lineno || 0;
       const linenoB = b.lineno || 0;
-      return linenoB - linenoA; // 倒序排列
+      return linenoB - linenoA;
     });
   });
 
-  return Object.values(groups).sort(
-    (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
-  );
-});
+  // 触发响应式更新
+  groupMap.value = new Map(groupMap.value);
+};
+
+// 创建防抖的加载函数
+const debouncedLoadTransactions = createDebounce(
+  async (isRefresh = false, pageToLoad?: number) => {
+    await loadTransactionsInternal(isRefresh, pageToLoad);
+  },
+  300
+);
 
 // 格式化日期范围显示
 const formatDateRangeDisplay = (startDateStr: string, endDateStr: string) => {
@@ -466,98 +496,129 @@ const deleteTransaction = async (transaction: any) => {
     const transactionId = transaction.transaction_id || transaction.id;
     await deleteTransactionApi(transactionId);
 
-    // 从列表中移除
-    const index = transactions.value.findIndex(
+    // 从分组中移除
+    const group = groupMap.value.get(transaction.date);
+    if (group) {
+      const index = group.transactions.findIndex(
+        (t) =>
+          (t.transaction_id && t.transaction_id === transactionId) ||
+          t.id === transaction.id
+      );
+      if (index > -1) {
+        group.transactions.splice(index, 1);
+        group.totalAmount -= getTransactionDisplayAmount(transaction);
+
+        // 如果组为空，删除组
+        if (group.transactions.length === 0) {
+          groupMap.value.delete(transaction.date);
+        }
+
+        // 触发响应式更新
+        groupMap.value = new Map(groupMap.value);
+      }
+    }
+
+    // 从原始数组中移除
+    const transactionIndex = transactions.value.findIndex(
       (t) =>
         (t.transaction_id && t.transaction_id === transactionId) ||
         t.id === transaction.id
     );
-    if (index > -1) {
-      transactions.value.splice(index, 1);
+    if (transactionIndex > -1) {
+      transactions.value.splice(transactionIndex, 1);
+      transactions.value = [...transactions.value]; // 触发响应式更新
     }
 
     showToast("删除成功");
   } catch (error) {
     if (error !== "cancel") {
-      console.error("删除交易失败:", error);
+      if ((import.meta as any).env?.DEV) {
+        console.error("删除交易失败:", error);
+      }
       showToast("删除交易失败");
     }
   }
 };
 
 const onRefresh = async () => {
-  console.log("🔄 onRefresh called: resetting state and loading page 1");
+  if ((import.meta as any).env?.DEV) {
+    console.log("🔄 onRefresh called: resetting state and loading page 1");
+  }
+
+  // 取消所有进行中的请求
+  requestManager.cancelAll();
 
   // 重置到初始状态
-  currentPage.value = 1; // 重置为第一页
+  currentPage.value = 1;
   finished.value = false;
-  loading.value = false; // 确保loading状态正确
+  loading.value = false;
   totalPages.value = 1;
-  transactions.value = []; // 清空现有数据
+  transactions.value = [];
+  groupMap.value.clear();
 
-  console.log("🚀 onRefresh: state reset, loading page 1");
-  // 直接加载第一页
   try {
-    await loadTransactions(true);
+    await loadTransactionsInternal(true);
   } catch (error) {
-    console.error("刷新失败:", error);
+    if (!(error as any)?.cancelled) {
+      console.error("刷新失败:", error);
+    }
   } finally {
     refreshing.value = false;
   }
 };
 
 const onLoad = async () => {
-  console.log("🔄 onLoad called:", {
-    finished: finished.value,
-    loading: loading.value,
-    currentPage: currentPage.value,
-    totalPages: totalPages.value,
-    transactionsCount: transactions.value.length,
-  });
+  if ((import.meta as any).env.DEV) {
+    console.log("🔄 onLoad called:", {
+      finished: finished.value,
+      loading: loading.value,
+      currentPage: currentPage.value,
+      totalPages: totalPages.value,
+      transactionsCount: transactions.value.length,
+    });
+  }
 
-  // 检查是否已经完成加载
   if (finished.value) {
-    console.log("⛔ onLoad early return: finished");
+    if ((import.meta as any).env.DEV) {
+      console.log("⛔ onLoad early return: finished");
+    }
     return;
   }
 
-  // 检查是否还有更多页面
   if (currentPage.value >= totalPages.value && totalPages.value > 0) {
-    console.log(
-      "⛔ onLoad: no more pages to load, currentPage:",
-      currentPage.value,
-      "totalPages:",
-      totalPages.value
-    );
+    if ((import.meta as any).env.DEV) {
+      console.log("⛔ onLoad: no more pages to load");
+    }
     finished.value = true;
     return;
   }
 
-  // 立即设置 loading 状态，让 van-list 知道开始加载
   loading.value = true;
-  console.log(
-    "📄 onLoad: set loading=true, loading page",
-    currentPage.value + 1
-  );
 
   try {
-    // 加载下一页数据
     const nextPage = currentPage.value + 1;
-    await loadTransactions(false, nextPage);
+    await loadTransactionsInternal(false, nextPage);
   } catch (error) {
-    console.error("onLoad failed:", error);
+    if (!(error as any)?.cancelled) {
+      console.error("onLoad failed:", error);
+    }
     loading.value = false;
   }
 };
 
-const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
-  console.log("📥 loadTransactions called:", {
-    isRefresh,
-    pageToLoad,
-    currentLoading: loading.value,
-    currentPage: currentPage.value,
-    finished: finished.value,
-  });
+const loadTransactionsInternal = async (
+  isRefresh = false,
+  pageToLoad?: number
+) => {
+  if ((import.meta as any).env.DEV) {
+    console.log("📥 loadTransactionsInternal called:", {
+      isRefresh,
+      pageToLoad,
+      currentLoading: loading.value,
+      currentPage: currentPage.value,
+      finished: finished.value,
+    });
+  }
 
   // 如果不是刷新，且还没有设置 loading 状态，则设置它
   if (!isRefresh && !loading.value) {
@@ -622,21 +683,22 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
       params.end_date = today.toLocaleDateString("en-CA");
     }
 
-    console.log(
-      "🌐 Making API call to getTransactions with final params:",
-      params
-    );
-    const response = await getTransactions(params);
-    console.log("🎯 API call completed successfully");
-    console.log("📡 API response received:", {
-      requested_page: targetPage,
-      current_page: currentPage.value,
-      total_pages: response.total_pages,
-      total: response.total,
-      data_length: response.data?.length,
-      response_keys: Object.keys(response),
-      params,
-    });
+    // 创建可取消的请求
+    const requestKey = `load-transactions-${targetPage}`;
+    const request = createCancellableGet<any>("/transactions/", { params });
+    requestManager.add(requestKey, request);
+
+    const response = await request.promise;
+
+    if ((import.meta as any).env.DEV) {
+      console.log("📡 API response received:", {
+        requested_page: targetPage,
+        current_page: currentPage.value,
+        total_pages: response.total_pages,
+        total: response.total,
+        data_length: response.data?.length,
+      });
+    }
 
     // 更新分页信息
     totalPages.value = response.total_pages;
@@ -657,11 +719,12 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
 
     if (isRefresh) {
       transactions.value = convertedTransactions;
+      updateGroupMap(convertedTransactions, true);
     } else {
       transactions.value.push(...convertedTransactions);
+      transactions.value = [...transactions.value]; // 触发响应式更新
+      updateGroupMap(convertedTransactions, false);
     }
-
-    // 统计数据现在通过计算属性自动更新
 
     // 判断是否还有更多数据
     const hasMoreData = currentPage.value < response.total_pages;
@@ -671,34 +734,41 @@ const loadTransactions = async (isRefresh = false, pageToLoad?: number) => {
       response.total_pages === 0 ||
       (currentPage.value === 1 && convertedTransactions.length === 0)
     ) {
-      // 没有数据或第一页没有数据
       finished.value = true;
-      console.log("📄 No data available, marking as finished");
+      if ((import.meta as any).env.DEV) {
+        console.log("📄 No data available, marking as finished");
+      }
     } else {
       finished.value = !hasMoreData;
     }
 
-    console.log("📊 Pagination check:", {
-      currentPage: currentPage.value,
-      totalPages: response.total_pages,
-      convertedTransactions: convertedTransactions.length,
-      hasMoreData,
-      finished: finished.value,
-      totalTransactions: transactions.value.length,
-      isRefresh,
-    });
-
-    // 移除临时测试代码
+    if ((import.meta as any).env.DEV) {
+      console.log("📊 Pagination check:", {
+        currentPage: currentPage.value,
+        totalPages: response.total_pages,
+        convertedTransactions: convertedTransactions.length,
+        hasMoreData,
+        finished: finished.value,
+        totalTransactions: transactions.value.length,
+        isRefresh,
+      });
+    }
   } catch (error) {
-    console.error("加载交易数据失败:", error);
-    showToast("加载交易数据失败");
-    // 发生错误时，如果是加载新页面失败，则设置finished为true停止继续加载
-    if (!isRefresh && pageToLoad && pageToLoad > currentPage.value) {
-      finished.value = true;
+    if (!(error as any)?.cancelled) {
+      console.error("加载交易数据失败:", error);
+      showToast("加载交易数据失败");
+      if (!isRefresh && pageToLoad && pageToLoad > currentPage.value) {
+        finished.value = true;
+      }
     }
   } finally {
     loading.value = false;
   }
+};
+
+// 立即加载函数（不防抖）
+const loadTransactions = (isRefresh = false, pageToLoad?: number) => {
+  return loadTransactionsInternal(isRefresh, pageToLoad);
 };
 
 // 格式化单个账户名称段（去掉字母前缀和连字符）
@@ -946,71 +1016,62 @@ const onDateRangeConfirm = (dates: Date[]) => {
 const clearDateRange = () => {
   startDate.value = "";
   endDate.value = "";
+
+  // 关闭下拉菜单
+  const dropdown = document.querySelector(".van-dropdown-item__content") as any;
+  if (dropdown) {
+    dropdown.style.display = "none";
+  }
 };
 
-// 组件是否已初始化完成
-const isInitialized = ref(false);
-// 是否正在处理筛选变化
-const isHandlingFilterChange = ref(false);
-
-// 监听筛选条件变化
+// 监听筛选条件变化，使用防抖
 watch(
-  [filterType, filterAccount, sortBy, startDate, endDate],
-  async () => {
-    // 只有在组件初始化完成后才响应筛选条件变化
-    if (isInitialized.value && !isHandlingFilterChange.value) {
-      isHandlingFilterChange.value = true;
-      console.log("🔄 Filter changed, refreshing data:", {
-        filterType: filterType.value,
-        filterAccount: filterAccount.value,
-        sortBy: sortBy.value,
-        startDate: startDate.value,
-        endDate: endDate.value,
-      });
-      try {
-        await onRefresh();
-      } finally {
-        isHandlingFilterChange.value = false;
-      }
+  [filterType, filterAccount, startDate, endDate],
+  () => {
+    if (!isInitialized.value) return;
+
+    if ((import.meta as any).env.DEV) {
+      console.log("🔄 Filter changed, triggering debounced load");
     }
+
+    // 取消当前请求
+    requestManager.cancelAll();
+
+    // 重置状态
+    currentPage.value = 1;
+    finished.value = false;
+    loading.value = false;
+
+    // 防抖加载
+    debouncedLoadTransactions(true);
   },
   { deep: true }
 );
 
 onMounted(async () => {
-  console.log("🚀 Component mounting, initializing state");
-
-  // 确保初始状态正确
-  finished.value = false;
-  loading.value = false;
-  currentPage.value = 1; // 直接从1开始
-  totalPages.value = 1;
-  transactions.value = [];
-
-  console.log("📊 Initial state set:", {
-    finished: finished.value,
-    loading: loading.value,
-    currentPage: currentPage.value,
-    totalPages: totalPages.value,
-    transactionsLength: transactions.value.length,
-  });
-
-  console.log("🚀 Loading account options and initial data");
+  if ((import.meta as any).env.DEV) {
+    console.log("🚀 H5Transactions component mounted");
+  }
 
   loadAccountOptions();
-
-  // 初始加载第一页
-  await loadTransactions(true); // 直接调用loadTransactions作为初始加载
-
-  // 标记组件已初始化完成，现在可以响应筛选条件变化
+  await loadTransactions(true);
   isInitialized.value = true;
-  console.log("✅ Component initialization completed:", {
-    finished: finished.value,
-    loading: loading.value,
-    currentPage: currentPage.value,
-    totalPages: totalPages.value,
-    transactionsLength: transactions.value.length,
-  });
+
+  if ((import.meta as any).env.DEV) {
+    console.log("✅ Component initialization completed:", {
+      finished: finished.value,
+      loading: loading.value,
+      currentPage: currentPage.value,
+      totalPages: totalPages.value,
+      transactionsLength: transactions.value.length,
+    });
+  }
+});
+
+// 组件卸载时清理
+onUnmounted(() => {
+  requestManager.cancelAll();
+  debouncedLoadTransactions.cancel();
 });
 </script>
 
