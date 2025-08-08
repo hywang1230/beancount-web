@@ -15,11 +15,11 @@
     <!-- 主内容 -->
     <div class="main-content" ref="mainContentRef">
       <!-- 添加 keep-alive 缓存关键页面 -->
-      <keep-alive include="H5Transactions,H5Reports,H5Accounts,H5Dashboard">
-        <router-view v-slot="{ Component, route }">
+      <router-view v-slot="{ Component, route }">
+        <keep-alive include="H5Transactions,H5Reports,H5Accounts,H5Dashboard">
           <component :is="Component" :key="route.fullPath" />
-        </router-view>
-      </keep-alive>
+        </keep-alive>
+      </router-view>
     </div>
 
     <!-- 底部导航 -->
