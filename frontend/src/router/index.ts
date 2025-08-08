@@ -1,7 +1,5 @@
 import H5Layout from "@/layout/h5/Layout.vue";
-import PcLayout from "@/layout/pc/Layout.vue";
 import { useAuthStore } from "@/stores/auth";
-import { getDefaultRoute } from "@/utils/device";
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 
 const routes: RouteRecordRaw[] = [
@@ -12,65 +10,10 @@ const routes: RouteRecordRaw[] = [
     component: () => import("@/views/Login.vue"),
     meta: { requiresAuth: false, title: "登录" },
   },
-  // 根路由重定向逻辑，根据设备类型跳转
+  // 根路由重定向到H5页面
   {
     path: "/",
-    redirect: () => {
-      return getDefaultRoute();
-    },
-  },
-  // PC端路由
-  {
-    path: "/pc",
-    redirect: "/dashboard",
-  },
-  {
-    path: "/",
-    component: PcLayout,
-    children: [
-      {
-        path: "dashboard",
-        name: "PcDashboard",
-        component: () => import("@/views/pc/Dashboard.vue"),
-        meta: { title: "仪表盘", platform: "pc", requiresAuth: true },
-      },
-      {
-        path: "transactions",
-        name: "PcTransactions",
-        component: () => import("@/views/pc/Transactions.vue"),
-        meta: { title: "交易流水", platform: "pc", requiresAuth: true },
-      },
-      {
-        path: "add-transaction",
-        name: "PcAddTransaction",
-        component: () => import("@/views/pc/AddTransaction.vue"),
-        meta: { title: "新增交易", platform: "pc", requiresAuth: true },
-      },
-      {
-        path: "reports",
-        name: "PcReports",
-        component: () => import("@/views/pc/Reports.vue"),
-        meta: { title: "报表分析", platform: "pc", requiresAuth: true },
-      },
-      {
-        path: "accounts",
-        name: "PcAccounts",
-        component: () => import("@/views/pc/Accounts.vue"),
-        meta: { title: "账户管理", platform: "pc", requiresAuth: true },
-      },
-      {
-        path: "files",
-        name: "PcFiles",
-        component: () => import("@/views/pc/Files.vue"),
-        meta: { title: "文件管理", platform: "pc", requiresAuth: true },
-      },
-      {
-        path: "recurring",
-        name: "PcRecurringTransactions",
-        component: () => import("@/views/pc/RecurringTransactions.vue"),
-        meta: { title: "周期记账", platform: "pc", requiresAuth: true },
-      },
-    ],
+    redirect: "/h5/dashboard",
   },
   // 移动端路由
   {
@@ -219,8 +162,8 @@ router.beforeEach(async (to, _from, next) => {
       return;
     }
   } else if (to.path === "/login" && authStore.isAuthenticated) {
-    // 已登录用户访问登录页，根据设备类型重定向到对应首页
-    next(getDefaultRoute());
+    // 已登录用户访问登录页，重定向到H5首页
+    next("/h5/dashboard");
     return;
   }
 

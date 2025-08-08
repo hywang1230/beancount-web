@@ -98,7 +98,7 @@ export const perfMonitor = new PerformanceMonitor();
 // 常用的性能装饰器
 export function measurePerformance(name: string) {
   return function (
-    target: any,
+    _target: any,
     propertyKey: string,
     descriptor: PropertyDescriptor
   ) {
