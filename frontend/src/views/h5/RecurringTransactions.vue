@@ -425,7 +425,7 @@ const executeNow = async () => {
     // 刷新列表
     await loadRecurringList(true);
   } catch (error) {
-    console.error("执行周期记账失败:", error);
+    // console.error("执行周期记账失败:", error);
     showToast("执行失败");
   } finally {
     executeLoading.value = false;
@@ -443,7 +443,7 @@ const viewLogs = async (item: any) => {
     executionLogs.value = logs;
     logsFinished.value = true;
   } catch (error) {
-    console.error("加载日志失败:", error);
+    // console.error("加载日志失败:", error);
     showToast("加载日志失败");
   } finally {
     logsLoading.value = false;
@@ -461,7 +461,7 @@ const showExecutionLogs = async () => {
     executionLogs.value = logs;
     logsFinished.value = true;
   } catch (error) {
-    console.error("加载全部日志失败:", error);
+    // console.error("加载全部日志失败:", error);
     showToast("加载日志失败");
   } finally {
     logsLoading.value = false;
@@ -499,7 +499,7 @@ const showSchedulerJobs = async () => {
     schedulerJobs.value = jobs;
     jobsFinished.value = true;
   } catch (error) {
-    console.error("加载定时任务状态失败:", error);
+    // console.error("加载定时任务状态失败:", error);
     showToast("加载定时任务状态失败");
   } finally {
     jobsLoading.value = false;
@@ -517,7 +517,7 @@ const triggerScheduler = async () => {
     await showSchedulerJobs();
     await loadRecurringList(true);
   } catch (error) {
-    console.error("触发定时任务失败:", error);
+    // console.error("触发定时任务失败:", error);
     showToast("触发定时任务失败");
   } finally {
     triggerLoading.value = false;
@@ -545,7 +545,7 @@ const toggleStatus = async (item: any) => {
     if (error !== "cancel") {
       // 不是用户取消
       // showToast(`${newStatus === 'active' ? '启用' : '暂停'}失败`)
-      console.error("切换状态失败:", error);
+      // console.error("切换状态失败:", error);
     }
   }
 };
@@ -571,7 +571,7 @@ const deleteRecurring = async (item: any) => {
     if (error !== "cancel") {
       // 不是用户取消
       showToast("删除失败");
-      console.error("删除周期记账失败:", error);
+      // console.error("删除周期记账失败:", error);
     }
   }
 };
@@ -659,7 +659,7 @@ const loadRecurringList = async (isRefresh = false) => {
     // 所有数据一次性加载完成
     finished.value = true;
   } catch (error) {
-    console.error("加载周期记账列表失败:", error);
+    // console.error("加载周期记账列表失败:", error);
     showToast("加载周期记账数据失败");
   } finally {
     loading.value = false;

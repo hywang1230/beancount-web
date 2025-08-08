@@ -249,7 +249,7 @@ class RecurringTransactionService:
             return beancount_service.add_transaction(transaction_data)
         
         except Exception as e:
-            print(f"执行周期记账失败: {e}")
+            # print(f"执行周期记账失败: {e}")
             return False
     
     def _should_execute_on_date(self, transaction: Dict, target_date: date) -> bool:

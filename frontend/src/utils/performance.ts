@@ -30,18 +30,14 @@ class PerformanceMonitor {
 
     const metric = this.metrics.get(name);
     if (!metric) {
-      console.warn(`Performance metric "${name}" not found`);
+      // Performance metric not found
       return;
     }
 
     metric.endTime = performance.now();
     metric.duration = metric.endTime - metric.startTime;
 
-    if (this.enabled && metric.duration > 100) {
-      console.warn(
-        `⚠️ Performance: "${name}" took ${metric.duration.toFixed(2)}ms`
-      );
-    }
+    // Performance monitoring disabled in production
 
     return metric.duration;
   }
@@ -80,16 +76,7 @@ class PerformanceMonitor {
     const metrics = this.getMetrics();
     if (metrics.length === 0) return;
 
-    console.group("📊 Performance Report");
-    metrics
-      .sort((a, b) => (b.duration || 0) - (a.duration || 0))
-      .forEach((metric) => {
-        const duration = metric.duration!.toFixed(2);
-        const emoji =
-          metric.duration! > 500 ? "🔴" : metric.duration! > 100 ? "🟡" : "🟢";
-        console.log(`${emoji} ${metric.name}: ${duration}ms`);
-      });
-    console.groupEnd();
+    // Performance report generation disabled
   }
 }
 
@@ -117,21 +104,6 @@ export function measurePerformance(name: string) {
 // 内存使用监控
 export function checkMemoryUsage(): void {
   if (!(import.meta as any).env.DEV) return;
-
-  if ("memory" in performance) {
-    const memory = (performance as any).memory;
-    const used = Math.round((memory.usedJSHeapSize / 1048576) * 100) / 100;
-    const total = Math.round((memory.totalJSHeapSize / 1048576) * 100) / 100;
-    const limit = Math.round((memory.jsHeapSizeLimit / 1048576) * 100) / 100;
-
-    if (used / total > 0.9) {
-      console.warn(
-        `🚨 Memory usage high: ${used}MB / ${total}MB (limit: ${limit}MB)`
-      );
-    } else {
-      console.log(`💾 Memory usage: ${used}MB / ${total}MB`);
-    }
-  }
 }
 
 // 帧率监控
@@ -152,7 +124,7 @@ export function startFPSMonitor(): () => void {
       const fps = Math.round((frames * 1000) / (currentTime - lastTime));
 
       if (fps < 30) {
-        console.warn(`🎭 Low FPS detected: ${fps}`);
+        // Low FPS detected: ${fps}
       }
 
       frames = 0;

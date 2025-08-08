@@ -53,14 +53,14 @@ onMounted(async () => {
         showOfflineReady.value = true;
       },
       onRegistered(r: ServiceWorkerRegistration | undefined) {
-        console.log("Service Worker 注册成功", r);
+        // console.log("Service Worker 注册成功", r);
       },
       onRegisterError(error: any) {
-        console.error("Service Worker 注册失败", error);
+        // console.error("Service Worker 注册失败", error);
       },
     });
   } catch (error) {
-    console.warn("PWA 功能不可用", error);
+    // console.warn("PWA 功能不可用", error);
   }
 });
 </script>

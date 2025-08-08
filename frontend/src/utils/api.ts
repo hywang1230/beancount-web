@@ -1,14 +1,7 @@
 import { useAuthStore } from "@/stores/auth";
 import axios, { AxiosRequestConfig } from "axios";
 
-// 根据环境确定API基础URL
 const getBaseURL = (): string => {
-  // 如果是开发环境，使用localhost
-  // @ts-ignore
-  // if (import.meta.env && import.meta.env.DEV) {
-  //   return 'http://localhost:8000/api'
-  // }
-  // 生产环境使用相对路径
   return "/api";
 };
 
@@ -43,9 +36,6 @@ api.interceptors.response.use(
   (error) => {
     // 处理取消请求的情况
     if (axios.isCancel(error)) {
-      if ((import.meta as any).env?.DEV) {
-        console.log("Request cancelled:", error.message);
-      }
       return Promise.reject({ cancelled: true, message: error.message });
     }
 

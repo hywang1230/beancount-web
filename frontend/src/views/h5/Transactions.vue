@@ -214,7 +214,6 @@ const totalPages = ref(1);
 // 筛选条件
 const filterType = ref("all");
 const filterAccount = ref("all");
-const sortBy = ref("date_desc");
 
 // 日期筛选相关
 const startDate = ref("");
@@ -665,7 +664,7 @@ const deleteTransaction = async (transaction: any) => {
   } catch (error) {
     if (error !== "cancel") {
       if ((import.meta as any).env?.DEV) {
-        console.error("删除交易失败:", error);
+        // console.error("删除交易失败:", error);
       }
       showToast("删除交易失败");
     }
@@ -673,9 +672,7 @@ const deleteTransaction = async (transaction: any) => {
 };
 
 const onRefresh = async () => {
-  if ((import.meta as any).env?.DEV) {
-    console.log("🔄 onRefresh called: resetting state and loading page 1");
-  }
+  // Refresh transaction list
 
   // 取消所有进行中的请求
   requestManager.cancelAll();
@@ -692,7 +689,7 @@ const onRefresh = async () => {
     await loadTransactionsInternal(true);
   } catch (error) {
     if (!(error as any)?.cancelled) {
-      console.error("刷新失败:", error);
+      // console.error("刷新失败:", error);
     }
   } finally {
     refreshing.value = false;
@@ -700,27 +697,13 @@ const onRefresh = async () => {
 };
 
 const onLoad = async () => {
-  if ((import.meta as any).env.DEV) {
-    console.log("🔄 onLoad called:", {
-      finished: finished.value,
-      loading: loading.value,
-      currentPage: currentPage.value,
-      totalPages: totalPages.value,
-      transactionsCount: transactions.value.length,
-    });
-  }
+  // Load more transactions on scroll
 
   if (finished.value) {
-    if ((import.meta as any).env.DEV) {
-      console.log("⛔ onLoad early return: finished");
-    }
     return;
   }
 
   if (currentPage.value >= totalPages.value && totalPages.value > 0) {
-    if ((import.meta as any).env.DEV) {
-      console.log("⛔ onLoad: no more pages to load");
-    }
     finished.value = true;
     return;
   }
@@ -732,7 +715,7 @@ const onLoad = async () => {
     await loadTransactionsInternal(false, nextPage);
   } catch (error) {
     if (!(error as any)?.cancelled) {
-      console.error("onLoad failed:", error);
+      // console.error("onLoad failed:", error);
     }
     loading.value = false;
   }
@@ -742,16 +725,6 @@ const loadTransactionsInternal = async (
   isRefresh = false,
   pageToLoad?: number
 ) => {
-  if ((import.meta as any).env.DEV) {
-    console.log("📥 loadTransactionsInternal called:", {
-      isRefresh,
-      pageToLoad,
-      currentLoading: loading.value,
-      currentPage: currentPage.value,
-      finished: finished.value,
-    });
-  }
-
   // 如果不是刷新，且还没有设置 loading 状态，则设置它
   if (!isRefresh && !loading.value) {
     loading.value = true;
@@ -776,17 +749,6 @@ const loadTransactionsInternal = async (
       page: targetPage,
       page_size: 20,
     };
-
-    console.log("🚀 About to call API with params:", params);
-    console.log("🔍 Current filter state:", {
-      filterType: filterType.value,
-      filterAccount: filterAccount.value,
-      sortBy: sortBy.value,
-      startDate: startDate.value,
-      endDate: endDate.value,
-      isRefresh,
-      targetPage,
-    });
 
     // 类型筛选
     if (filterType.value !== "all") {
@@ -821,16 +783,6 @@ const loadTransactionsInternal = async (
     requestManager.add(requestKey, request);
 
     const response = await request.promise;
-
-    if ((import.meta as any).env.DEV) {
-      console.log("📡 API response received:", {
-        requested_page: targetPage,
-        current_page: currentPage.value,
-        total_pages: response.total_pages,
-        total: response.total,
-        data_length: response.data?.length,
-      });
-    }
 
     // 更新分页信息
     totalPages.value = response.total_pages;
@@ -867,27 +819,12 @@ const loadTransactionsInternal = async (
       (currentPage.value === 1 && convertedTransactions.length === 0)
     ) {
       finished.value = true;
-      if ((import.meta as any).env.DEV) {
-        console.log("📄 No data available, marking as finished");
-      }
+      // No more data available
     } else {
       finished.value = !hasMoreData;
     }
-
-    if ((import.meta as any).env.DEV) {
-      console.log("📊 Pagination check:", {
-        currentPage: currentPage.value,
-        totalPages: response.total_pages,
-        convertedTransactions: convertedTransactions.length,
-        hasMoreData,
-        finished: finished.value,
-        totalTransactions: transactions.value.length,
-        isRefresh,
-      });
-    }
   } catch (error) {
     if (!(error as any)?.cancelled) {
-      console.error("加载交易数据失败:", error);
       showToast("加载交易数据失败");
       if (!isRefresh && pageToLoad && pageToLoad > currentPage.value) {
         finished.value = true;
@@ -968,7 +905,7 @@ const loadAccountOptions = async () => {
       const accountType = getAccountType(accountName);
 
       const parts = accountName.split(":");
-      console.log(`处理筛选账户: ${accountName}, parts:`, parts);
+      // Processing filter account
 
       if (parts.length < 2) {
         // 如果层级不够，归类到其他
@@ -998,7 +935,7 @@ const loadAccountOptions = async () => {
 
       // 从第三级开始构建子层级
       const remainingParts = parts.slice(2);
-      console.log(`  筛选remainingParts:`, remainingParts);
+      // Processing remaining account parts
 
       if (remainingParts.length === 0) {
         // 如果没有更多层级，直接添加到accounts中
@@ -1017,7 +954,7 @@ const loadAccountOptions = async () => {
       } else {
         // 有多级子账户，按第一级分组
         const subGroupName = remainingParts[0];
-        console.log(`  筛选创建子分组: ${subGroupName}`);
+        // Creating account subgroup
 
         if (
           !accountsByType[accountType][categoryName].subGroups[subGroupName]
@@ -1031,7 +968,7 @@ const loadAccountOptions = async () => {
           .slice(1)
           .map((part: string) => formatAccountNameSegment(part))
           .join("-");
-        console.log(`  筛选子账户名称: ${finalAccountName}`);
+        // Processing sub-account name
 
         accountsByType[accountType][categoryName].subGroups[subGroupName].push({
           name: finalAccountName,
@@ -1041,7 +978,7 @@ const loadAccountOptions = async () => {
       }
     });
 
-    console.log("筛选按类型和分类分组的账户:", accountsByType);
+    // Account filter options grouped by type
 
     // 构建分层选项
     const options: AccountOption[] = [{ text: "全部账户", value: "all" }];
@@ -1122,14 +1059,6 @@ const loadAccountOptions = async () => {
     });
 
     accountOptions.value = options;
-    console.log(
-      "账户筛选选项加载成功:",
-      accounts.length,
-      "个账户，按",
-      typeOrder.filter((type) => Object.keys(accountsByType[type]).length > 0)
-        .length,
-      "种类型分组"
-    );
   } catch (error) {
     console.error("加载账户筛选选项失败:", error);
   }
@@ -1159,9 +1088,7 @@ watch(
   () => {
     if (!isInitialized.value) return;
 
-    if ((import.meta as any).env.DEV) {
-      console.log("🔄 Filter changed, triggering debounced load");
-    }
+    // Filter changed, reloading data
 
     // 取消当前请求
     requestManager.cancelAll();
@@ -1178,23 +1105,11 @@ watch(
 );
 
 onMounted(async () => {
-  if ((import.meta as any).env.DEV) {
-    console.log("🚀 H5Transactions component mounted");
-  }
+  // Component mounted
 
   loadAccountOptions();
   await loadTransactions(true);
   isInitialized.value = true;
-
-  if ((import.meta as any).env.DEV) {
-    console.log("✅ Component initialization completed:", {
-      finished: finished.value,
-      loading: loading.value,
-      currentPage: currentPage.value,
-      totalPages: totalPages.value,
-      transactionsLength: transactions.value.length,
-    });
-  }
 });
 
 // 组件卸载时清理

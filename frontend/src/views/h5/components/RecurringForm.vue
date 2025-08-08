@@ -797,7 +797,7 @@ const onSubmit = async () => {
 
     router.back();
   } catch (error) {
-    console.error("保存失败:", error);
+    // console.error("保存失败:", error);
     showToast("保存失败");
   } finally {
     submitLoading.value = false;
@@ -822,7 +822,7 @@ const loadEditData = async () => {
         })),
       });
     } catch (error) {
-      console.error("加载数据失败:", error);
+      // console.error("加载数据失败:", error);
       showToast("加载数据失败");
     }
   }
@@ -848,9 +848,9 @@ onMounted(async () => {
 // 加载交易对象列表
 const loadPayees = async () => {
   try {
-    console.log("正在加载交易对象列表...");
+    // console.log("正在加载交易对象列表...");
     const payeeData = await getPayees();
-    console.log("交易对象API原始响应:", payeeData);
+    // console.log("交易对象API原始响应:", payeeData);
 
     if (Array.isArray(payeeData)) {
       payeeList.value = payeeData;
@@ -859,9 +859,9 @@ const loadPayees = async () => {
     } else {
       payeeList.value = [];
     }
-    console.log("处理后的交易对象列表:", payeeList.value);
+    // console.log("处理后的交易对象列表:", payeeList.value);
   } catch (error) {
-    console.error("获取交易对象列表失败:", error);
+    // console.error("获取交易对象列表失败:", error);
     payeeList.value = [];
     showToast("获取交易对象列表失败");
   }

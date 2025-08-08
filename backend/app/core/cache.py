@@ -159,7 +159,7 @@ class CacheManager:
                             self.memory_cache.put(key, value, ttl_seconds=3600)
                             return value
             except Exception as e:
-                print(f"读取持久化缓存失败: {e}")
+                # print(f"读取持久化缓存失败: {e}")
         
         return None
     
@@ -186,7 +186,7 @@ class CacheManager:
                     """, (key, value_str, self.entries_version, 
                           datetime.now().isoformat(), expires_at))
             except Exception as e:
-                print(f"写入持久化缓存失败: {e}")
+                # print(f"写入持久化缓存失败: {e}")
     
     def invalidate_by_pattern(self, pattern: str):
         """按模式使缓存失效"""
@@ -196,7 +196,7 @@ class CacheManager:
             with sqlite3.connect(self.db_path) as conn:
                 conn.execute("DELETE FROM cache_entries WHERE key LIKE ?", (f"%{pattern}%",))
         except Exception as e:
-            print(f"清理持久化缓存失败: {e}")
+            # print(f"清理持久化缓存失败: {e}")
     
     def bump_version(self):
         """增加版本号，使所有缓存失效"""
@@ -212,7 +212,7 @@ class CacheManager:
                         WHERE version < ? OR (expires_at IS NOT NULL AND expires_at < ?)
                     """, (self.entries_version, datetime.now().isoformat()))
             except Exception as e:
-                print(f"清理过期缓存失败: {e}")
+                # print(f"清理过期缓存失败: {e}")
     
     def cache_key(self, prefix: str, **kwargs) -> str:
         """生成缓存键"""

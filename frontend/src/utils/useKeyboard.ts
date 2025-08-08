@@ -60,10 +60,6 @@ export function useKeyboard() {
       viewportHeight.value = window.innerHeight;
     }
 
-    console.log("键盘检测初始化:", {
-      initialHeight: initialViewportHeight.value,
-    });
-
     // 监听窗口大小变化
     window.addEventListener("resize", detectKeyboard);
 

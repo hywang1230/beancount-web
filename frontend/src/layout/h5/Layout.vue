@@ -247,7 +247,7 @@ const handleLogout = async () => {
     router.push("/login");
   } catch (error: any) {
     if (error !== "cancel") {
-      console.error("登出失败:", error);
+      // console.error("登出失败:", error);
       showToast("登出失败");
     }
   }

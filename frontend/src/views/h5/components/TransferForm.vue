@@ -240,8 +240,7 @@ const buildHierarchicalOptions = (
   accounts: string[],
   allowedTypes: string[]
 ): Option[] => {
-  console.log("转账表单构建精细层级选项，输入账户:", accounts);
-  console.log("转账表单允许的类型:", allowedTypes);
+  // Building transfer form options
 
   // 按类型和分类分组账户
   const accountsByType: Record<string, any> = {
@@ -259,7 +258,7 @@ const buildHierarchicalOptions = (
     if (!allowedTypes.includes(accountType)) return;
 
     const parts = accountName.split(":");
-    console.log(`转账表单处理账户: ${accountName}, parts:`, parts);
+    // Processing transfer account
 
     if (parts.length < 2) return;
 
@@ -275,7 +274,7 @@ const buildHierarchicalOptions = (
 
     // 从第三级开始构建子层级
     const remainingParts = parts.slice(2);
-    console.log(`  转账表单remainingParts:`, remainingParts);
+    // Processing remaining parts
 
     if (remainingParts.length === 0) {
       // 如果没有更多层级，直接添加到accounts中
@@ -294,7 +293,7 @@ const buildHierarchicalOptions = (
     } else {
       // 有多级子账户，按第一级分组
       const subGroupName = remainingParts[0];
-      console.log(`  转账表单创建子分组: ${subGroupName}`);
+      // Creating transfer subgroup
 
       if (!accountsByType[accountType][categoryName].subGroups[subGroupName]) {
         accountsByType[accountType][categoryName].subGroups[subGroupName] = [];
@@ -305,7 +304,7 @@ const buildHierarchicalOptions = (
         .slice(1)
         .map((part: string) => formatAccountName(part))
         .join("-");
-      console.log(`  转账表单子账户名称: ${finalAccountName}`);
+      // Processing sub-account name
 
       accountsByType[accountType][categoryName].subGroups[subGroupName].push({
         name: finalAccountName,
@@ -315,7 +314,7 @@ const buildHierarchicalOptions = (
     }
   });
 
-  console.log("转账表单按类型和分类分组的账户:", accountsByType);
+  // Transfer accounts grouped by type
 
   // 构建分层选项
   const options: Option[] = [];
@@ -388,7 +387,7 @@ const buildHierarchicalOptions = (
     }
   });
 
-  console.log("转账表单最终构建的精细层级选项:", options);
+  // Transfer form options built successfully
   return options;
 };
 
@@ -437,7 +436,7 @@ watch(
         newData.description !== localFormData.value.description;
 
       if (hasSignificantChange) {
-        console.log("TransferForm收到新的formData:", newData);
+        // Transfer form data updated
 
         isUpdatingFromProps = true;
         localFormData.value = {
@@ -575,31 +574,27 @@ const onSubmit = () => {
 };
 
 const loadAccountOptions = async () => {
-  console.log("=== TransferForm loadAccountOptions 开始 ===");
+  // Loading transfer account options
 
   try {
     // 从API获取资产和负债账户列表
-    console.log("正在加载转账账户列表...");
+    // Loading transfer accounts
     const response = await getAccountsByType();
-    console.log("转账表单API完整响应:", response);
     const accountData = response.data || response;
-    console.log("转账表单账户数据:", accountData);
-    console.log("转账表单账户数据类型:", typeof accountData);
 
     // 处理后端返回的按类型分组的数据格式
     let accounts: string[] = [];
     if (accountData && typeof accountData === "object") {
-      console.log("转账表单Assets账户:", accountData.Assets);
-      console.log("转账表单Liabilities账户:", accountData.Liabilities);
+      // Processing assets and liabilities accounts
 
       // 提取 Assets 和 Liabilities 类型的账户
       const assetsAccounts: string[] = accountData.Assets || [];
       const liabilitiesAccounts: string[] = accountData.Liabilities || [];
       accounts = [...assetsAccounts, ...liabilitiesAccounts];
 
-      console.log("转账表单合并后的账户列表:", accounts);
+      // Account list merged
     } else {
-      console.warn("转账表单账户数据格式不正确或为空:", accountData);
+      // Account data format incorrect or empty
     }
 
     // 构建分层账户选项
@@ -608,17 +603,16 @@ const loadAccountOptions = async () => {
       "liabilities",
     ]);
 
-    console.log("转账表单最终账户选项:", accountOptions.value);
-    console.log("转账表单账户选项数量:", accountOptions.value.length);
+    // Account options finalized
   } catch (error) {
-    console.error("转账表单获取账户列表失败:", error);
+    // console.error("转账表单获取账户列表失败:", error);
     console.error(
       "转账表单错误详情:",
       (error as any).response || (error as any).message || error
     );
 
     // 备用硬编码数据
-    console.log("转账表单使用备用账户数据");
+    // Using fallback account data
     const fallbackAccounts = [
       "Assets:ZJ-资金:现金",
       "Assets:ZJ-资金:活期存款",
@@ -632,7 +626,7 @@ const loadAccountOptions = async () => {
     ]);
   }
 
-  console.log("=== TransferForm loadAccountOptions 结束 ===");
+  // Transfer account options loading completed
 };
 
 onMounted(() => {

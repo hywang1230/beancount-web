@@ -854,15 +854,8 @@ const sortedMonthlyExpenseAccounts = computed(() => {
 const groupAccountsByCategory = (accounts: any[], _prefix: string) => {
   const categories: { [key: string]: any } = {};
 
-  // 调试：打印账户数据
-  console.log(
-    "账户数据:",
-    accounts.map((acc) => ({ name: acc.name, balance: acc.balance }))
-  );
-
   accounts.forEach((account) => {
     const parts = account.name.split(":");
-    console.log(`处理账户: ${account.name}, parts:`, parts);
 
     let categoryName = "其他";
 
@@ -879,7 +872,6 @@ const groupAccountsByCategory = (accounts: any[], _prefix: string) => {
 
     // 从第三级开始构建子层级
     const remainingParts = parts.slice(2);
-    console.log(`  remainingParts:`, remainingParts);
 
     if (remainingParts.length === 0) {
       // 如果没有更多层级，直接添加到accounts中
@@ -898,7 +890,6 @@ const groupAccountsByCategory = (accounts: any[], _prefix: string) => {
     } else {
       // 有多级子账户，按第一级分组
       const subGroupName = remainingParts[0];
-      console.log(`  创建子分组: ${subGroupName}`);
 
       if (!categories[categoryName].subGroups[subGroupName]) {
         categories[categoryName].subGroups[subGroupName] = [];
@@ -909,7 +900,6 @@ const groupAccountsByCategory = (accounts: any[], _prefix: string) => {
         .slice(1)
         .map((part: string) => formatAccountName(part))
         .join("-");
-      console.log(`  子账户名称: ${finalAccountName}`);
 
       categories[categoryName].subGroups[subGroupName].push({
         name: finalAccountName,
@@ -955,16 +945,6 @@ const groupAccountsByCategory = (accounts: any[], _prefix: string) => {
       total: total,
     };
 
-    // 调试：打印分组结果
-    console.log(
-      `分类 ${categoryName}:`,
-      allAccounts.map((acc) => ({
-        name: acc.name,
-        isSubGroup: acc.isSubGroup,
-        subAccounts: acc.subAccounts?.length || 0,
-      }))
-    );
-
     return result;
   });
 };
@@ -975,7 +955,6 @@ const loadBalanceSheet = async () => {
   try {
     balanceSheet.value = await getBalanceSheet(asOfDate.value);
   } catch (error) {
-    console.error("加载资产负债表失败:", error);
     showToast("加载资产负债表失败");
   } finally {
     loading.value = false;
@@ -993,7 +972,6 @@ const loadIncomeStatement = async () => {
       );
     }
   } catch (error) {
-    console.error("加载损益表失败:", error);
     showToast("加载损益表失败");
   } finally {
     loading.value = false;
@@ -1007,7 +985,6 @@ const loadTrends = async () => {
     trendsData.value = await getTrends(trendsMonths.value);
     generateTrendsChart();
   } catch (error) {
-    console.error("加载趋势数据失败:", error);
     showToast("加载趋势数据失败");
   } finally {
     loading.value = false;
@@ -1148,7 +1125,6 @@ const loadMonthlyReport = async () => {
     monthlySummary.value = monthlyRes;
     yearToDateSummary.value = ytdRes;
   } catch (error) {
-    console.error("加载月度报告失败:", error);
     showToast("加载月度报告失败");
   } finally {
     loading.value = false;

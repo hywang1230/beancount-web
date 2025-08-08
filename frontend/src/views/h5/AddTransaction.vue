@@ -278,7 +278,7 @@ const onSubmit = async () => {
     if (Math.abs(postingsSum) >= 0.01) {
       closeToast();
       showToast(`分录不平衡，差额：¥${postingsSum.toFixed(2)}`);
-      console.error("分录不平衡:", postings, "合计:", postingsSum);
+      // console.error("分录不平衡:", postings, "合计:", postingsSum);
       return;
     }
 
@@ -290,8 +290,8 @@ const onSubmit = async () => {
       postings,
     };
 
-    console.log("准备发送的交易数据:", transactionData);
-    console.log("postings详情:", postings);
+    // console.log("准备发送的交易数据:", transactionData);
+    // console.log("postings详情:", postings);
 
     // 先进行校验
     try {
@@ -320,13 +320,13 @@ const onSubmit = async () => {
           showToast("交易数据校验失败");
         }
 
-        console.error("交易校验失败:", validation.errors);
+        // console.error("交易校验失败:", validation.errors);
         return;
       }
     } catch (validationError) {
       closeToast();
       showToast("交易校验失败，请检查数据格式");
-      console.error("校验接口调用失败:", validationError);
+      // console.error("校验接口调用失败:", validationError);
       return;
     }
 
@@ -340,7 +340,7 @@ const onSubmit = async () => {
     const editId = route.query.id as string;
     if (editId) {
       // 编辑模式：直接更新原交易
-      console.log("编辑模式：更新原交易");
+      // console.log("编辑模式：更新原交易");
       await updateTransaction(editId, transactionData);
       showToast("更新成功");
     } else {
@@ -360,7 +360,7 @@ const onSubmit = async () => {
   } catch (error) {
     closeToast();
     showToast(route.query.id ? "更新失败" : "保存失败");
-    console.error("保存交易失败:", error);
+    // console.error("保存交易失败:", error);
   }
 };
 
@@ -418,13 +418,13 @@ const onTransferSubmit = async () => {
           showToast("转账数据校验失败");
         }
 
-        console.error("转账校验失败:", validation.errors);
+        // console.error("转账校验失败:", validation.errors);
         return;
       }
     } catch (validationError) {
       closeToast();
       showToast("转账校验失败，请检查数据格式");
-      console.error("校验接口调用失败:", validationError);
+      // console.error("校验接口调用失败:", validationError);
       return;
     }
 
@@ -438,7 +438,7 @@ const onTransferSubmit = async () => {
     const editId = route.query.id as string;
     if (editId) {
       // 编辑模式：直接更新原转账交易
-      console.log("编辑转账模式：更新原交易");
+      // console.log("编辑转账模式：更新原交易");
       await updateTransaction(editId, transferData);
       showToast("更新成功");
     } else {
@@ -458,7 +458,7 @@ const onTransferSubmit = async () => {
   } catch (error) {
     closeToast();
     showToast(route.query.id ? "更新失败" : "转账失败");
-    console.error("保存转账失败:", error);
+    // console.error("保存转账失败:", error);
   }
 };
 
@@ -481,18 +481,18 @@ const loadTransactionData = async () => {
     const id = route.query.id as string;
     if (!id) return;
 
-    console.log("开始加载交易数据，ID:", id);
+    // console.log("开始加载交易数据，ID:", id);
 
     // 使用正确的API获取单个交易数据
     const response = await getTransactionById(id);
     const transaction = response.data || response;
 
-    console.log("加载到的交易数据:", transaction);
+    // console.log("加载到的交易数据:", transaction);
 
     if (transaction) {
       // 分析交易类型和数据
       const postings = transaction.postings || [];
-      console.log("分析postings:", postings);
+      // console.log("分析postings:", postings);
 
       // 分离不同类型的分录
       const assetPostings = postings.filter(
@@ -507,9 +507,9 @@ const loadTransactionData = async () => {
         p.account?.startsWith("Income:")
       );
 
-      console.log("资产分录:", assetPostings);
-      console.log("支出分录:", expensePostings);
-      console.log("收入分录:", incomePostings);
+      // console.log("资产分录:", assetPostings);
+      // console.log("支出分录:", expensePostings);
+      // console.log("收入分录:", incomePostings);
 
       // 判断交易类型
       if (
@@ -547,8 +547,8 @@ const loadTransactionData = async () => {
           };
 
           activeTab.value = "transfer";
-          console.log("设置的转账类型:", "transfer");
-          console.log("设置的转账表单数据:", transferFormData.value);
+          // console.log("设置的转账类型:", "transfer");
+          // console.log("设置的转账表单数据:", transferFormData.value);
           return;
         }
       } else if (expensePostings.length > 0 && assetPostings.length > 0) {
@@ -590,8 +590,8 @@ const loadTransactionData = async () => {
         formData.value = transactionData;
         activeTab.value = "expense";
 
-        console.log("设置的支出交易类型:", "expense");
-        console.log("设置的支出表单数据:", transactionData);
+        // console.log("设置的支出交易类型:", "expense");
+        // console.log("设置的支出表单数据:", transactionData);
         return;
       } else if (incomePostings.length > 0 && assetPostings.length > 0) {
         // 收入交易：有收入分录和资产分录
@@ -632,13 +632,13 @@ const loadTransactionData = async () => {
         formData.value = transactionData;
         activeTab.value = "income";
 
-        console.log("设置的收入交易类型:", "income");
-        console.log("设置的收入表单数据:", transactionData);
+        // console.log("设置的收入交易类型:", "income");
+        // console.log("设置的收入表单数据:", transactionData);
         return;
       }
 
       // 如果没有匹配到已知模式，使用默认处理
-      console.warn("未识别的交易模式，使用默认处理");
+      // console.warn("未识别的交易模式，使用默认处理");
       const defaultData = {
         amount: "0",
         payee: transaction.payee || "",
@@ -661,11 +661,11 @@ const loadTransactionData = async () => {
       formData.value = defaultData;
       activeTab.value = "expense";
 
-      console.log("设置的默认交易数据:", defaultData);
+      // console.log("设置的默认交易数据:", defaultData);
     }
   } catch (error) {
     showToast("加载交易数据失败");
-    console.error("加载交易数据失败:", error);
+    // console.error("加载交易数据失败:", error);
   }
 };
 </script>

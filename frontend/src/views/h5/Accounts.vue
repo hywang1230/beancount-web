@@ -828,7 +828,7 @@ const handleCreateAccount = async () => {
       showToast(response.message || "账户创建失败");
     }
   } catch (error: any) {
-    console.error("创建账户失败:", error);
+    // console.error("创建账户失败:", error);
     showToast(error.response?.data?.detail || "创建账户失败");
   } finally {
     createLoading.value = false;
@@ -883,7 +883,7 @@ const confirmArchiveAccount = async () => {
       return false;
     }
   } catch (error: any) {
-    console.error("归档账户失败:", error);
+    // console.error("归档账户失败:", error);
     showToast(error.response?.data?.detail || "归档账户失败");
     return false;
   }
@@ -911,7 +911,7 @@ const confirmRestoreAccount = async () => {
       showToast(response.message || "账户恢复失败");
     }
   } catch (error: any) {
-    console.error("恢复账户失败:", error);
+    // console.error("恢复账户失败:", error);
     showToast(error.response?.data?.detail || "恢复账户失败");
   }
 };
@@ -955,7 +955,7 @@ const loadAccounts = async () => {
       }
     }
   } catch (error: any) {
-    console.error("加载账户失败:", error);
+    // console.error("加载账户失败:", error);
     if (error?.response?.status === 404) {
       showToast("账户数据文件未找到");
     } else if (error?.response?.status >= 500) {

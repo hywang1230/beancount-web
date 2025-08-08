@@ -151,7 +151,7 @@ const loadAccounts = async () => {
 
     finished.value = true;
   } catch (error) {
-    console.error("加载账户列表失败:", error);
+    // console.error("加载账户列表失败:", error);
     showToast("加载账户列表失败");
   } finally {
     loading.value = false;

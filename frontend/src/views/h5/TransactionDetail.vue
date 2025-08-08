@@ -213,7 +213,7 @@ const loadAccountTypes = async () => {
     const response = await getAccountsByType();
     accountTypes.value = response.data || response;
   } catch (error) {
-    console.error("加载账户类型失败:", error);
+    // console.error("加载账户类型失败:", error);
     // 不显示错误提示，因为这不是核心功能
   }
 };
@@ -221,14 +221,14 @@ const loadAccountTypes = async () => {
 const loadTransaction = async () => {
   try {
     const transactionId = route.params.id as string;
-    console.log("Loading transaction with ID:", transactionId);
+    // console.log("Loading transaction with ID:", transactionId);
 
     const response = await getTransactionById(transactionId);
     transaction.value = response.data || response;
 
-    console.log("Loaded transaction:", transaction.value);
+    // console.log("Loaded transaction:", transaction.value);
   } catch (error) {
-    console.error("加载交易详情失败:", error);
+    // console.error("加载交易详情失败:", error);
     showToast("加载交易详情失败");
   } finally {
     loading.value = false;
@@ -255,7 +255,7 @@ const deleteTransaction = async () => {
     router.back();
   } catch (error) {
     if (error !== "cancel") {
-      console.error("删除交易失败:", error);
+      // console.error("删除交易失败:", error);
       showToast("删除交易失败");
     }
   }

@@ -90,7 +90,7 @@ export const useAuthStore = defineStore("auth", () => {
         });
       }
     } catch (error) {
-      console.error("登出请求失败:", error);
+      // console.error("登出请求失败:", error);
     } finally {
       clearToken();
     }
@@ -118,7 +118,7 @@ export const useAuthStore = defineStore("auth", () => {
       const userData: User = await response.json();
       user.value = userData;
     } catch (error) {
-      console.error("获取用户信息失败:", error);
+      // console.error("获取用户信息失败:", error);
       clearToken();
     }
   };
