@@ -14,6 +14,9 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 # Bearer token 安全认证
 security = HTTPBearer()
 
+# 缓存密码哈希，避免每次请求重新计算
+_cached_password_hash: Optional[str] = None
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """验证密码"""
     return pwd_context.verify(plain_password, hashed_password)
@@ -24,10 +27,14 @@ def get_password_hash(password: str) -> str:
 
 def get_user(username: str) -> Optional[UserInDB]:
     """获取用户信息（单用户模式）"""
+    global _cached_password_hash
+    
     if username == settings.username:
-        # 在实际应用中，这里应该从数据库或配置文件读取
-        hashed_password = get_password_hash(settings.password)
-        return UserInDB(username=username, hashed_password=hashed_password)
+        # 使用缓存的密码哈希，避免每次重新计算
+        if _cached_password_hash is None:
+            _cached_password_hash = get_password_hash(settings.password)
+        
+        return UserInDB(username=username, hashed_password=_cached_password_hash)
     return None
 
 def authenticate_user(username: str, password: str) -> Optional[User]:
