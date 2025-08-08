@@ -683,7 +683,8 @@ const isCategoryComplete = (category: CategoryItem) => {
     category.category &&
     category.categoryDisplayName &&
     category.amount &&
-    parseFloat(category.amount) > 0
+    !isNaN(parseFloat(category.amount)) &&
+    parseFloat(category.amount) !== 0
   );
 };
 
@@ -840,7 +841,8 @@ watch(
       newCategories &&
       newCategories.length === 1 &&
       newAmount &&
-      parseFloat(newAmount) > 0
+      !isNaN(parseFloat(newAmount)) &&
+      parseFloat(newAmount) !== 0
     ) {
       const firstCategory = newCategories[0];
       const amount = parseFloat(newAmount);
@@ -1043,7 +1045,7 @@ const openMultiCategorySheet = () => {
   // 在打开多类别时，如果有输入的总金额且第一个分类没有金额，则自动赋值
   if (localFormData.value.amount && tempCategories.value.length > 0) {
     const totalAmount = parseFloat(localFormData.value.amount);
-    if (!isNaN(totalAmount) && totalAmount > 0) {
+    if (!isNaN(totalAmount) && totalAmount !== 0) {
       const firstCategory = tempCategories.value[0];
       if (
         firstCategory.category &&
@@ -1120,7 +1122,7 @@ const onFullScreenCategoryConfirm = (categoryName: string) => {
       parseFloat(targetCategories[0].amount) === 0)
   ) {
     const amount = parseFloat(localFormData.value.amount);
-    if (!isNaN(amount) && amount > 0) {
+    if (!isNaN(amount) && amount !== 0) {
       // 根据交易类型确定金额符号
       let categoryAmount = amount;
 
@@ -1153,7 +1155,7 @@ const onSubmit = () => {
   }
 
   const amount = parseFloat(localFormData.value.amount);
-  if (isNaN(amount) || amount <= 0) {
+  if (isNaN(amount) || amount === 0) {
     showToast("请输入有效金额");
     return;
   }
@@ -1186,7 +1188,11 @@ const onSubmit = () => {
 
     if (!category.category || !category.categoryDisplayName) {
       invalidCategories.push(`第${i + 1}个分类未选择`);
-    } else if (!category.amount || parseFloat(category.amount) <= 0) {
+    } else if (
+      !category.amount ||
+      isNaN(parseFloat(category.amount)) ||
+      parseFloat(category.amount) === 0
+    ) {
       invalidCategories.push(`第${i + 1}个分类金额无效`);
     }
   }
