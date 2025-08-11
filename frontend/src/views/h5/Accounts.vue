@@ -273,26 +273,12 @@
     <van-dialog
       v-model:show="showArchiveDialog"
       title="归档账户"
-      :message="`确定要归档账户 「${archiveAccountName}」 吗？归档后该账户将在指定日期后不可用。`"
+      :message="`确定要归档账户 「${archiveAccountName}」 吗？\n归档后该账户将不再可用。`"
       :show-cancel-button="true"
       confirm-button-text="归档"
       confirm-button-color="#ee0a24"
       @confirm="confirmArchiveAccount"
       @cancel="showArchiveDialog = false"
-    />
-
-    <!-- 归档日期选择日历 -->
-    <van-calendar
-      v-model:show="showArchiveDateCalendar"
-      title="选择归档日期"
-      :default-date="archiveDate ? new Date(archiveDate) : new Date()"
-      :min-date="new Date(2020, 0, 1)"
-      :max-date="new Date()"
-      switch-mode="year-month"
-      @confirm="onArchiveDateConfirm"
-      @cancel="showArchiveDateCalendar = false"
-      :show-confirm="false"
-      teleport="body"
     />
 
     <!-- 恢复确认对话框 -->
@@ -371,9 +357,7 @@ const showBookingPicker = ref(false);
 
 // 归档相关
 const showArchiveDialog = ref(false);
-const showArchiveDateCalendar = ref(false);
 const archiveAccountName = ref("");
-const archiveDate = ref("");
 
 // 恢复相关
 const showRestoreDialog = ref(false);
@@ -780,27 +764,18 @@ const resetCreateForm = () => {
 // 归档账户
 const handleArchiveAccount = (accountName: string) => {
   archiveAccountName.value = accountName;
-  const today = new Date();
-  archiveDate.value = today.toLocaleDateString("en-CA");
-
   showArchiveDialog.value = true;
 };
 
-const onArchiveDateConfirm = (date: Date) => {
-  archiveDate.value = date.toLocaleDateString("en-CA");
-  showArchiveDateCalendar.value = false;
-};
-
 const confirmArchiveAccount = async () => {
-  if (!archiveDate.value) {
-    showToast("请选择归档日期");
-    return false;
-  }
-
   try {
+    // 使用当前日期作为归档日期
+    const today = new Date();
+    const archiveDate = today.toLocaleDateString("en-CA");
+
     const requestData: AccountCloseRequest = {
       name: archiveAccountName.value,
-      close_date: archiveDate.value,
+      close_date: archiveDate,
     };
 
     const response = await closeAccount(requestData);
@@ -1100,8 +1075,8 @@ onMounted(() => {
   color: var(--text-color-secondary);
 }
 
-/* 弹出层样式覆盖 */
-:deep(.van-popup) {
+/* 弹出层样式覆盖 - 排除Dialog */
+:deep(.van-popup:not(.van-dialog)) {
   border-radius: 16px 16px 0 0;
   z-index: 2001; /* 确保弹窗在最上层 */
   background-color: var(--bg-color-secondary);
