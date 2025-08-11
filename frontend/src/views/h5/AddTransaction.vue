@@ -250,10 +250,7 @@ const onSubmit = async () => {
         const categoryAmount = parseFloat(category.amount);
         postings.push({
           account: category.category,
-          amount:
-            activeTab.value === "expense"
-              ? Math.abs(categoryAmount)
-              : -Math.abs(categoryAmount),
+          amount: categoryAmount,
           currency: formData.value.currency || "CNY",
         });
       }
@@ -263,22 +260,36 @@ const onSubmit = async () => {
     const totalAmount = parseFloat(formData.value.amount);
     postings.push({
       account: formData.value.account,
-      amount:
-        activeTab.value === "expense"
-          ? -Math.abs(totalAmount)
-          : Math.abs(totalAmount),
+      amount: activeTab.value === "income" ? totalAmount : -totalAmount,
       currency: formData.value.currency || "CNY",
     });
 
-    // 验证分录平衡（复式记账规则：所有分录金额合计必须为0）
+    // 先校验分类分配与总金额关系
+    const categoriesSum = formData.value.categories.reduce(
+      (sum, cat) => sum + (parseFloat(cat.amount) || 0),
+      0
+    );
+    const expectedCategoriesSum =
+      activeTab.value === "income" ? -totalAmount : totalAmount;
+    const categoriesDiff = categoriesSum - expectedCategoriesSum;
+    if (Math.abs(categoriesDiff) >= 0.01) {
+      closeToast();
+      showToast(
+        `分类分配与总额不匹配，应为¥${expectedCategoriesSum.toFixed(
+          2
+        )}，实际¥${categoriesSum.toFixed(2)}`
+      );
+      return;
+    }
+
+    // 再校验分录平衡（所有分录金额合计必须为0）
     const postingsSum = postings.reduce(
       (sum, posting) => sum + posting.amount,
       0
     );
     if (Math.abs(postingsSum) >= 0.01) {
       closeToast();
-      showToast(`分录不平衡，差额：¥${postingsSum.toFixed(2)}`);
-      // console.error("分录不平衡:", postings, "合计:", postingsSum);
+      showToast(`分录不平衡，差额：¥${Math.abs(postingsSum).toFixed(2)}`);
       return;
     }
 
@@ -554,15 +565,8 @@ const loadTransactionData = async () => {
       } else if (expensePostings.length > 0 && assetPostings.length > 0) {
         // 支出交易：有支出分录和资产分录
         const assetPosting = assetPostings[0]; // 通常只有一个资产账户
-        const assetAmount =
-          typeof assetPosting.amount === "string"
-            ? parseFloat(assetPosting.amount)
-            : assetPosting.amount || 0;
 
-        // 计算总支出金额（应该等于资产减少的金额）
-        const totalExpenseAmount = Math.abs(assetAmount);
-
-        // 构建分类数组
+        // 构建分类数组（保留原始符号）
         const categories = expensePostings.map((p: any) => {
           const amt =
             typeof p.amount === "string" ? parseFloat(p.amount) : p.amount || 0;
@@ -570,9 +574,15 @@ const loadTransactionData = async () => {
             categoryName: "",
             categoryDisplayName: formatAccountNameForCategory(p.account),
             category: p.account,
-            amount: Math.abs(amt).toString(),
+            amount: String(amt),
           };
         });
+
+        // 计算总金额为分类金额之和（可为正负，保持一致性）
+        const totalExpenseAmount = categories.reduce(
+          (sum: number, c: any) => sum + (parseFloat(c.amount) || 0),
+          0
+        );
 
         // 更新支出表单数据
         const transactionData = {
@@ -596,15 +606,8 @@ const loadTransactionData = async () => {
       } else if (incomePostings.length > 0 && assetPostings.length > 0) {
         // 收入交易：有收入分录和资产分录
         const assetPosting = assetPostings[0];
-        const assetAmount =
-          typeof assetPosting.amount === "string"
-            ? parseFloat(assetPosting.amount)
-            : assetPosting.amount || 0;
 
-        // 计算总收入金额（应该等于资产增加的金额）
-        const totalIncomeAmount = Math.abs(assetAmount);
-
-        // 构建分类数组
+        // 构建分类数组（保留原始符号）
         const categories = incomePostings.map((p: any) => {
           const amt =
             typeof p.amount === "string" ? parseFloat(p.amount) : p.amount || 0;
@@ -612,9 +615,15 @@ const loadTransactionData = async () => {
             categoryName: "",
             categoryDisplayName: formatAccountNameForCategory(p.account),
             category: p.account,
-            amount: Math.abs(amt).toString(),
+            amount: String(amt),
           };
         });
+
+        // 计算总金额为分类金额之和（可为正负，保持一致性）
+        const totalIncomeAmount = categories.reduce(
+          (sum: number, c: any) => sum + (parseFloat(c.amount) || 0),
+          0
+        );
 
         // 更新收入表单数据
         const transactionData = {

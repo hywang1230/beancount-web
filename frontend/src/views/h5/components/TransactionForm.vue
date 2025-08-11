@@ -674,6 +674,11 @@ const allocatedAmount = computed(() => {
 
 const remainingAmount = computed(() => {
   const totalAmount = parseFloat(localFormData.value.amount) || 0;
+  if (props.type === "income") {
+    // 收入：期望 分配之和 = -总金额
+    return totalAmount + allocatedAmount.value;
+  }
+  // 支出/调整：期望 分配之和 = 总金额
   return totalAmount - allocatedAmount.value;
 });
 
@@ -707,7 +712,11 @@ const isMultiCategoryValid = computed(() => {
     const amount = parseFloat(item.amount) || 0;
     return sum + amount;
   }, 0);
-  const amountsMatch = Math.abs(totalAmount - allocatedAmount) < 0.01;
+  const diff =
+    props.type === "income"
+      ? totalAmount + allocatedAmount
+      : totalAmount - allocatedAmount;
+  const amountsMatch = Math.abs(diff) < 0.01;
 
   return hasValidCategories && amountsMatch;
 });
@@ -855,11 +864,11 @@ watch(
         // 根据交易类型确定金额符号
         let categoryAmount = amount;
 
-        // 对于支出类型，分类金额为正数
-        // 对于收入类型，分类金额为正数
-        // 对于调整类型，保持原金额符号
-        if (props.type === "expense" || props.type === "income") {
-          categoryAmount = Math.abs(amount);
+        // 支出：分类金额等于输入金额；收入：分类金额为输入金额相反数
+        if (props.type === "expense") {
+          categoryAmount = amount;
+        } else if (props.type === "income") {
+          categoryAmount = -amount;
         }
 
         firstCategory.amount = String(categoryAmount);
@@ -1054,11 +1063,11 @@ const openMultiCategorySheet = () => {
         // 根据交易类型确定金额符号
         let categoryAmount = totalAmount;
 
-        // 对于支出类型，分类金额为正数
-        // 对于收入类型，分类金额为正数
-        // 对于调整类型，保持原金额符号
-        if (props.type === "expense" || props.type === "income") {
-          categoryAmount = Math.abs(totalAmount);
+        // 支出：分类金额等于输入金额；收入：分类金额为输入金额相反数
+        if (props.type === "expense") {
+          categoryAmount = totalAmount;
+        } else if (props.type === "income") {
+          categoryAmount = -totalAmount;
         }
 
         firstCategory.amount = String(categoryAmount);
@@ -1126,11 +1135,11 @@ const onFullScreenCategoryConfirm = (categoryName: string) => {
       // 根据交易类型确定金额符号
       let categoryAmount = amount;
 
-      // 对于支出类型，分类金额为正数
-      // 对于收入类型，分类金额为正数
-      // 对于调整类型，保持原金额符号
-      if (props.type === "expense" || props.type === "income") {
-        categoryAmount = Math.abs(amount);
+      // 支出：分类金额等于输入金额；收入：分类金额为输入金额相反数
+      if (props.type === "expense") {
+        categoryAmount = amount;
+      } else if (props.type === "income") {
+        categoryAmount = -amount;
       }
 
       targetCategories[0].amount = String(categoryAmount);
@@ -1170,11 +1179,11 @@ const onSubmit = () => {
       // 根据交易类型确定金额符号
       let categoryAmount = amount;
 
-      // 对于支出类型，分类金额为正数
-      // 对于收入类型，分类金额为正数
-      // 对于调整类型，保持原金额符号
-      if (props.type === "expense" || props.type === "income") {
-        categoryAmount = Math.abs(amount);
+      // 支出：分类金额等于输入金额；收入：分类金额为输入金额相反数
+      if (props.type === "expense") {
+        categoryAmount = amount;
+      } else if (props.type === "income") {
+        categoryAmount = -amount;
       }
 
       firstCategory.amount = String(categoryAmount);
@@ -1215,7 +1224,7 @@ const onSubmit = () => {
 
   emit("submit", {
     ...localFormData.value,
-    amount: props.type === "expense" ? -amount : amount,
+    amount: amount,
   });
 };
 
