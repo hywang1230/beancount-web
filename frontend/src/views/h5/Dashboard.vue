@@ -204,10 +204,12 @@ const generateTrendsOption = () => {
         });
         return result;
       },
-      backgroundColor: isDark.value ? "#262626" : "#ffffff",
+      backgroundColor: isDark.value
+        ? "rgba(0, 0, 0, 0.8)"
+        : "rgba(255, 255, 255, 0.95)",
       borderColor: isDark.value ? "#434343" : "#dcdfe6",
       textStyle: {
-        color: isDark.value ? "#e8e8e8" : "#303133",
+        color: isDark.value ? "#ffffff" : "#323233",
       },
     },
     legend: {
@@ -215,7 +217,7 @@ const generateTrendsOption = () => {
       bottom: 0,
       textStyle: {
         fontSize: 12,
-        color: isDark.value ? "#c9c9c9" : "#606266",
+        color: isDark.value ? "#c8c9cc" : "#646566",
       },
     },
     grid: {
@@ -231,7 +233,7 @@ const generateTrendsOption = () => {
       axisLabel: {
         fontSize: 10,
         rotate: 45,
-        color: isDark.value ? "#8c8c8c" : "#909399",
+        color: isDark.value ? "#969799" : "#969799",
       },
       axisLine: {
         lineStyle: {
@@ -249,7 +251,7 @@ const generateTrendsOption = () => {
           }
           return value.toString();
         },
-        color: isDark.value ? "#8c8c8c" : "#909399",
+        color: isDark.value ? "#969799" : "#969799",
       },
       splitLine: {
         lineStyle: {
@@ -453,13 +455,13 @@ watch(isDark, () => {
 
 .quick-actions :deep(.van-grid-item__icon) {
   font-size: 24px;
-  color: #1989fa;
+  color: var(--van-primary-color);
 }
 
 .quick-actions :deep(.van-grid-item__text) {
   margin-top: 8px;
   font-size: 12px;
-  color: #646566;
+  color: var(--van-text-color-2);
 }
 
 :deep(.van-cell-group) {
@@ -471,20 +473,20 @@ watch(isDark, () => {
 :deep(.van-cell-group__title) {
   padding: 16px 16px 8px;
   font-weight: 500;
-  color: #323233;
+  color: var(--van-text-color);
 }
 
 :deep(.positive) {
-  color: #07c160;
+  color: var(--van-success-color);
 }
 
 :deep(.negative) {
-  color: #ee0a24;
+  color: var(--van-danger-color);
 }
 
 :deep(.van-cell__left-icon) {
   margin-right: 12px;
-  color: #969799;
+  color: var(--van-text-color-3);
 }
 
 /* 趋势图表样式 */

@@ -871,8 +871,6 @@ onMounted(() => {
 .content-area {
   flex: 1;
   overflow-y: auto;
-  /* 确保内容不被底部遮挡 */
-  padding-bottom: max(60px, calc(20px + env(safe-area-inset-bottom)));
   /* 增强移动端滚动体验 */
   -webkit-overflow-scrolling: touch;
   scroll-behavior: smooth;
@@ -950,9 +948,8 @@ onMounted(() => {
 /* 树形结构样式 */
 .account-tree,
 .category-tree {
-  padding: 8px 0;
-  /* 确保最后一个项目不被遮挡 */
-  padding-bottom: max(80px, calc(40px + env(safe-area-inset-bottom)));
+  padding: 8px 0 20px 0;
+  /* 移除固定高度，让内容自然流动 */
 }
 
 .tree-node {
@@ -1120,7 +1117,15 @@ onMounted(() => {
 
 /* 分类列表 */
 .category-list {
-  padding: 8px 0;
+  padding: 8px 0 20px 0;
+}
+
+/* 分类内容区域 */
+.category-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0; /* 允许flexbox子元素收缩 */
 }
 
 .category-item {
@@ -1218,8 +1223,8 @@ onMounted(() => {
   /* 移除内部滚动，由.content-area统一处理 */
   /* flex: 1; */
   /* overflow-y: auto; */
-  /* 确保最后一个项目不被遮挡 */
-  padding-bottom: max(80px, calc(40px + env(safe-area-inset-bottom)));
+  /* 移除固定底部填充，让内容自然流动 */
+  padding-bottom: 20px;
   /* 增强移动端滚动体验 */
   /* -webkit-overflow-scrolling: touch; */
   /* scroll-behavior: smooth; */

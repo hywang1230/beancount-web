@@ -7,36 +7,39 @@
     :overlay="false"
     class="fullscreen-popup"
   >
-    <van-nav-bar
-      :title="title"
-      left-text="取消"
-      left-arrow
-      @click-left="close"
-    />
+    <div class="category-selector-container">
+      <van-nav-bar
+        :title="title"
+        left-text="取消"
+        left-arrow
+        @click-left="close"
+      />
 
-    <!-- 搜索框 -->
-    <div class="search-section">
-      <van-search
-        v-model="searchKeyword"
-        placeholder="搜索分类..."
-        @search="onSearch"
-        @input="onSearchInput"
+      <!-- 搜索框 -->
+      <div class="search-section">
+        <van-search
+          v-model="searchKeyword"
+          placeholder="搜索分类..."
+          @search="onSearch"
+          @input="onSearchInput"
+        />
+      </div>
+
+      <!-- TreeSelect 组件 -->
+      <van-tree-select
+        v-model:active-id="selectedCategoryId"
+        v-model:main-active-index="activeMainIndex"
+        :items="treeSelectItems"
+        :height="treeSelectHeight"
+        @click-item="onSelectCategory"
+        class="tree-select-content"
       />
     </div>
-
-    <!-- TreeSelect 组件 -->
-    <van-tree-select
-      v-model:active-id="selectedCategoryId"
-      v-model:main-active-index="activeMainIndex"
-      :items="treeSelectItems"
-      :height="400"
-      @click-item="onSelectCategory"
-    />
   </van-popup>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
 interface Category {
   name: string;
@@ -79,6 +82,7 @@ const visible = ref(false);
 const selectedCategoryId = ref("");
 const activeMainIndex = ref(0);
 const searchKeyword = ref("");
+const treeSelectHeight = ref(400);
 
 // 格式化分类名称
 const formatCategoryName = (name: string) => {
@@ -182,11 +186,106 @@ const onSelectCategory = (item: TreeSelectChild) => {
   close();
 };
 
+// 计算TreeSelect的高度
+const calculateTreeSelectHeight = () => {
+  const viewportHeight = window.innerHeight;
+
+  // 动态获取实际元素高度，而不是使用固定值
+  const container = document.querySelector(
+    ".category-selector-container"
+  ) as HTMLElement;
+  const navbar = container?.querySelector(".van-nav-bar") as HTMLElement;
+  const searchSection = container?.querySelector(
+    ".search-section"
+  ) as HTMLElement;
+  const treeSelect = container?.querySelector(
+    ".van-tree-select"
+  ) as HTMLElement;
+
+  const actualNavBarHeight = navbar?.offsetHeight || 46;
+  const actualSearchSectionHeight = searchSection?.offsetHeight || 64;
+
+  // 在小屏幕下增加更多的安全区域
+  let safeAreaBottom = 30; // 增加底部安全区域
+  if (viewportHeight < 600) {
+    safeAreaBottom = 40; // 小屏幕设备需要更多安全区域
+  }
+  if (viewportHeight < 500) {
+    safeAreaBottom = 50; // 超小屏幕设备需要更多安全区域
+  }
+
+  const availableHeight =
+    viewportHeight -
+    actualNavBarHeight -
+    actualSearchSectionHeight -
+    safeAreaBottom;
+
+  // 设置最小高度为250px（降低最小高度以适应小屏幕），最大高度为可用高度的90%
+  const minHeight = viewportHeight < 600 ? 200 : 250;
+  const maxHeightRatio = viewportHeight < 600 ? 0.75 : 0.8;
+
+  const calculatedHeight = Math.max(
+    minHeight,
+    Math.min(availableHeight, viewportHeight * maxHeightRatio)
+  );
+
+  treeSelectHeight.value = calculatedHeight;
+
+  // 直接设置TreeSelect的样式，确保生效
+  if (treeSelect) {
+    treeSelect.style.setProperty(
+      "height",
+      calculatedHeight + "px",
+      "important"
+    );
+    treeSelect.style.setProperty(
+      "max-height",
+      calculatedHeight + "px",
+      "important"
+    );
+    treeSelect.style.setProperty(
+      "min-height",
+      calculatedHeight + "px",
+      "important"
+    );
+
+    // 同时设置内部元素的高度
+    const nav = treeSelect.querySelector(
+      ".van-tree-select__nav"
+    ) as HTMLElement;
+    const content = treeSelect.querySelector(
+      ".van-tree-select__content"
+    ) as HTMLElement;
+
+    if (nav) {
+      nav.style.setProperty("height", calculatedHeight + "px", "important");
+      nav.style.setProperty("max-height", calculatedHeight + "px", "important");
+    }
+
+    if (content) {
+      content.style.setProperty("height", calculatedHeight + "px", "important");
+      content.style.setProperty(
+        "max-height",
+        calculatedHeight + "px",
+        "important"
+      );
+    }
+  }
+};
+
 // 显示选择器
 const show = () => {
   visible.value = true;
   selectedCategoryId.value = "";
   activeMainIndex.value = 0;
+
+  // 延迟计算高度，确保DOM完全渲染
+  nextTick(() => {
+    // 再次等待一个微任务，确保所有元素都已经渲染完成
+    setTimeout(() => {
+      calculateTreeSelectHeight();
+    }, 10);
+  });
 };
 
 // 关闭选择器
@@ -194,6 +293,27 @@ const close = () => {
   visible.value = false;
   emit("close");
 };
+
+// 窗口尺寸变化时重新计算高度
+const handleResize = () => {
+  if (visible.value) {
+    setTimeout(() => {
+      calculateTreeSelectHeight();
+    }, 10);
+  }
+};
+
+// 生命周期钩子
+onMounted(() => {
+  window.addEventListener("resize", handleResize);
+  // 处理设备方向变化
+  window.addEventListener("orientationchange", handleResize);
+});
+
+onUnmounted(() => {
+  window.removeEventListener("resize", handleResize);
+  window.removeEventListener("orientationchange", handleResize);
+});
 
 defineExpose({
   show,
@@ -206,9 +326,35 @@ defineExpose({
   z-index: 2000;
 }
 
+.category-selector-container {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background-color: var(--van-background);
+}
+
 .search-section {
+  flex-shrink: 0;
   padding: 8px 16px;
   background: var(--van-background-2);
   border-bottom: 1px solid var(--van-border-color);
+}
+
+.tree-select-content {
+  flex: 1;
+  overflow: hidden;
+}
+
+/* 确保TreeSelect内部滚动正常工作 */
+:deep(.van-tree-select) {
+  height: v-bind(treeSelectHeight + "px") !important;
+  max-height: v-bind(treeSelectHeight + "px") !important;
+}
+
+:deep(.van-tree-select__nav),
+:deep(.van-tree-select__content) {
+  height: 100% !important;
+  max-height: 100% !important;
+  overflow-y: auto;
 }
 </style>

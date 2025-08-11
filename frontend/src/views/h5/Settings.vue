@@ -67,12 +67,7 @@
     </van-cell-group>
 
     <van-cell-group inset title="应用信息">
-      <van-cell
-        title="版本信息"
-        icon="info-o"
-        :value="version"
-        :border="false"
-      />
+      <van-cell title="版本信息" icon="info-o" value="1.0.0" :border="false" />
 
       <van-cell
         title="关于我们"
@@ -87,15 +82,10 @@
     <van-dialog
       v-model:show="showAbout"
       title="关于 Beancount Web"
+      message="Beancount Web 是一个基于 Beancount 的记账应用，支持复式记账，帮助您更好地管理个人财务。"
       :show-cancel-button="false"
       confirm-button-text="确定"
-    >
-      <div class="about-content">
-        <p>Beancount Web 是一个基于 Beancount 的记账应用</p>
-        <p>支持复式记账，帮助您更好地管理个人财务</p>
-        <p class="version-text">版本：{{ version }}</p>
-      </div>
-    </van-dialog>
+    />
   </div>
 </template>
 
@@ -110,7 +100,6 @@ const router = useRouter();
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
 const showAbout = ref(false);
-const version = ref("1.0.0");
 
 // 主题设置
 const themeSetting = computed({
@@ -166,26 +155,9 @@ const handleLogout = async () => {
 }
 
 .cell-desc {
-  color: #969799;
+  color: var(--van-text-color-3);
   font-size: 12px;
   margin-top: 4px;
-}
-
-.about-content {
-  padding: 16px;
-  text-align: center;
-  line-height: 1.6;
-}
-
-.about-content p {
-  margin: 8px 0;
-  color: #646566;
-}
-
-.version-text {
-  margin-top: 16px;
-  font-size: 12px;
-  color: #969799;
 }
 
 .theme-radio-group {
@@ -195,13 +167,13 @@ const handleLogout = async () => {
 
 :deep(.van-cell-group__title) {
   padding: 16px 16px 8px;
-  color: #646566;
+  color: var(--van-text-color-2);
   font-size: 14px;
   font-weight: normal;
 }
 
 :deep(.van-cell) {
-  background-color: #fff;
+  background-color: var(--van-background-2);
   padding: 16px;
 }
 

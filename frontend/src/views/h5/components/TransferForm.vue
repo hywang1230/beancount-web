@@ -31,10 +31,12 @@
           </div>
           <van-field
             v-model="localFormData.amount"
-            type="number"
+            type="text"
             placeholder="0.00"
             class="amount-field"
+            readonly
             :border="false"
+            @click="showNumberKeyboard = true"
             @update:model-value="onAmountInput"
           />
         </div>
@@ -123,11 +125,25 @@
       @confirm="onDateConfirm"
       @close="showDateCalendar = false"
     />
+
+    <!-- 数字键盘 - 转账金额输入 -->
+    <NumberKeyboard
+      v-model="localFormData.amount"
+      v-model:show="showNumberKeyboard"
+      title="输入转账金额（支持加减运算）"
+      placeholder="请输入转账金额"
+      :show-decimal="true"
+      :show-negative="false"
+      :show-calculation="true"
+      @confirm="onAmountKeyboardConfirm"
+      @calculate="onAmountCalculate"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { getAccountsByType } from "@/api/accounts";
+import NumberKeyboard from "@/components/NumberKeyboard.vue";
 import { showToast } from "vant";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import AccountTreeSelector from "./AccountTreeSelector.vue";
@@ -159,6 +175,9 @@ const localFormData = ref({
 // 弹窗状态
 const showCurrencySelector = ref(false);
 const showDateCalendar = ref(false);
+
+// 数字键盘状态
+const showNumberKeyboard = ref(false);
 
 // 全屏选择器引用
 const fromAccountSelectorRef = ref();
@@ -627,6 +646,19 @@ const loadAccountOptions = async () => {
   }
 
   // Transfer account options loading completed
+};
+
+// 数字键盘相关方法
+const onAmountKeyboardConfirm = (value: string) => {
+  localFormData.value.amount = value;
+  showNumberKeyboard.value = false;
+};
+
+// 转账金额计算事件处理
+const onAmountCalculate = (expression: string, result: string) => {
+  console.log("转账金额计算:", expression, "=", result);
+  localFormData.value.amount = result;
+  showToast(`计算结果: ${expression} = ${result}`);
 };
 
 onMounted(() => {

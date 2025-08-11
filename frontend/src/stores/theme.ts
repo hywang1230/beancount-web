@@ -31,13 +31,18 @@ export const useThemeStore = defineStore("theme", () => {
     const html = document.documentElement;
 
     // 移除之前的主题类
-    html.classList.remove("light-theme", "dark-theme");
+    html.classList.remove("light-theme", "dark-theme", "van-theme-dark");
 
     // 添加新的主题类
     html.classList.add(`${currentTheme.value}-theme`);
 
     // 设置主题属性，供CSS变量使用
     html.setAttribute("data-theme", currentTheme.value);
+
+    // 为 Vant 组件添加暗黑模式类
+    if (currentTheme.value === "dark") {
+      html.classList.add("van-theme-dark");
+    }
 
     // 为移动端（H5）特别设置
     if (window.innerWidth <= 768) {

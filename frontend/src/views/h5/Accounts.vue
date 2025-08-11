@@ -36,7 +36,7 @@
       <van-search
         v-model="searchText"
         placeholder="搜索账户"
-        background="#f7f8fa"
+        :background="'var(--van-background)'"
         @update:model-value="onSearch"
       />
       <van-button
@@ -272,108 +272,26 @@
     <!-- 归档确认对话框 -->
     <van-dialog
       v-model:show="showArchiveDialog"
-      title=""
-      :show-cancel-button="false"
-      :show-confirm-button="false"
-      class-name="archive-dialog"
-      close-on-click-overlay
-    >
-      <div class="archive-content">
-        <!-- 自定义标题 -->
-        <div class="dialog-header">
-          <van-icon name="warning-o" class="warning-icon" />
-          <h3 class="dialog-title">归档账户</h3>
-        </div>
-
-        <!-- 账户信息 -->
-        <div class="account-info">
-          <p class="account-name">{{ archiveAccountName }}</p>
-          <p class="warning-message">归档后该账户将在指定日期后不可用</p>
-        </div>
-
-        <!-- 日期选择 -->
-        <div class="date-section">
-          <van-cell
-            title="归档日期"
-            :value="archiveDate || '请选择归档日期'"
-            is-link
-            @click="showArchiveDateCalendar = true"
-            class="date-cell"
-          >
-            <template #icon>
-              <van-icon name="calendar-o" class="calendar-icon" />
-            </template>
-          </van-cell>
-        </div>
-
-        <!-- 操作按钮 -->
-        <div class="dialog-actions">
-          <van-button class="cancel-btn" @click="showArchiveDialog = false">
-            取消
-          </van-button>
-          <van-button
-            type="danger"
-            class="confirm-btn"
-            :disabled="!archiveDate"
-            @click="confirmArchiveAccount"
-          >
-            确认归档
-          </van-button>
-        </div>
-      </div>
-    </van-dialog>
-
-    <!-- 归档日期选择日历 -->
-    <van-calendar
-      v-model:show="showArchiveDateCalendar"
-      title="选择归档日期"
-      :default-date="archiveDate ? new Date(archiveDate) : new Date()"
-      :min-date="new Date(2020, 0, 1)"
-      :max-date="new Date()"
-      switch-mode="year-month"
-      @confirm="onArchiveDateConfirm"
-      @cancel="showArchiveDateCalendar = false"
-      :show-confirm="false"
-      teleport="body"
+      title="归档账户"
+      :message="`确定要归档账户 「${archiveAccountName}」 吗？\n归档后该账户将不再可用。`"
+      :show-cancel-button="true"
+      confirm-button-text="归档"
+      confirm-button-color="var(--van-danger-color)"
+      @confirm="confirmArchiveAccount"
+      @cancel="showArchiveDialog = false"
     />
 
     <!-- 恢复确认对话框 -->
     <van-dialog
       v-model:show="showRestoreDialog"
-      title=""
-      :show-cancel-button="false"
-      :show-confirm-button="false"
-      class-name="restore-dialog"
-      close-on-click-overlay
-    >
-      <div class="restore-content">
-        <!-- 自定义标题 -->
-        <div class="dialog-header">
-          <van-icon name="replay" class="restore-icon" />
-          <h3 class="dialog-title">恢复账户</h3>
-        </div>
-
-        <!-- 账户信息 -->
-        <div class="account-info">
-          <p class="account-name">{{ restoreAccountName }}</p>
-          <p class="success-message">恢复后该账户将重新可用</p>
-        </div>
-
-        <!-- 操作按钮 -->
-        <div class="dialog-actions">
-          <van-button class="cancel-btn" @click="showRestoreDialog = false">
-            取消
-          </van-button>
-          <van-button
-            type="success"
-            class="restore-confirm-btn"
-            @click="confirmRestoreAccount"
-          >
-            确认恢复
-          </van-button>
-        </div>
-      </div>
-    </van-dialog>
+      title="恢复账户"
+      :message="`确定要恢复账户 「${restoreAccountName}」 吗？恢复后该账户将重新可用。`"
+      :show-cancel-button="true"
+      confirm-button-text="恢复"
+      confirm-button-color="#07c160"
+      @confirm="confirmRestoreAccount"
+      @cancel="showRestoreDialog = false"
+    />
   </div>
 </template>
 
@@ -439,9 +357,7 @@ const showBookingPicker = ref(false);
 
 // 归档相关
 const showArchiveDialog = ref(false);
-const showArchiveDateCalendar = ref(false);
 const archiveAccountName = ref("");
-const archiveDate = ref("");
 
 // 恢复相关
 const showRestoreDialog = ref(false);
@@ -848,27 +764,18 @@ const resetCreateForm = () => {
 // 归档账户
 const handleArchiveAccount = (accountName: string) => {
   archiveAccountName.value = accountName;
-  const today = new Date();
-  archiveDate.value = today.toLocaleDateString("en-CA");
-
   showArchiveDialog.value = true;
 };
 
-const onArchiveDateConfirm = (date: Date) => {
-  archiveDate.value = date.toLocaleDateString("en-CA");
-  showArchiveDateCalendar.value = false;
-};
-
 const confirmArchiveAccount = async () => {
-  if (!archiveDate.value) {
-    showToast("请选择归档日期");
-    return false;
-  }
-
   try {
+    // 使用当前日期作为归档日期
+    const today = new Date();
+    const archiveDate = today.toLocaleDateString("en-CA");
+
     const requestData: AccountCloseRequest = {
       name: archiveAccountName.value,
-      close_date: archiveDate.value,
+      close_date: archiveDate,
     };
 
     const response = await closeAccount(requestData);
@@ -1062,25 +969,26 @@ onMounted(() => {
 /* 层级显示样式 */
 .account-level-0 {
   font-weight: 600;
+  color: var(--van-text-color);
 }
 
 .account-level-1 {
   font-weight: 500;
-  opacity: 0.9;
+  color: var(--van-text-color-2);
 }
 
 .account-level-2 {
   font-weight: 400;
-  opacity: 0.8;
+  color: var(--van-text-color-3);
 }
 
 .account-level-3 {
   font-weight: 300;
-  opacity: 0.7;
+  color: var(--van-text-color-3);
 }
 
 .has-children {
-  background-color: var(--bg-color-secondary);
+  background-color: var(--van-background-2);
 }
 
 .expand-icon {
@@ -1106,166 +1014,7 @@ onMounted(() => {
   margin-top: 24px;
 }
 
-/* 归档对话框样式 */
-:deep(.van-dialog) {
-  background-color: var(--bg-color) !important;
-}
-
-:deep(.archive-dialog) {
-  border-radius: 16px;
-  overflow: hidden;
-  max-height: 80vh !important; /* 限制最大高度 */
-  margin: auto !important; /* 确保居中 */
-  position: fixed !important; /* 固定定位 */
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important; /* 完全居中 */
-  z-index: 2000 !important; /* 确保在最上层 */
-}
-
-.archive-content {
-  padding: 0;
-  max-height: 60vh; /* 限制内容高度 */
-  overflow-y: auto; /* 允许垂直滚动 */
-  -webkit-overflow-scrolling: touch; /* iOS平滑滚动 */
-}
-
-.dialog-header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 24px 20px 16px;
-  background: var(--bg-color);
-}
-
-.warning-icon {
-  font-size: 48px;
-  color: #ff6b35;
-  margin-bottom: 12px;
-}
-
-.dialog-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-color);
-  margin: 0;
-}
-
-.account-info {
-  padding: 16px 20px;
-  text-align: center;
-  background: var(--bg-color-secondary);
-}
-
-.account-name {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--text-color);
-  margin: 0 0 8px 0;
-  padding: 8px 16px;
-  background: var(--bg-color);
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-}
-
-.warning-message {
-  font-size: 13px;
-  color: #ff6b35;
-  margin: 0;
-  line-height: 1.4;
-}
-
-.date-section {
-  padding: 16px 20px;
-  background-color: var(--bg-color);
-}
-
-.date-cell {
-  border-radius: 8px;
-  border: 1px solid var(--border-color);
-  overflow: hidden;
-}
-
-.calendar-icon {
-  color: var(--color-primary);
-  margin-right: 8px;
-}
-
-.dialog-actions {
-  display: flex;
-  gap: 12px;
-  padding: 20px;
-  background: var(--bg-color-secondary);
-}
-
-.cancel-btn {
-  flex: 1;
-  height: 44px;
-  border: 1px solid var(--border-color);
-  background: var(--bg-color);
-  color: var(--text-color-secondary);
-  border-radius: 8px;
-}
-
-.confirm-btn {
-  flex: 1;
-  height: 44px;
-  background: #ff6b35;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.confirm-btn:disabled {
-  background: #c8c9cc;
-  color: white;
-}
-
-/* 恢复对话框样式 */
-:deep(.restore-dialog) {
-  border-radius: 16px;
-  overflow: hidden;
-  max-height: 80vh !important; /* 限制最大高度 */
-  margin: auto !important; /* 确保居中 */
-  position: fixed !important; /* 固定定位 */
-  top: 50% !important;
-  left: 50% !important;
-  transform: translate(-50%, -50%) !important; /* 完全居中 */
-  z-index: 2000 !important; /* 确保在最上层 */
-}
-
-.restore-content {
-  padding: 0;
-  max-height: 60vh; /* 限制内容高度 */
-  overflow-y: auto; /* 允许垂直滚动 */
-  -webkit-overflow-scrolling: touch; /* iOS平滑滚动 */
-}
-
-.restore-icon {
-  font-size: 48px;
-  color: #52c41a;
-  margin-bottom: 12px;
-}
-
-.success-message {
-  font-size: 13px;
-  color: #52c41a;
-  margin: 0;
-  line-height: 1.4;
-}
-
-.restore-confirm-btn {
-  flex: 1;
-  height: 44px;
-  background: #52c41a;
-  border: none;
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.restore-confirm-btn:active {
-  background: #389e0d;
-}
+/* 移除所有自定义Dialog样式，使用Vant原生样式 */
 
 /* 标签页样式覆盖 */
 :deep(.van-tabs__nav) {
@@ -1326,8 +1075,8 @@ onMounted(() => {
   color: var(--text-color-secondary);
 }
 
-/* 弹出层样式覆盖 */
-:deep(.van-popup) {
+/* 弹出层样式覆盖 - 排除Dialog */
+:deep(.van-popup:not(.van-dialog)) {
   border-radius: 16px 16px 0 0;
   z-index: 2001; /* 确保弹窗在最上层 */
   background-color: var(--bg-color-secondary);
