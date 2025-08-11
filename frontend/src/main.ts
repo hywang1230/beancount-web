@@ -4,6 +4,9 @@ import App from "./App.vue";
 import router from "./router";
 import { useAuthStore } from "./stores/auth";
 
+// Vant 样式 - 手动导入以支持暗黑模式
+import "vant/lib/index.css";
+
 // 全局样式
 import "./style/global.css";
 import "./style/theme.css";

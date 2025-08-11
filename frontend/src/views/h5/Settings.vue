@@ -155,7 +155,7 @@ const handleLogout = async () => {
 }
 
 .cell-desc {
-  color: #969799;
+  color: var(--van-text-color-3);
   font-size: 12px;
   margin-top: 4px;
 }
@@ -167,13 +167,13 @@ const handleLogout = async () => {
 
 :deep(.van-cell-group__title) {
   padding: 16px 16px 8px;
-  color: #646566;
+  color: var(--van-text-color-2);
   font-size: 14px;
   font-weight: normal;
 }
 
 :deep(.van-cell) {
-  background-color: #fff;
+  background-color: var(--van-background-2);
   padding: 16px;
 }
 

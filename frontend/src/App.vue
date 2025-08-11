@@ -1,7 +1,10 @@
 <template>
   <div id="app">
-    <!-- 统一使用移动端UI组件 -->
-    <van-config-provider :locale="zhCn">
+    <!-- 统一使用移动端UI组件，支持暗黑模式 -->
+    <van-config-provider
+      :locale="zhCn"
+      :theme="themeStore.isDark ? 'dark' : 'light'"
+    >
       <router-view />
     </van-config-provider>
 

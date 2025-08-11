@@ -36,7 +36,7 @@
       <van-search
         v-model="searchText"
         placeholder="搜索账户"
-        background="#f7f8fa"
+        :background="'var(--van-background)'"
         @update:model-value="onSearch"
       />
       <van-button
@@ -276,7 +276,7 @@
       :message="`确定要归档账户 「${archiveAccountName}」 吗？\n归档后该账户将不再可用。`"
       :show-cancel-button="true"
       confirm-button-text="归档"
-      confirm-button-color="#ee0a24"
+      confirm-button-color="var(--van-danger-color)"
       @confirm="confirmArchiveAccount"
       @cancel="showArchiveDialog = false"
     />

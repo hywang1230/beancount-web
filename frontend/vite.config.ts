@@ -16,7 +16,7 @@ export default defineConfig({
       resolvers: [VantResolver()],
     }),
     Components({
-      resolvers: [VantResolver()],
+      resolvers: [VantResolver({ importStyle: false })], // 禁用自动样式导入，手动控制
     }),
     VitePWA({
       registerType: "autoUpdate",
@@ -25,7 +25,7 @@ export default defineConfig({
         name: "Beancount Web 记账系统",
         short_name: "Beancount",
         description: "基于Beancount的现代化复式记账系统",
-        theme_color: "#409EFF",
+        theme_color: "#1989fa",
         background_color: "#ffffff",
         display: "standalone",
         orientation: "portrait",

@@ -12,6 +12,7 @@ html, body {
   -moz-osx-font-smoothing: grayscale;
   background-color: var(--van-background);
   color: var(--van-text-color);
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* 移除所有Dialog自定义样式，使用Vant原生样式 */

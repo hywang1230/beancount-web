@@ -184,7 +184,7 @@
                 <van-icon
                   v-if="localFormData.currency === option.value"
                   name="success"
-                  color="#1989fa"
+                  :color="'var(--van-primary-color)'"
                 />
               </template>
             </van-cell>
@@ -1455,7 +1455,7 @@ onMounted(() => {
 /* 账户卡片 */
 .account-card .card-icon {
   background: rgba(255, 193, 7, 0.1);
-  color: #ffc107;
+  color: var(--van-warning-color);
 }
 
 /* 金额卡片 */
@@ -1465,7 +1465,7 @@ onMounted(() => {
 
 .amount-card .card-icon {
   background: rgba(238, 90, 82, 0.1);
-  color: #ee5a52;
+  color: var(--van-danger-color);
 }
 
 .amount-input-container {
