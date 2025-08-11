@@ -1348,7 +1348,7 @@ const onAmountKeyboardConfirm = (value: string) => {
 };
 
 // 主金额计算事件处理
-const onAmountCalculate = (expression: string, result: string) => {
+const onAmountCalculate = (result: string) => {
   localFormData.value.amount = result;
 };
 
