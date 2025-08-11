@@ -339,7 +339,7 @@
     <NumberKeyboard
       v-model="localFormData.amount"
       v-model:show="showNumberKeyboard"
-      title="输入金额"
+      title="输入金额（支持加减运算）"
       :placeholder="`请输入${
         props.type === 'expense'
           ? '支出'
@@ -349,18 +349,22 @@
       }金额`"
       :show-decimal="true"
       :show-negative="true"
+      :show-calculation="true"
       @confirm="onAmountKeyboardConfirm"
+      @calculate="onAmountCalculate"
     />
 
     <!-- 数字键盘 - 分类金额输入 -->
     <NumberKeyboard
       v-model="categoryAmountInput"
       v-model:show="showCategoryAmountKeyboardVisible"
-      title="输入分类金额"
+      title="输入分类金额（支持加减运算）"
       placeholder="请输入分类金额"
       :show-decimal="true"
       :show-negative="true"
+      :show-calculation="true"
       @confirm="onCategoryAmountKeyboardConfirm"
+      @calculate="onCategoryAmountCalculate"
     />
   </div>
 </template>
@@ -987,7 +991,6 @@ const onCategoryAmountInput = (index: number, value: string | number) => {
 
   // 确保分类数组存在且索引有效
   if (!targetCategories[index]) {
-    // console.error(`Category at index ${index} does not exist`);
     return;
   }
 
@@ -996,11 +999,6 @@ const onCategoryAmountInput = (index: number, value: string | number) => {
 
   // 直接更新分类对象的amount属性，确保响应式更新
   targetCategories[index].amount = stringValue;
-
-  // console.log(`Updated category ${index} amount to:`, stringValue);
-  // console.log("Current categories:", targetCategories);
-  // console.log("Current allocated amount:", allocatedAmount.value);
-  // console.log("Current remaining amount:", remainingAmount.value);
 };
 
 // 全屏交易对象选择器方法
@@ -1012,17 +1010,13 @@ const showFullScreenPayeeSelector = () => {
 
 const onFullScreenPayeeConfirm = (payee: string) => {
   localFormData.value.payee = payee;
-  // console.log("选择的交易对象:", payee);
 };
 
-const onFullScreenPayeeClose = () => {
-  // console.log("交易对象选择器已关闭");
-};
+const onFullScreenPayeeClose = () => {};
 
 // 清除交易对象
 const clearPayee = () => {
   localFormData.value.payee = "";
-  // console.log("已清除交易对象");
 };
 
 // 全屏账户选择器方法
@@ -1268,48 +1262,31 @@ const onSubmit = () => {
 };
 
 const loadOptions = async () => {
-  // console.log("=== TransactionForm loadOptions 开始 ===");
-  // console.log("当前交易类型:", props.type);
-
   try {
     // 加载收款人历史
     try {
-      // console.log("正在加载收款人列表...");
       const payeeData = await getPayees();
-      // console.log("收款人API原始响应:", payeeData);
 
       payeeOptions.value = Array.isArray(payeeData)
         ? payeeData.map((p) => ({ text: p, value: p }))
         : [];
-      // console.log("处理后的收款人选项:", payeeOptions.value);
     } catch (error) {
-      // console.error("获取收款人列表失败:", error);
       payeeOptions.value = [];
     }
 
     // 加载账户选项 - 资产和负债账户
     try {
-      // console.log("正在加载账户列表...");
       const response = await getAccountsByType();
-      // console.log("账户API完整响应:", response);
       const accountData = response.data || response;
-      // console.log("账户数据:", accountData);
-      // console.log("账户数据类型:", typeof accountData);
 
       // 处理后端返回的按类型分组的数据格式
       let accounts: string[] = [];
       if (accountData && typeof accountData === "object") {
-        // console.log("Assets账户:", accountData.Assets);
-        // console.log("Liabilities账户:", accountData.Liabilities);
-
         // 提取 Assets 和 Liabilities 类型的账户
         const assetsAccounts: string[] = accountData.Assets || [];
         const liabilitiesAccounts: string[] = accountData.Liabilities || [];
         accounts = [...assetsAccounts, ...liabilitiesAccounts];
-
-        // console.log("合并后的账户列表:", accounts);
       } else {
-        // console.warn("账户数据格式不正确或为空:", accountData);
       }
 
       // 构建分层账户选项
@@ -1317,36 +1294,17 @@ const loadOptions = async () => {
         "assets",
         "liabilities",
       ]);
-
-      // console.log("最终账户选项:", accountOptions.value);
-      // console.log("账户选项数量:", accountOptions.value.length);
     } catch (error) {
-      // console.error("获取账户列表失败:", error);
       console.error(
         "错误详情:",
         (error as any).response || (error as any).message || error
       );
-
-      // 备用硬编码数据
-      // console.log("使用备用账户数据");
-      const fallbackAccounts = [
-        "Assets:ZJ-资金:现金",
-        "Assets:ZJ-资金:活期存款",
-        "Liabilities:XYK-信用卡:招行:8164",
-      ];
-      accountOptions.value = buildHierarchicalOptions(fallbackAccounts, [
-        "assets",
-        "liabilities",
-      ]);
     }
 
     // 加载分类选项
     try {
-      // console.log("正在加载分类列表...");
       const response = await getAccountsByType();
-      // console.log("分类API完整响应:", response);
       const categoryData = response.data || response;
-      // console.log("分类数据:", categoryData);
 
       // 处理后端返回的按类型分组的数据格式
       let categories: string[] = [];
@@ -1354,16 +1312,11 @@ const loadOptions = async () => {
         // 根据交易类型选择对应的分类
         if (props.type === "expense") {
           categories = categoryData.Expenses || [];
-          // console.log("支出分类:", categories);
         } else if (props.type === "income") {
           categories = categoryData.Income || [];
-          // console.log("收入分类:", categories);
         } else {
-          // console.log("调整类型，使用支出分类");
           categories = categoryData.Expenses || [];
         }
-      } else {
-        // console.warn("分类数据格式不正确或为空:", categoryData);
       }
 
       // 构建分层分类选项
@@ -1377,50 +1330,26 @@ const loadOptions = async () => {
         categories,
         categoryTypes
       );
-
-      // console.log("最终分类选项:", categoryOptions.value);
-      // console.log("分类选项数量:", categoryOptions.value.length);
     } catch (error) {
-      // console.error("获取分类列表失败:", error);
       console.error(
         "错误详情:",
         (error as any).response || (error as any).message || error
       );
-
-      // 备用硬编码数据
-      // console.log("使用备用分类数据");
-      if (props.type === "expense") {
-        const fallbackCategories = [
-          "Expenses:CY-餐饮",
-          "Expenses:JT-交通:公交",
-          "Expenses:JT-交通:打车",
-          "Expenses:YL-娱乐:其他",
-        ];
-        categoryOptions.value = buildHierarchicalOptions(fallbackCategories, [
-          "expenses",
-        ]);
-      } else {
-        const fallbackCategories = [
-          "Income:GZ-工资",
-          "Income:TZ-投资",
-          "Income:QT-其他",
-        ];
-        categoryOptions.value = buildHierarchicalOptions(fallbackCategories, [
-          "income",
-        ]);
-      }
     }
   } catch (error) {
-    // console.error("加载选项数据失败:", error);
+    console.error("加载选项数据失败:", error);
   }
-
-  // console.log("=== TransactionForm loadOptions 结束 ===");
 };
 
 // 数字键盘相关方法
 const onAmountKeyboardConfirm = (value: string) => {
   localFormData.value.amount = value;
   showNumberKeyboard.value = false;
+};
+
+// 主金额计算事件处理
+const onAmountCalculate = (expression: string, result: string) => {
+  localFormData.value.amount = result;
 };
 
 const showCategoryAmountKeyboard = (index: number) => {
@@ -1450,6 +1379,22 @@ const onCategoryAmountKeyboardConfirm = (value: string) => {
 
   showCategoryAmountKeyboardVisible.value = false;
   categoryAmountInput.value = "";
+};
+
+// 分类金额计算事件处理
+const onCategoryAmountCalculate = (result: string) => {
+  const index = currentEditingCategoryIndex.value;
+
+  // 获取当前编辑的分类数组
+  const targetCategories = isEditingMultiCategory.value
+    ? tempCategories.value
+    : localFormData.value.categories;
+
+  if (targetCategories[index]) {
+    targetCategories[index].amount = result;
+  }
+
+  categoryAmountInput.value = result;
 };
 
 onMounted(() => {

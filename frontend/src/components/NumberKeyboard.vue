@@ -72,7 +72,16 @@
             {{ key }}
           </div>
           <div
-            v-if="showNegative"
+            v-if="showCalculation"
+            class="key-item key-action key-plus"
+            @touchstart="onKeyTouchStart('plus')"
+            @touchend="onKeyTouchEnd"
+            @click="onKeyClick('plus')"
+          >
+            +
+          </div>
+          <div
+            v-else-if="showNegative"
             class="key-item key-action key-negative"
             :class="{ 'key-disabled': !canAddNegative }"
             @touchstart="onKeyTouchStart('negative')"
@@ -96,7 +105,16 @@
             {{ key }}
           </div>
           <div
-            v-if="showDecimal"
+            v-if="showCalculation"
+            class="key-item key-action key-minus"
+            @touchstart="onKeyTouchStart('minus')"
+            @touchend="onKeyTouchEnd"
+            @click="onKeyClick('minus')"
+          >
+            -
+          </div>
+          <div
+            v-else-if="showDecimal"
             class="key-item key-action key-decimal"
             :class="{ 'key-disabled': !canAddDecimal }"
             @touchstart="onKeyTouchStart('decimal')"
@@ -118,7 +136,26 @@
             0
           </div>
           <div
-            v-if="showHide"
+            v-if="showDecimal"
+            class="key-item key-action key-decimal"
+            :class="{ 'key-disabled': !canAddDecimal }"
+            @touchstart="onKeyTouchStart('decimal')"
+            @touchend="onKeyTouchEnd"
+            @click="onKeyClick('decimal')"
+          >
+            .
+          </div>
+          <div
+            v-if="showCalculation"
+            class="key-item key-action key-equals"
+            @touchstart="onKeyTouchStart('equals')"
+            @touchend="onKeyTouchEnd"
+            @click="onKeyClick('equals')"
+          >
+            =
+          </div>
+          <div
+            v-else-if="showHide"
             class="key-item key-action key-hide"
             @touchstart="onKeyTouchStart('hide')"
             @touchend="onKeyTouchEnd"
@@ -160,6 +197,7 @@ interface Props {
   showConfirmInKeys?: boolean;
   closeOnClickOverlay?: boolean;
   teleport?: string | HTMLElement;
+  showCalculation?: boolean; // 新增：是否显示计算功能
 }
 
 interface Emits {
@@ -170,6 +208,7 @@ interface Emits {
   (e: "clear"): void;
   (e: "hide"): void;
   (e: "input", value: string): void;
+  (e: "calculate", expression: string, result: string): void; // 新增：计算事件
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -187,6 +226,7 @@ const props = withDefaults(defineProps<Props>(), {
   showConfirmInKeys: false,
   closeOnClickOverlay: true,
   teleport: "body",
+  showCalculation: false, // 新增：默认不显示计算功能
 });
 
 const emit = defineEmits<Emits>();
@@ -194,6 +234,12 @@ const emit = defineEmits<Emits>();
 // 内部状态
 const inputValue = ref("");
 const keyPressed = ref("");
+
+// 计算相关状态
+const expression = ref(""); // 当前表达式
+const currentOperator = ref(""); // 当前操作符
+const previousValue = ref(""); // 上一个操作数
+const isCalculating = ref(false); // 是否在计算模式
 
 // 同步外部值
 watch(
@@ -212,19 +258,34 @@ const visible = computed({
 
 // 显示值
 const displayValue = computed(() => {
-  if (!inputValue.value) return "";
+  // 如果在计算模式
+  if (props.showCalculation) {
+    // 如果有完整的表达式（计算结果），显示表达式
+    if (expression.value) {
+      return expression.value;
+    }
 
-  // 格式化显示值
-  const value = inputValue.value;
+    // 如果有操作符，构建表达式显示
+    if (currentOperator.value && previousValue.value) {
+      const baseExpression = `${previousValue.value} ${currentOperator.value}`;
+      // 如果有当前输入值，加上它；否则只显示操作符前的部分
+      return inputValue.value
+        ? `${baseExpression} ${inputValue.value}`
+        : baseExpression;
+    }
+  }
 
-  // 如果是负数，确保负号在最前面
-  const isNegative = value.startsWith("-");
-  const cleanValue = isNegative ? value.slice(1) : value;
+  // 如果有当前输入值，格式化显示
+  if (inputValue.value) {
+    const value = inputValue.value;
+    // 如果是负数，确保负号在最前面
+    const isNegative = value.startsWith("-");
+    const cleanValue = isNegative ? value.slice(1) : value;
+    return isNegative ? `-${cleanValue}` : cleanValue;
+  }
 
-  // 添加千分位分隔符（可选）
-  // const formattedValue = cleanValue.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-
-  return isNegative ? `-${cleanValue}` : cleanValue;
+  // 如果什么都没有，返回空字符串（会显示placeholder）
+  return "";
 });
 
 // 检查是否可以添加小数点
@@ -253,6 +314,12 @@ const onKeyClick = (key: string) => {
     onConfirm();
   } else if (key === "hide") {
     onHide();
+  } else if (key === "plus") {
+    handleOperator("+");
+  } else if (key === "minus") {
+    handleOperator("-");
+  } else if (key === "equals") {
+    handleEquals();
   } else if (/^\d$/.test(key)) {
     handleNumber(key);
   }
@@ -324,9 +391,123 @@ const updateValue = () => {
   emit("input", inputValue.value);
 };
 
+// 处理操作符（加减）
+const handleOperator = (operator: string) => {
+  if (!props.showCalculation) return;
+
+  const currentValue = inputValue.value;
+  if (!currentValue) {
+    // 如果没有当前值，但有之前的值，允许更换操作符
+    if (previousValue.value && currentOperator.value) {
+      currentOperator.value = operator;
+    }
+    return;
+  }
+
+  // 如果已有操作符且有前一个值，说明需要进行中间计算
+  if (currentOperator.value && previousValue.value) {
+    // 进行中间计算
+    const prev = parseFloat(previousValue.value);
+    const current = parseFloat(inputValue.value);
+
+    if (!isNaN(prev) && !isNaN(current)) {
+      let result = 0;
+      switch (currentOperator.value) {
+        case "+":
+          result = prev + current;
+          break;
+        case "-":
+          result = prev - current;
+          break;
+        default:
+          return;
+      }
+
+      // 保留指定的小数位数
+      const formattedResult = result
+        .toFixed(props.decimalLength)
+        .replace(/\.?0+$/, "");
+
+      // 使用计算结果作为下一次运算的第一个操作数
+      previousValue.value = formattedResult;
+      currentOperator.value = operator;
+      inputValue.value = "";
+      expression.value = ""; // 清空表达式
+      isCalculating.value = true;
+
+      // 更新显示值
+      updateValue();
+    }
+    return;
+  }
+
+  // 首次输入操作符：设置第一个操作数和操作符
+  previousValue.value = inputValue.value;
+  currentOperator.value = operator;
+  expression.value = ""; // 清空表达式，让显示逻辑处理
+  inputValue.value = "";
+  isCalculating.value = true;
+};
+
+// 处理等号
+const handleEquals = () => {
+  if (!props.showCalculation || !currentOperator.value || !previousValue.value)
+    return;
+
+  const currentValue = inputValue.value;
+  if (!currentValue) return;
+
+  calculateResult();
+};
+
+// 计算结果
+const calculateResult = () => {
+  const prev = parseFloat(previousValue.value);
+  const current = parseFloat(inputValue.value);
+
+  if (isNaN(prev) || isNaN(current)) return;
+
+  let result = 0;
+  const fullExpression = `${previousValue.value} ${currentOperator.value} ${inputValue.value}`;
+
+  switch (currentOperator.value) {
+    case "+":
+      result = prev + current;
+      break;
+    case "-":
+      result = prev - current;
+      break;
+    default:
+      return;
+  }
+
+  // 保留指定的小数位数
+  const formattedResult = result
+    .toFixed(props.decimalLength)
+    .replace(/\.?0+$/, "");
+
+  // 更新状态
+  inputValue.value = formattedResult;
+  expression.value = `${fullExpression} = ${formattedResult}`;
+
+  // 重置计算状态
+  currentOperator.value = "";
+  previousValue.value = "";
+  isCalculating.value = false;
+
+  // 触发计算事件
+  emit("calculate", fullExpression, formattedResult);
+  updateValue();
+};
+
 // 清空
 const onClear = () => {
   inputValue.value = "";
+  // 重置计算状态
+  expression.value = "";
+  currentOperator.value = "";
+  previousValue.value = "";
+  isCalculating.value = false;
   updateValue();
   emit("clear");
 };
@@ -531,6 +712,42 @@ const onKeyTouchEnd = () => {
   background: var(--van-primary-color-dark);
 }
 
+/* 加号键 */
+.key-plus {
+  background: #e6f7ff;
+  color: #1890ff;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.key-plus:active {
+  background: #d9f0ff;
+}
+
+/* 减号键 */
+.key-minus {
+  background: #fff1f0;
+  color: #ff4d4f;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.key-minus:active {
+  background: #ffe7e6;
+}
+
+/* 等号键 */
+.key-equals {
+  background: #f6ffed;
+  color: #52c41a;
+  font-size: 18px;
+  font-weight: bold;
+}
+
+.key-equals:active {
+  background: #f0f9e8;
+}
+
 /* 隐藏键 */
 .key-hide {
   background: #f7f8fa;
@@ -598,6 +815,33 @@ const onKeyTouchEnd = () => {
 
   .key-hide:active {
     background: #3a3a3c;
+  }
+
+  .key-plus {
+    background: #0d1420;
+    color: #1890ff;
+  }
+
+  .key-plus:active {
+    background: #141f2e;
+  }
+
+  .key-minus {
+    background: #2a1215;
+    color: #ff4d4f;
+  }
+
+  .key-minus:active {
+    background: #3a1d21;
+  }
+
+  .key-equals {
+    background: #162312;
+    color: #52c41a;
+  }
+
+  .key-equals:active {
+    background: #1f2e18;
   }
 }
 

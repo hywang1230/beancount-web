@@ -130,11 +130,13 @@
     <NumberKeyboard
       v-model="localFormData.amount"
       v-model:show="showNumberKeyboard"
-      title="输入转账金额"
+      title="输入转账金额（支持加减运算）"
       placeholder="请输入转账金额"
       :show-decimal="true"
       :show-negative="false"
+      :show-calculation="true"
       @confirm="onAmountKeyboardConfirm"
+      @calculate="onAmountCalculate"
     />
   </div>
 </template>
@@ -650,6 +652,13 @@ const loadAccountOptions = async () => {
 const onAmountKeyboardConfirm = (value: string) => {
   localFormData.value.amount = value;
   showNumberKeyboard.value = false;
+};
+
+// 转账金额计算事件处理
+const onAmountCalculate = (expression: string, result: string) => {
+  console.log("转账金额计算:", expression, "=", result);
+  localFormData.value.amount = result;
+  showToast(`计算结果: ${expression} = ${result}`);
 };
 
 onMounted(() => {
