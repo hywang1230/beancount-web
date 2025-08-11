@@ -120,11 +120,13 @@
             label="金额"
             type="text"
             placeholder="请输入金额"
+            readonly
             :formatter="formatNumberInput"
             :rules="[
               { required: true, message: '请输入金额' },
               { validator: validateNumberInput, message: '请输入合法数字' },
             ]"
+            @click="() => showAmountKeyboard(index)"
           />
           <van-field :name="`posting-${index}-currency`" label="货币">
             <template #input>
@@ -404,12 +406,24 @@
         </div>
       </div>
     </van-popup>
+
+    <!-- 数字键盘 - 金额输入 -->
+    <NumberKeyboard
+      v-model="amountInput"
+      v-model:show="showNumberKeyboard"
+      title="输入金额"
+      placeholder="请输入金额"
+      :show-decimal="true"
+      :show-negative="true"
+      @confirm="onAmountKeyboardConfirm"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { recurringApi } from "@/api/recurring";
 import { getPayees } from "@/api/transactions";
+import NumberKeyboard from "@/components/NumberKeyboard.vue";
 import { showToast } from "vant";
 import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
@@ -484,6 +498,11 @@ const currentCurrencyIndex = ref(-1);
 const accountSelectorRef = ref();
 const payeeSelectorRef = ref();
 const payeeList = ref<string[]>([]);
+
+// 数字键盘状态
+const showNumberKeyboard = ref(false);
+const amountInput = ref("");
+const currentAmountPostingIndex = ref(0);
 
 const recurrenceTypeColumns = [
   { text: "每日", value: "daily" },
@@ -826,6 +845,22 @@ const loadEditData = async () => {
       showToast("加载数据失败");
     }
   }
+};
+
+// 数字键盘相关方法
+const showAmountKeyboard = (index: number) => {
+  currentAmountPostingIndex.value = index;
+  amountInput.value = String(form.value.postings[index]?.amount || "");
+  showNumberKeyboard.value = true;
+};
+
+const onAmountKeyboardConfirm = (value: string) => {
+  const index = currentAmountPostingIndex.value;
+  if (form.value.postings[index]) {
+    form.value.postings[index].amount = value;
+  }
+  showNumberKeyboard.value = false;
+  amountInput.value = "";
 };
 
 onMounted(async () => {

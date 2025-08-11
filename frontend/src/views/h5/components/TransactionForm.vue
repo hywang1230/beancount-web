@@ -35,10 +35,12 @@
             placeholder="请输入金额"
             type="text"
             class="amount-field"
+            readonly
             :formatter="formatNumberInput"
             :rules="[
               { validator: validateNumberInput, message: '请输入合法数字' },
             ]"
+            @click="showNumberKeyboard = true"
           />
         </div>
       </div>
@@ -246,10 +248,12 @@
                 type="text"
                 placeholder="0.00"
                 class="amount-field-small"
+                readonly
                 :formatter="formatNumberInput"
                 :rules="[
                   { validator: validateNumberInput, message: '请输入合法数字' },
                 ]"
+                @click="() => showCategoryAmountKeyboard(index)"
                 @update:model-value="
                   (value: string) => onCategoryAmountInput(index, value)
                 "
@@ -330,12 +334,41 @@
       @confirm="onDateConfirm"
       @close="showDateCalendar = false"
     />
+
+    <!-- 数字键盘 - 主金额输入 -->
+    <NumberKeyboard
+      v-model="localFormData.amount"
+      v-model:show="showNumberKeyboard"
+      title="输入金额"
+      :placeholder="`请输入${
+        props.type === 'expense'
+          ? '支出'
+          : props.type === 'income'
+          ? '收入'
+          : '调整'
+      }金额`"
+      :show-decimal="true"
+      :show-negative="true"
+      @confirm="onAmountKeyboardConfirm"
+    />
+
+    <!-- 数字键盘 - 分类金额输入 -->
+    <NumberKeyboard
+      v-model="categoryAmountInput"
+      v-model:show="showCategoryAmountKeyboardVisible"
+      title="输入分类金额"
+      placeholder="请输入分类金额"
+      :show-decimal="true"
+      :show-negative="true"
+      @confirm="onCategoryAmountKeyboardConfirm"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { getAccountsByType } from "@/api/accounts";
 import { getPayees } from "@/api/transactions";
+import NumberKeyboard from "@/components/NumberKeyboard.vue";
 import { showToast } from "vant";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
 import AccountTreeSelector from "./AccountTreeSelector.vue";
@@ -392,6 +425,12 @@ watch(
 const showCurrencySelector = ref(false);
 const showMultiCategorySheet = ref(false);
 const showDateCalendar = ref(false);
+
+// 数字键盘状态
+const showNumberKeyboard = ref(false);
+const showCategoryAmountKeyboardVisible = ref(false);
+const categoryAmountInput = ref("");
+const currentEditingCategoryIndex = ref(0);
 
 // 多类别编辑的临时数据
 const tempCategories = ref<CategoryItem[]>([]);
@@ -1376,6 +1415,41 @@ const loadOptions = async () => {
   }
 
   // console.log("=== TransactionForm loadOptions 结束 ===");
+};
+
+// 数字键盘相关方法
+const onAmountKeyboardConfirm = (value: string) => {
+  localFormData.value.amount = value;
+  showNumberKeyboard.value = false;
+};
+
+const showCategoryAmountKeyboard = (index: number) => {
+  currentEditingCategoryIndex.value = index;
+
+  // 获取当前编辑的分类数组
+  const targetCategories = isEditingMultiCategory.value
+    ? tempCategories.value
+    : localFormData.value.categories;
+
+  // 设置当前分类的金额到键盘输入
+  categoryAmountInput.value = targetCategories[index]?.amount || "";
+  showCategoryAmountKeyboardVisible.value = true;
+};
+
+const onCategoryAmountKeyboardConfirm = (value: string) => {
+  const index = currentEditingCategoryIndex.value;
+
+  // 获取当前编辑的分类数组
+  const targetCategories = isEditingMultiCategory.value
+    ? tempCategories.value
+    : localFormData.value.categories;
+
+  if (targetCategories[index]) {
+    targetCategories[index].amount = value;
+  }
+
+  showCategoryAmountKeyboardVisible.value = false;
+  categoryAmountInput.value = "";
 };
 
 onMounted(() => {
