@@ -191,10 +191,16 @@ const calculateTreeSelectHeight = () => {
   const viewportHeight = window.innerHeight;
 
   // 动态获取实际元素高度，而不是使用固定值
-  const container = document.querySelector(".category-selector-container");
-  const navbar = container?.querySelector(".van-nav-bar");
-  const searchSection = container?.querySelector(".search-section");
-  const treeSelect = container?.querySelector(".van-tree-select");
+  const container = document.querySelector(
+    ".category-selector-container"
+  ) as HTMLElement;
+  const navbar = container?.querySelector(".van-nav-bar") as HTMLElement;
+  const searchSection = container?.querySelector(
+    ".search-section"
+  ) as HTMLElement;
+  const treeSelect = container?.querySelector(
+    ".van-tree-select"
+  ) as HTMLElement;
 
   const actualNavBarHeight = navbar?.offsetHeight || 46;
   const actualSearchSectionHeight = searchSection?.offsetHeight || 64;
@@ -244,8 +250,12 @@ const calculateTreeSelectHeight = () => {
     );
 
     // 同时设置内部元素的高度
-    const nav = treeSelect.querySelector(".van-tree-select__nav");
-    const content = treeSelect.querySelector(".van-tree-select__content");
+    const nav = treeSelect.querySelector(
+      ".van-tree-select__nav"
+    ) as HTMLElement;
+    const content = treeSelect.querySelector(
+      ".van-tree-select__content"
+    ) as HTMLElement;
 
     if (nav) {
       nav.style.setProperty("height", calculatedHeight + "px", "important");
