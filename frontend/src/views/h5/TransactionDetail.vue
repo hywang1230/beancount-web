@@ -105,6 +105,18 @@
         </van-button>
       </div>
     </div>
+
+    <!-- 删除确认Dialog -->
+    <van-dialog
+      v-model:show="showDeleteDialog"
+      title="确认删除"
+      message="确定要删除这条交易记录吗？删除后无法恢复。"
+      :show-cancel-button="true"
+      confirm-button-text="删除"
+      confirm-button-color="#ee0a24"
+      @confirm="confirmDelete"
+      @cancel="showDeleteDialog = false"
+    />
   </div>
 </template>
 
@@ -114,7 +126,7 @@ import {
   deleteTransaction as deleteTransactionApi,
   getTransactionById,
 } from "@/api/transactions";
-import { showConfirmDialog, showToast } from "vant";
+import { showToast } from "vant";
 import { onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
@@ -124,6 +136,7 @@ const route = useRoute();
 const loading = ref(true);
 const transaction = ref<any>(null);
 const accountTypes = ref<Record<string, string[]>>({});
+const showDeleteDialog = ref(false);
 
 const formatAmount = (
   amount: string | number | undefined,
@@ -240,13 +253,12 @@ const editTransaction = () => {
   router.push(`/h5/add-transaction?id=${transactionId}`);
 };
 
-const deleteTransaction = async () => {
-  try {
-    await showConfirmDialog({
-      title: "确认删除",
-      message: "确定要删除这条交易记录吗？删除后无法恢复。",
-    });
+const deleteTransaction = () => {
+  showDeleteDialog.value = true;
+};
 
+const confirmDelete = async () => {
+  try {
     const transactionId =
       transaction.value?.transaction_id || (route.params.id as string);
     await deleteTransactionApi(transactionId);
@@ -254,10 +266,8 @@ const deleteTransaction = async () => {
     showToast("删除成功");
     router.back();
   } catch (error) {
-    if (error !== "cancel") {
-      // console.error("删除交易失败:", error);
-      showToast("删除交易失败");
-    }
+    // console.error("删除交易失败:", error);
+    showToast("删除交易失败");
   }
 };
 

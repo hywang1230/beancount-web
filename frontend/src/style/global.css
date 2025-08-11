@@ -10,41 +10,11 @@ html, body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background-color: var(--van-background-color);
+  background-color: var(--van-background);
   color: var(--van-text-color);
 }
 
-/* Vant 对话框：保持默认定位与布局，避免破坏按钮排列。
-   仅在移动端限制高度，防止小屏幕内容溢出。 */
-@media (max-width: 768px) {
-  .van-dialog {
-    max-height: 80vh; /* 限制最大高度为视口的80% */
-    border-radius: 12px; /* 轻度圆角，美化但不强制覆盖 */
-    overflow: hidden; /* 防止内容溢出 */
-  }
-
-  /* 对话框内容区域仅做滚动限制，不修改默认内边距和对齐 */
-  .van-dialog__content {
-    max-height: 60vh; /* 限制内容区域高度 */
-    overflow-y: auto; /* 允许垂直滚动 */
-  }
-
-    /* 确保底部按钮横向排列并等宽显示（兼容被其他样式影响的情况） */
-    .van-dialog__footer {
-      display: flex;
-      flex-direction: row;
-      gap: 0; /* 按Vant默认无间距 */
-    }
-    .van-dialog__footer .van-button {
-      flex: 1 1 0%;
-    }
-
-    /* 标题与消息保持居中对齐，避免继承到的左对齐样式影响 */
-    .van-dialog__header,
-    .van-dialog__message {
-      text-align: center;
-    }
-}
+/* 移除所有Dialog自定义样式，使用Vant原生样式 */
 
 /* Vant通知栏优化 */
 .van-notify {
@@ -61,7 +31,7 @@ html, body {
 
 /* 统计卡片样式 */
 .stat-card {
-  background: var(--van-white);
+  background: var(--van-background-2);
   border-radius: 8px;
   padding: 16px;
   margin: 8px 0;
@@ -256,22 +226,22 @@ html, body {
 
 .account-level-1 {
   padding-left: 20px;
-  color: var(--van-gray-7);
+  color: var(--van-text-color-2);
 }
 
 .account-level-2 {
   padding-left: 40px;
-  color: var(--van-gray-6);
+  color: var(--van-text-color-3);
 }
 
 .account-level-3 {
   padding-left: 60px;
-  color: var(--van-gray-5);
+  color: var(--van-text-color-3);
 }
 
 /* 自定义按钮样式 */
 .cancel-btn {
-  background-color: var(--van-gray-3) !important;
+  background-color: var(--van-gray-3, #f7f8fa) !important;
   color: var(--van-text-color) !important;
-  border-color: var(--van-gray-3) !important;
+  border-color: var(--van-gray-3, #f7f8fa) !important;
 }

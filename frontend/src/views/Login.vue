@@ -7,46 +7,43 @@
       </div>
 
       <form @submit.prevent="handleLogin" class="login-form">
-        <div class="form-group">
-          <label for="username" class="form-label">用户名</label>
-          <input
-            id="username"
+        <van-cell-group inset>
+          <van-field
             v-model="loginForm.username"
-            type="text"
-            class="form-input"
+            label="用户名"
             placeholder="请输入用户名"
             required
             :disabled="authStore.isLoading"
+            clearable
           />
-        </div>
-
-        <div class="form-group">
-          <label for="password" class="form-label">密码</label>
-          <input
-            id="password"
+          <van-field
             v-model="loginForm.password"
             type="password"
-            class="form-input"
+            label="密码"
             placeholder="请输入密码"
             required
             :disabled="authStore.isLoading"
           />
-        </div>
+        </van-cell-group>
 
-        <div v-if="errorMessage" class="error-message">
-          {{ errorMessage }}
-        </div>
+        <van-notice-bar
+          v-if="errorMessage"
+          type="danger"
+          :text="errorMessage"
+          class="error-notice"
+        />
 
-        <button
-          type="submit"
+        <van-button
+          type="primary"
+          size="large"
+          block
+          :loading="authStore.isLoading"
+          :disabled="!loginForm.username || !loginForm.password"
+          @click="handleLogin"
           class="login-button"
-          :disabled="
-            authStore.isLoading || !loginForm.username || !loginForm.password
-          "
         >
-          <span v-if="authStore.isLoading" class="loading-spinner"></span>
           {{ authStore.isLoading ? "登录中..." : "登录" }}
-        </button>
+        </van-button>
       </form>
     </div>
   </div>
@@ -97,15 +94,14 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: var(--van-background);
   padding: 20px;
 }
 
 .login-card {
-  background: white;
+  background: var(--van-background-2);
   border-radius: 16px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
-  padding: 40px;
+  padding: 32px 24px;
   width: 100%;
   max-width: 400px;
   animation: slideUp 0.6s ease-out;
@@ -128,128 +124,30 @@ onMounted(() => {
 }
 
 .login-title {
-  font-size: 32px;
-  font-weight: 700;
-  color: #1a202c;
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--van-text-color);
   margin: 0 0 8px 0;
 }
 
 .login-subtitle {
-  color: #718096;
+  color: var(--van-text-color-2);
   margin: 0;
   font-size: 16px;
 }
 
 .login-form {
-  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
 }
 
-.form-group {
-  margin-bottom: 20px;
-}
-
-.form-label {
-  display: block;
-  margin-bottom: 8px;
-  color: #374151;
-  font-weight: 500;
-  font-size: 14px;
-}
-
-.form-input {
-  width: 100%;
-  padding: 12px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: all 0.2s ease;
-  box-sizing: border-box;
-}
-
-.form-input:focus {
-  outline: none;
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
-}
-
-.form-input:disabled {
-  background-color: #f7fafc;
-  cursor: not-allowed;
-}
-
-.error-message {
-  background-color: #fed7d7;
-  color: #c53030;
-  padding: 12px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  font-size: 14px;
-  text-align: center;
+.error-notice {
+  margin: 0;
 }
 
 .login-button {
-  width: 100%;
-  padding: 12px 24px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 16px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-}
-
-.login-button:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(102, 126, 234, 0.3);
-}
-
-.login-button:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-
-.loading-spinner {
-  width: 16px;
-  height: 16px;
-  border: 2px solid transparent;
-  border-top: 2px solid white;
-  border-radius: 50%;
-  animation: spin 1s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.login-footer {
-  text-align: center;
-  padding-top: 20px;
-  border-top: 1px solid #e2e8f0;
-}
-
-.default-hint {
-  color: #718096;
-  font-size: 14px;
-  margin: 0;
-  line-height: 1.5;
-}
-
-.default-hint strong {
-  color: #4a5568;
-  font-family: monospace;
-  background: #f7fafc;
-  padding: 2px 6px;
-  border-radius: 4px;
+  margin-top: 8px;
 }
 
 /* 移动端适配 */
@@ -259,47 +157,15 @@ onMounted(() => {
   }
 
   .login-card {
-    padding: 32px 24px;
+    padding: 24px 20px;
   }
 
   .login-title {
-    font-size: 28px;
-  }
-}
-
-/* 暗黑模式适配 */
-@media (prefers-color-scheme: dark) {
-  .login-card {
-    background: #2d3748;
-    color: #e2e8f0;
+    font-size: 24px;
   }
 
-  .login-title {
-    color: #e2e8f0;
-  }
-
-  .form-label {
-    color: #cbd5e0;
-  }
-
-  .form-input {
-    background: #4a5568;
-    border-color: #4a5568;
-    color: #e2e8f0;
-  }
-
-  .form-input:focus {
-    border-color: #667eea;
-    background: #4a5568;
-  }
-
-  .default-hint {
-    color: #a0aec0;
-  }
-
-  .default-hint strong {
-    color: #e2e8f0;
-    background: #4a5568;
+  .login-subtitle {
+    font-size: 14px;
   }
 }
 </style>

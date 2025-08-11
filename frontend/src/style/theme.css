@@ -49,6 +49,9 @@ html[data-theme="light"] {
   --van-green-light: #f6ffed;
   --van-orange: #ff976a;
   --van-orange-light: #fff7e6;
+  --van-gray-3: #f7f8fa;
+  --van-gray-5: #dcdee0;
+  --van-gray-6: #c8c9cc;
 }
 
 /* 暗黑主题 */
@@ -99,6 +102,9 @@ html[data-theme="dark"] {
   --van-green-light: #283a28;
   --van-orange: #d48806;
   --van-orange-light: #3a3a28;
+  --van-gray-3: #323233;
+  --van-gray-5: #646566;
+  --van-gray-6: #969799;
 }
 
 /* 基础样式应用主题变量 */
@@ -210,18 +216,7 @@ html, body {
       background-color: var(--van-background-2) !important;
     }
     
-    /* Dialog 组件 */
-    .van-dialog {
-      background-color: var(--van-background-2) !important;
-    }
-    
-    .van-dialog__header {
-      color: var(--van-text-color) !important;
-    }
-    
-    .van-dialog__content {
-      color: var(--van-text-color-2) !important;
-    }
+    /* Dialog 组件使用Vant原生暗黑模式样式 */
     
     /* Toast 组件 */
     .van-toast {

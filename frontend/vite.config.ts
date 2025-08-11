@@ -1,10 +1,7 @@
 import vue from "@vitejs/plugin-vue";
 import { resolve } from "path";
 import AutoImport from "unplugin-auto-import/vite";
-import {
-  ElementPlusResolver,
-  VantResolver,
-} from "unplugin-vue-components/resolvers";
+import { VantResolver } from "unplugin-vue-components/resolvers";
 import Components from "unplugin-vue-components/vite";
 import { defineConfig } from "vite";
 import { VitePWA } from "vite-plugin-pwa";
@@ -16,10 +13,10 @@ export default defineConfig({
   plugins: [
     vue(),
     AutoImport({
-      resolvers: [ElementPlusResolver(), VantResolver()],
+      resolvers: [VantResolver()],
     }),
     Components({
-      resolvers: [ElementPlusResolver(), VantResolver()],
+      resolvers: [VantResolver()],
     }),
     VitePWA({
       registerType: "autoUpdate",
@@ -124,8 +121,7 @@ export default defineConfig({
           // 将Vue相关库分离
           vue: ["vue", "vue-router", "pinia"],
           // 将UI库分离
-          "element-plus": ["element-plus", "@element-plus/icons-vue"],
-          vant: ["vant"],
+          vant: ["vant", "@vant/icons"],
           // 将图表库分离
           echarts: ["echarts", "vue-echarts"],
           // 将工具库分离
@@ -184,9 +180,8 @@ export default defineConfig({
       "vue",
       "vue-router",
       "pinia",
-      "element-plus",
-      "@element-plus/icons-vue",
       "vant",
+      "@vant/icons",
       "axios",
       "dayjs",
       "echarts",
