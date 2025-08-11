@@ -107,7 +107,7 @@
               <span
                 class="group-amount"
                 :class="getGroupAmountClass(group.totalAmount)"
-                >{{ formatAmount(group.totalAmount) }}</span
+                >{{ formatGroupAmount(group.totalAmount) }}</span
               >
             </div>
 
@@ -270,11 +270,11 @@ const isInitialized = ref(false);
 // 计算交易的显示金额（用于合计计算）- 只统计收入和支出，排除转账
 const getTransactionDisplayAmount = (transaction: any) => {
   if (transaction.type === "income") {
-    // 收入：计算为正数
-    return Math.abs(transaction.amount);
+    // 收入：使用原始金额进行汇总（收入账户的相反数，通常为正数）
+    return transaction.amount;
   } else if (transaction.type === "expense") {
-    // 支出：计算为负数
-    return -Math.abs(transaction.amount);
+    // 支出：使用原始金额的负数进行汇总（支出在汇总中减少总额）
+    return -transaction.amount;
   } else {
     // 转账：不纳入统计
     return 0;
@@ -461,6 +461,14 @@ const formatAmount = (amount: number) => {
   return new Intl.NumberFormat("zh-CN", {
     style: "currency",
     currency: "CNY",
+  }).format(amount);
+};
+
+// 格式化每日汇总金额（不显示正负号）
+const formatGroupAmount = (amount: number) => {
+  return new Intl.NumberFormat("zh-CN", {
+    style: "currency",
+    currency: "CNY",
   }).format(Math.abs(amount));
 };
 
@@ -491,27 +499,29 @@ const formatTransactionAmount = (transaction: any) => {
   let displayAmount = transaction.amount;
 
   if (transaction.type === "income") {
-    // 收入：显示为正数
-    displayAmount = Math.abs(transaction.amount);
+    // 收入：显示收入账户金额的相反数
+    displayAmount = transaction.amount; // 金额已经是相反数
   } else if (transaction.type === "expense") {
-    // 支出：显示为正数
-    displayAmount = Math.abs(transaction.amount);
+    // 支出：保持原始金额
+    displayAmount = transaction.amount;
   }
+  // 转账：保持不变
 
-  return formatAmount(displayAmount);
+  // 不显示正负号，统一取绝对值
+  return formatAmount(Math.abs(displayAmount));
 };
 
 // 获取交易显示金额的正负性（用于颜色显示）
 const getTransactionAmountClass = (transaction: any) => {
   if (transaction.type === "income") {
-    // 收入：显示绿色
-    return "positive";
+    // 收入：正数为绿色，负数为红色
+    return transaction.amount >= 0 ? "positive" : "negative";
   } else if (transaction.type === "expense") {
-    // 支出：显示红色
-    return "negative";
+    // 支出：正数为红色，负数为绿色
+    return transaction.amount >= 0 ? "negative" : "positive";
   } else {
-    // 转账：根据金额正负显示
-    return transaction.amount > 0 ? "positive" : "negative";
+    // 转账：均为绿色
+    return "positive";
   }
 };
 
@@ -557,7 +567,7 @@ const convertTransactionData = (trans: any, fallbackId: string) => {
     const totalAmount = expensePostings.reduce((sum: number, p: any) => {
       const amount =
         typeof p.amount === "string" ? parseFloat(p.amount) : p.amount || 0;
-      return sum + Math.abs(amount); // 取绝对值确保显示正数
+      return sum + amount; // 保持原始金额，不取绝对值
     }, 0);
 
     mainAccountName = accountNames;
@@ -571,7 +581,7 @@ const convertTransactionData = (trans: any, fallbackId: string) => {
     const totalAmount = incomePostings.reduce((sum: number, p: any) => {
       const amount =
         typeof p.amount === "string" ? parseFloat(p.amount) : p.amount || 0;
-      return sum + Math.abs(amount); // 取绝对值确保显示正数
+      return sum + -amount; // 显示收入账户金额的相反数
     }, 0);
 
     mainAccountName = accountNames;
