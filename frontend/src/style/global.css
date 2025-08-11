@@ -14,23 +14,20 @@ html, body {
   color: var(--van-text-color);
 }
 
-/* Vant对话框优化 - 确保H5页面弹窗完全显示 */
-.van-dialog {
-  max-height: 80vh !important; /* 限制最大高度为视口的80% */
-  margin: auto !important; /* 确保垂直居中 */
-  position: fixed !important; /* 确保固定定位 */
-  top: 50% !important; /* 垂直居中 */
-  left: 50% !important; /* 水平居中 */
-  transform: translate(-50%, -50%) !important; /* 完全居中 */
-  overflow: hidden !important; /* 防止内容溢出 */
-  border-radius: 12px !important; /* 圆角美化 */
-}
+/* Vant 对话框：保持默认定位与布局，避免破坏按钮排列。
+   仅在移动端限制高度，防止小屏幕内容溢出。 */
+@media (max-width: 768px) {
+  .van-dialog {
+    max-height: 80vh; /* 限制最大高度为视口的80% */
+    border-radius: 12px; /* 轻度圆角，美化但不强制覆盖 */
+    overflow: hidden; /* 防止内容溢出 */
+  }
 
-/* 对话框内容区域 */
-.van-dialog__content {
-  max-height: 60vh !important; /* 限制内容区域高度 */
-  overflow-y: auto !important; /* 允许垂直滚动 */
-  padding: 16px !important; /* 增加内边距 */
+  /* 对话框内容区域仅做滚动限制，不修改默认内边距和对齐 */
+  .van-dialog__content {
+    max-height: 60vh; /* 限制内容区域高度 */
+    overflow-y: auto; /* 允许垂直滚动 */
+  }
 }
 
 /* Vant通知栏优化 */
