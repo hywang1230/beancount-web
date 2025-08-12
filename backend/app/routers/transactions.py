@@ -118,8 +118,11 @@ async def create_transaction(transaction: TransactionCreate):
 async def get_accounts():
     """获取活跃账户列表（排除已归档账户）"""
     try:
+        from app.services.account_order_service import account_order_service
         accounts = beancount_service.get_active_accounts()
-        return accounts
+        # 应用排序
+        sorted_accounts = account_order_service.sort_accounts(accounts)
+        return sorted_accounts
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取账户列表失败: {str(e)}")
 

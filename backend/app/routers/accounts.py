@@ -1,7 +1,8 @@
-from fastapi import APIRouter, HTTPException
-from typing import List
+from fastapi import APIRouter, HTTPException, Body
+from typing import List, Dict
 
 from app.services.beancount_service import beancount_service
+from app.services.account_order_service import account_order_service
 from app.models.schemas import AccountCreate, AccountClose, AccountRestore, AccountActionResponse
 
 router = APIRouter()
@@ -11,7 +12,9 @@ async def get_all_accounts():
     """获取活跃账户列表（排除已归档账户）"""
     try:
         accounts = beancount_service.get_active_accounts()
-        return accounts
+        # 应用排序
+        sorted_accounts = account_order_service.sort_accounts(accounts)
+        return sorted_accounts
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取账户列表失败: {str(e)}")
 
@@ -90,9 +93,9 @@ async def get_accounts_by_type():
             elif account.startswith('Expenses:'):
                 grouped["Expenses"].append(account)
         
-        # 对每个分组进行排序
+        # 对每个分组应用排序
         for key in grouped:
-            grouped[key].sort()
+            grouped[key] = account_order_service.sort_accounts(grouped[key])
         
         return grouped
         
@@ -187,4 +190,61 @@ async def restore_account(account_data: AccountRestore):
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"恢复账户失败: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"恢复账户失败: {str(e)}")
+
+# 账户排序相关API
+@router.get("/order/config")
+async def get_account_order_config():
+    """获取账户排序配置"""
+    try:
+        config = account_order_service.get_order_config()
+        return config
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取排序配置失败: {str(e)}")
+
+@router.put("/order/categories")
+async def update_category_order(category_order: List[str] = Body(...)):
+    """更新账户分类排序"""
+    try:
+        config = account_order_service.update_category_order(category_order)
+        return {"success": True, "message": "分类排序更新成功", "config": config}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"更新分类排序失败: {str(e)}")
+
+@router.put("/order/subcategories/{category}")
+async def update_subcategory_order(category: str, subcategory_order: List[str] = Body(...)):
+    """更新子分类排序"""
+    try:
+        config = account_order_service.update_subcategory_order(category, subcategory_order)
+        return {"success": True, "message": "子分类排序更新成功", "config": config}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"更新子分类排序失败: {str(e)}")
+
+@router.put("/order/accounts/{category}/{subcategory}")
+async def update_account_order_in_subcategory(category: str, subcategory: str, account_order: List[str] = Body(...)):
+    """更新指定子分类的账户排序"""
+    try:
+        config = account_order_service.update_account_order(category, subcategory, account_order)
+        return {"success": True, "message": "账户排序更新成功", "config": config}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"更新账户排序失败: {str(e)}")
+
+@router.get("/order/subcategories/{category}")
+async def get_subcategories(category: str):
+    """获取指定分类下的所有子分类"""
+    try:
+        accounts = beancount_service.get_active_accounts()
+        subcategories = account_order_service.get_subcategories(category, accounts)
+        return {"subcategories": subcategories}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取子分类失败: {str(e)}")
+
+@router.get("/order/accounts/{category}/{subcategory}")
+async def get_accounts_in_subcategory(category: str, subcategory: str):
+    """获取指定子分类下的所有账户"""
+    try:
+        accounts = beancount_service.get_active_accounts()
+        subcategory_accounts = account_order_service.get_accounts_in_subcategory(category, subcategory, accounts)
+        return {"accounts": subcategory_accounts}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取子分类账户失败: {str(e)}")

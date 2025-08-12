@@ -47,10 +47,22 @@
       >
         新增
       </van-button>
+      <van-button
+        :type="sortMode ? 'warning' : 'default'"
+        size="small"
+        round
+        @click="toggleSortMode"
+      >
+        {{ sortMode ? "完成排序" : "排序" }}
+      </van-button>
     </div>
 
-    <!-- 账户列表 -->
-    <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+    <!-- 普通模式：账户列表 -->
+    <van-pull-refresh
+      v-model="refreshing"
+      @refresh="onRefresh"
+      v-if="!sortMode"
+    >
       <van-tabs v-model:active="activeType" sticky offset-top="0">
         <van-tab
           v-for="item in orderedAccountGroups"
@@ -145,6 +157,147 @@
         </van-tab>
       </van-tabs>
     </van-pull-refresh>
+
+    <!-- 排序模式界面 -->
+    <div v-if="sortMode" class="sort-mode">
+      <div class="sort-section">
+        <!-- 排序导航栏 -->
+        <div class="sort-header">
+          <h3>账户排序</h3>
+          <div class="sort-breadcrumb">
+            <div class="breadcrumb-item-container">
+              <van-icon
+                v-if="sortLevel === 'account'"
+                name="arrow-left"
+                class="back-icon"
+                @click="backToSubcategorySort"
+              />
+              <span
+                class="breadcrumb-item"
+                :class="{
+                  active: sortLevel === 'subcategory',
+                  clickable: sortLevel === 'account',
+                }"
+                @click="backToSubcategorySort"
+              >
+                {{ getTypeLabel(sortActiveType) }}
+              </span>
+            </div>
+            <van-icon
+              v-if="sortLevel === 'account'"
+              name="arrow"
+              class="breadcrumb-arrow"
+            />
+            <span
+              v-if="sortLevel === 'account'"
+              class="breadcrumb-item active current"
+            >
+              {{ selectedSubcategory }}
+            </span>
+          </div>
+        </div>
+
+        <van-tabs v-model:active="sortActiveType">
+          <van-tab
+            v-for="category in fixedCategoryOrder"
+            :key="category"
+            :title="getTypeLabel(category)"
+            :name="category"
+          >
+            <!-- 二级分类排序视图 -->
+            <div
+              v-if="sortLevel === 'subcategory'"
+              class="subcategory-sort-container"
+            >
+              <p class="sort-desc">
+                拖拽调整二级分类的显示顺序，点击分类名称可调整其下的三级账户
+              </p>
+
+              <div
+                v-if="getSubcategoriesForSort(category).length > 0"
+                class="sort-list"
+              >
+                <draggable
+                  :model-value="getSubcategoriesForSort(category)"
+                  @update:model-value="(newOrder: string[]) => onSubcategoryOrderChange(category, newOrder)"
+                  item-key="id"
+                >
+                  <template #item="{ element, index }">
+                    <van-cell
+                      :title="element"
+                      :value="`第 ${index + 1} 位`"
+                      class="subcategory-item"
+                      is-link
+                      @click="enterAccountSort(category, element)"
+                    >
+                      <template #icon>
+                        <div class="icon-container">
+                          <van-icon name="bars" class="drag-handle" />
+                        </div>
+                      </template>
+                      <template #right-icon>
+                        <div class="right-content">
+                          <div class="account-count">
+                            {{
+                              getAccountsForSubcategory(category, element)
+                                .length
+                            }}
+                            个账户
+                          </div>
+                          <van-icon name="arrow" class="enter-icon" />
+                        </div>
+                      </template>
+                    </van-cell>
+                  </template>
+                </draggable>
+              </div>
+              <van-empty v-else description="该分类下暂无子分类" size="small" />
+            </div>
+
+            <!-- 三级账户排序视图 -->
+            <div
+              v-else-if="sortLevel === 'account'"
+              class="account-sort-container"
+            >
+              <p class="sort-desc">
+                拖拽调整 {{ selectedSubcategory }} 下账户的显示顺序
+              </p>
+
+              <div
+                v-if="
+                  getAccountsForSubcategory(category, selectedSubcategory)
+                    .length > 0
+                "
+                class="sort-list"
+              >
+                <draggable
+                  :model-value="
+                    getAccountsForSubcategory(category, selectedSubcategory)
+                  "
+                  @update:model-value="(newOrder: string[]) => onAccountOrderChangeInSubcategory(category, selectedSubcategory, newOrder)"
+                  item-key="id"
+                >
+                  <template #item="{ element, index }">
+                    <van-cell
+                      :title="formatAccountNameForSort(element)"
+                      :value="`第 ${index + 1} 位`"
+                      class="account-item-sort"
+                    >
+                      <template #icon>
+                        <div class="icon-container">
+                          <van-icon name="bars" class="drag-handle" />
+                        </div>
+                      </template>
+                    </van-cell>
+                  </template>
+                </draggable>
+              </div>
+              <van-empty v-else description="该子分类下暂无账户" size="small" />
+            </div>
+          </van-tab>
+        </van-tabs>
+      </div>
+    </div>
 
     <!-- 创建账户弹出层 -->
     <van-popup
@@ -299,21 +452,44 @@
 import type {
   AccountCloseRequest,
   AccountCreateRequest,
+  AccountOrderConfig,
   AccountRestoreRequest,
 } from "@/api/accounts";
 import {
   closeAccount,
   createAccount,
+  getAccountOrderConfig,
   getAccountsByType,
   getArchivedAccounts,
   restoreAccount,
+  updateAccountOrder,
+  updateSubcategoryOrder,
 } from "@/api/accounts";
 import { showToast } from "vant";
 import { computed, onMounted, ref } from "vue";
+import draggable from "vuedraggable";
 
 const refreshing = ref(false);
 const searchText = ref("");
 const activeType = ref("Assets");
+const sortMode = ref(false);
+const sortActiveType = ref("Assets");
+const sortLevel = ref<"subcategory" | "account">("subcategory"); // 当前排序层级
+const selectedSubcategory = ref<string>(""); // 选中的子分类
+const sortConfig = ref<AccountOrderConfig>({
+  category_order: [],
+  subcategory_order: {},
+  account_order: {},
+});
+
+// 固定的分类顺序，不可调整
+const fixedCategoryOrder = [
+  "Assets",
+  "Liabilities",
+  "Income",
+  "Expenses",
+  "Equity",
+];
 
 interface Account {
   id: number;
@@ -647,7 +823,8 @@ const getAccountsForDisplay = (accounts: Account[]) => {
   ): Account[] => {
     const result: Account[] = [];
 
-    accountsList.sort((a, b) => a.name.localeCompare(b.name));
+    // 保持API返回的顺序，不再强制按字母排序
+    // accountsList.sort((a, b) => a.name.localeCompare(b.name));
 
     accountsList.forEach((account) => {
       // 跳过第一级（如Assets, Liabilities等）
@@ -871,6 +1048,195 @@ const loadAccounts = async () => {
       showToast("加载账户数据失败");
     }
   }
+};
+
+// 排序相关方法
+const toggleSortMode = () => {
+  sortMode.value = !sortMode.value;
+  if (sortMode.value) {
+    loadSortConfig();
+    // 重置到子分类排序层级
+    sortLevel.value = "subcategory";
+    selectedSubcategory.value = "";
+  }
+};
+
+// 进入账户排序界面
+const enterAccountSort = (category: string, subcategory: string) => {
+  sortLevel.value = "account";
+  selectedSubcategory.value = subcategory;
+  sortActiveType.value = category;
+};
+
+// 返回子分类排序界面
+const backToSubcategorySort = () => {
+  sortLevel.value = "subcategory";
+  selectedSubcategory.value = "";
+};
+
+const loadSortConfig = async () => {
+  try {
+    sortConfig.value = await getAccountOrderConfig();
+  } catch (error) {
+    console.error("加载排序配置失败:", error);
+    // 使用默认配置
+    sortConfig.value = {
+      category_order: ["Assets", "Liabilities", "Income", "Expenses", "Equity"],
+      subcategory_order: {
+        Assets: [],
+        Liabilities: [],
+        Income: [],
+        Expenses: [],
+        Equity: [],
+      },
+      account_order: {
+        Assets: {},
+        Liabilities: {},
+        Income: {},
+        Expenses: {},
+        Equity: {},
+      },
+    };
+    showToast("使用默认排序配置");
+  }
+};
+
+const saveSubcategoryOrder = async (category: string, newOrder: string[]) => {
+  try {
+    await updateSubcategoryOrder(category, newOrder);
+    sortConfig.value.subcategory_order[category] = [...newOrder];
+    showToast("子分类排序保存成功");
+    // 重新加载账户数据以应用新的排序
+    await loadAccounts();
+  } catch (error) {
+    console.error("保存子分类排序失败:", error);
+    showToast("保存子分类排序失败");
+  }
+};
+
+const saveAccountOrder = async (
+  category: string,
+  subcategory: string,
+  newOrder: string[]
+) => {
+  try {
+    await updateAccountOrder(category, subcategory, newOrder);
+    if (!sortConfig.value.account_order[category]) {
+      sortConfig.value.account_order[category] = {};
+    }
+    sortConfig.value.account_order[category][subcategory] = [...newOrder];
+    showToast("账户排序保存成功");
+    // 重新加载账户数据以应用新的排序
+    await loadAccounts();
+  } catch (error) {
+    console.error("保存账户排序失败:", error);
+    showToast("保存账户排序失败");
+  }
+};
+
+// 子分类排序变化事件
+const onSubcategoryOrderChange = (category: string, newOrder: string[]) => {
+  saveSubcategoryOrder(category, newOrder);
+};
+
+// 账户排序变化事件
+const onAccountOrderChangeInSubcategory = (
+  category: string,
+  subcategory: string,
+  newOrder: string[]
+) => {
+  saveAccountOrder(category, subcategory, newOrder);
+};
+
+// 获取用于排序的子分类列表
+const getSubcategoriesForSort = (category: string): string[] => {
+  const categoryAccounts = Object.keys(allAccountGroups.value).includes(
+    category
+  )
+    ? allAccountGroups.value[category] || []
+    : [];
+
+  // 提取所有子分类
+  const subcategories = new Set<string>();
+  categoryAccounts.forEach((account) => {
+    const parts = account.split(":");
+    if (parts.length >= 2) {
+      subcategories.add(parts[1]);
+    }
+  });
+
+  const subcategoryList = Array.from(subcategories);
+
+  // 应用排序配置（如果有的话）
+  const currentOrder = sortConfig.value.subcategory_order?.[category] || [];
+
+  if (currentOrder.length > 0) {
+    // 按配置的顺序排列
+    const ordered: string[] = [];
+    currentOrder.forEach((sub) => {
+      if (subcategoryList.includes(sub)) {
+        ordered.push(sub);
+      }
+    });
+    // 添加未配置的子分类（按字母顺序）
+    subcategoryList.forEach((sub) => {
+      if (!ordered.includes(sub)) {
+        ordered.push(sub);
+      }
+    });
+    return ordered;
+  } else {
+    // 没有配置时，按字母顺序排列
+    return subcategoryList.sort();
+  }
+};
+
+// 获取指定子分类下的账户列表
+const getAccountsForSubcategory = (
+  category: string,
+  subcategory: string
+): string[] => {
+  const categoryAccounts = Object.keys(allAccountGroups.value).includes(
+    category
+  )
+    ? allAccountGroups.value[category] || []
+    : [];
+
+  const subcategoryAccounts = categoryAccounts.filter((account) =>
+    account.startsWith(`${category}:${subcategory}:`)
+  );
+
+  // 应用排序配置（如果有的话）
+  const currentOrder =
+    sortConfig.value.account_order?.[category]?.[subcategory] || [];
+
+  if (currentOrder.length > 0) {
+    // 按配置的顺序排列
+    const ordered: string[] = [];
+    currentOrder.forEach((acc) => {
+      if (subcategoryAccounts.includes(acc)) {
+        ordered.push(acc);
+      }
+    });
+    // 添加未配置的账户（按字母顺序）
+    subcategoryAccounts.forEach((acc) => {
+      if (!ordered.includes(acc)) {
+        ordered.push(acc);
+      }
+    });
+    return ordered;
+  } else {
+    // 没有配置时，按字母顺序排列
+    return subcategoryAccounts.sort();
+  }
+};
+
+// 格式化账户名称用于排序显示
+const formatAccountNameForSort = (accountName: string): string => {
+  if (!accountName) return "未知账户";
+  const parts = accountName.split(":");
+  // 返回三级名称（去掉一级分类和二级分类）
+  return parts.length > 2 ? parts[2] : accountName;
 };
 
 onMounted(() => {
@@ -1143,5 +1509,201 @@ onMounted(() => {
   .stats-section {
     padding: 0 12px 12px;
   }
+}
+
+/* 排序模式样式 */
+.sort-mode {
+  padding: 16px;
+  background-color: var(--bg-color);
+}
+
+.sort-section {
+  margin-bottom: 24px;
+}
+
+.sort-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color);
+  margin-bottom: 8px;
+}
+
+.sort-desc {
+  font-size: 14px;
+  color: var(--text-color-secondary);
+  margin-bottom: 16px;
+}
+
+.sort-header {
+  padding: 16px 16px 8px 16px;
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 16px;
+}
+
+.sort-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.sort-breadcrumb {
+  display: flex;
+  align-items: center;
+  font-size: 14px;
+  color: var(--text-color-secondary);
+}
+
+.breadcrumb-item-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.back-icon {
+  color: var(--color-primary);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 50%;
+  transition: background-color 0.2s;
+}
+
+.back-icon:hover {
+  background-color: var(--bg-color-secondary);
+}
+
+.breadcrumb-item {
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+
+.breadcrumb-item.clickable {
+  color: var(--color-primary);
+  background-color: var(--bg-color-secondary);
+  font-weight: 500;
+}
+
+.breadcrumb-item.clickable:hover {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+}
+
+.breadcrumb-item.active {
+  color: var(--color-primary);
+  font-weight: 500;
+}
+
+.breadcrumb-item.current {
+  background-color: var(--color-primary);
+  color: var(--color-white);
+  cursor: default;
+}
+
+.breadcrumb-arrow {
+  margin: 0 8px;
+  font-size: 12px;
+  transform: rotate(90deg);
+  color: var(--text-color-tertiary);
+}
+
+.subcategory-sort-container,
+.account-sort-container {
+  padding: 0 16px 16px 16px;
+}
+
+.sort-list {
+  margin-top: 16px;
+}
+
+.icon-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+}
+
+.right-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.account-count {
+  font-size: 12px;
+  color: var(--text-color-secondary);
+  background-color: var(--bg-color-secondary);
+  padding: 2px 8px;
+  border-radius: 12px;
+  white-space: nowrap;
+}
+
+.enter-icon {
+  color: var(--color-primary);
+  font-size: 14px;
+  transform: rotate(90deg);
+}
+
+.subcategory-item {
+  background-color: var(--bg-color);
+  border: 1px solid var(--border-color);
+  margin-bottom: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.subcategory-item:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.account-item-sort {
+  background-color: var(--bg-color-tertiary);
+  border: 1px solid var(--border-color-lighter);
+  margin-bottom: 8px;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+}
+
+.account-item-sort:hover {
+  border-color: var(--color-primary);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.drag-handle {
+  color: var(--text-color-secondary);
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+/* 层级样式 */
+.account-level-0 {
+  font-weight: 600;
+  background-color: var(--bg-color);
+}
+
+.account-level-1 {
+  font-weight: 500;
+  background-color: var(--bg-color-secondary);
+}
+
+.account-level-2 {
+  font-weight: 400;
+  background-color: var(--bg-color-tertiary);
+}
+
+/* 拖拽时的样式 */
+.sortable-ghost {
+  opacity: 0.8;
+  background-color: var(--bg-color-secondary);
+}
+
+.sortable-chosen {
+  background-color: var(--bg-color-secondary);
 }
 </style>
