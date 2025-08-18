@@ -36,6 +36,18 @@
           <span class="cell-desc">查看和验证账本文件</span>
         </template>
       </van-cell>
+
+      <van-cell
+        title="数据同步"
+        icon="sync"
+        is-link
+        @click="navigateTo('/h5/sync')"
+        :border="false"
+      >
+        <template #label>
+          <span class="cell-desc">同步账本到GitHub仓库</span>
+        </template>
+      </van-cell>
     </van-cell-group>
 
     <van-cell-group inset title="外观设置">

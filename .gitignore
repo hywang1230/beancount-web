@@ -71,6 +71,5 @@ cache.db
 *.tmp
 *.temp 
 .history/
-main.beancount
-/data/*.json
+/data/
 .cursor/

@@ -7,18 +7,22 @@ import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from app.routers import transactions, reports, accounts, files, recurring, auth
+from app.routers import transactions, reports, accounts, files, recurring, auth, sync
 from app.core.config import settings
 from app.services.scheduler import scheduler
+from app.services.github_sync_service import github_sync_service
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时
     scheduler.start()
+    # 初始化GitHub同步服务
+    await github_sync_service._load_config()
     yield
     # 关闭时
     scheduler.shutdown()
+    await github_sync_service.shutdown()
 
 # 创建FastAPI应用
 app = FastAPI(
@@ -53,6 +57,7 @@ app.include_router(reports.router, prefix="/api/reports", tags=["报表"], depen
 app.include_router(accounts.router, prefix="/api/accounts", tags=["账户"], dependencies=[Depends(get_current_user)])
 app.include_router(files.router, prefix="/api/files", tags=["文件"], dependencies=[Depends(get_current_user)])
 app.include_router(recurring.router, prefix="/api/recurring", tags=["周期记账"], dependencies=[Depends(get_current_user)])
+app.include_router(sync.router, prefix="/api", tags=["同步管理"], dependencies=[Depends(get_current_user)])
 
 @app.get("/api")
 async def api_root():
