@@ -694,7 +694,7 @@ onMounted(async () => {
 }
 
 .status-card {
-  margin: 8px;
+  margin: 8px 0;
 }
 
 .status-icon {
@@ -716,7 +716,7 @@ onMounted(async () => {
 }
 
 .action-buttons {
-  margin: 8px;
+  margin: 8px 16px;
 }
 
 .button-row {

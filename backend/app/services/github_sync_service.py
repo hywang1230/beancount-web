@@ -48,8 +48,19 @@ class FileWatcher(FileSystemEventHandler):
         
         self.last_change_time[str(file_path)] = current_time
         
-        # 异步触发同步检查
-        asyncio.create_task(self.sync_service._check_auto_sync())
+        # 异步触发同步检查 - 使用线程安全的方式
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(self.sync_service._check_auto_sync())
+        except RuntimeError:
+            # 如果没有运行中的事件循环，使用新的事件循环
+            def run_sync_check():
+                asyncio.run(self.sync_service._check_auto_sync())
+            
+            import threading
+            thread = threading.Thread(target=run_sync_check)
+            thread.daemon = True
+            thread.start()
     
     def _should_sync_file(self, file_path: Path) -> bool:
         """检查文件是否应该被同步 - 只监控 beancount 文件"""
@@ -307,6 +318,14 @@ class GitHubSyncService:
     
     async def manual_sync(self, force: bool = False, files: Optional[List[str]] = None) -> bool:
         """手动同步"""
+        return await self._sync(operation_type="manual_sync", force=force, files=files)
+    
+    async def _auto_sync(self, force: bool = False, files: Optional[List[str]] = None) -> bool:
+        """自动同步"""
+        return await self._sync(operation_type="auto_sync", force=force, files=files)
+    
+    async def _sync(self, operation_type: str, force: bool = False, files: Optional[List[str]] = None) -> bool:
+        """通用同步方法"""
         if self._current_status == SyncStatus.SYNCING:
             raise Exception("正在同步中，请稍后再试")
         
@@ -330,13 +349,13 @@ class GitHubSyncService:
             await self._sync_files_to_github(sync_files)
             
             self._current_status = SyncStatus.SUCCESS
-            await self._add_history_record("manual_sync", SyncStatus.SUCCESS, len(sync_files))
+            await self._add_history_record(operation_type, SyncStatus.SUCCESS, len(sync_files))
             
             return True
             
         except Exception as e:
             self._current_status = SyncStatus.FAILED
-            await self._add_history_record("manual_sync", SyncStatus.FAILED, 0, str(e))
+            await self._add_history_record(operation_type, SyncStatus.FAILED, 0, str(e))
             raise
     
     async def _sync_files_to_github(self, files: List[FileChangeInfo]):
@@ -349,12 +368,9 @@ class GitHubSyncService:
             if not file_path.exists():
                 continue
             
-            # 读取文件内容
-            async with aiofiles.open(file_path, 'rb') as f:
+            # 读取文件内容 - 直接读取为文本，不进行base64编码
+            async with aiofiles.open(file_path, 'r', encoding='utf-8') as f:
                 content = await f.read()
-            
-            # 编码为base64
-            content_b64 = base64.b64encode(content).decode()
             
             try:
                 # 检查文件是否存在
@@ -364,7 +380,7 @@ class GitHubSyncService:
                     repo.update_file(
                         file_info.file_path,
                         f"Update {file_info.file_path}",
-                        content_b64,
+                        content,
                         existing_file.sha,
                         branch=self._config.branch
                     )
@@ -374,7 +390,7 @@ class GitHubSyncService:
                         repo.create_file(
                             file_info.file_path,
                             f"Add {file_info.file_path}",
-                            content_b64,
+                            content,
                             branch=self._config.branch
                         )
                     else:
@@ -446,7 +462,7 @@ class GitHubSyncService:
         # 比如检查上次同步时间、文件变更数量等
         
         try:
-            await self.manual_sync()
+            await self._auto_sync()
         except Exception as e:
             print(f"自动同步失败: {e}")
     
@@ -478,13 +494,33 @@ class GitHubSyncService:
                     
                     # 下载文件内容
                     blob = repo.get_git_blob(item.sha)
-                    content = base64.b64decode(blob.content)
+                    
+                    # 尝试直接获取文本内容，如果失败则尝试base64解码
+                    try:
+                        # 首先尝试直接作为文本内容
+                        content_bytes = base64.b64decode(blob.content)
+                        content_text = content_bytes.decode('utf-8')
+                        
+                        # 检查是否是有效的beancount文本内容
+                        if any(line.strip().startswith(('open ', 'close ', 'option ', ';', '19', '20')) 
+                               for line in content_text.split('\n')[:10]):
+                            # 直接使用解码后的文本
+                            content = content_text
+                        else:
+                            # 可能是双重编码，尝试再次解码
+                            try:
+                                content = base64.b64decode(content_text).decode('utf-8')
+                            except:
+                                content = content_text
+                    except Exception:
+                        # 如果解码失败，使用原始内容
+                        content = base64.b64decode(blob.content).decode('utf-8')
                     
                     # 保存到本地
                     local_path = self.data_dir / item.path
                     local_path.parent.mkdir(parents=True, exist_ok=True)
                     
-                    async with aiofiles.open(local_path, 'wb') as f:
+                    async with aiofiles.open(local_path, 'w', encoding='utf-8') as f:
                         await f.write(content)
                     
                     restored_count += 1
