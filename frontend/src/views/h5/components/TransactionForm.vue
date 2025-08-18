@@ -901,10 +901,7 @@ watch(
       const amount = parseFloat(newAmount);
 
       // 如果分类已选择但金额为空或为0，则自动设置金额
-      if (
-        firstCategory.category &&
-        (!firstCategory.amount || parseFloat(firstCategory.amount) === 0)
-      ) {
+      if (firstCategory.category) {
         // 根据交易类型确定金额符号
         let categoryAmount = amount;
 
@@ -915,7 +912,14 @@ watch(
           categoryAmount = -amount;
         }
 
-        firstCategory.amount = String(categoryAmount);
+        // 仅当计算出的金额与当前金额不同时才更新，避免不必要的重渲染
+        const currentCategoryAmount = parseFloat(firstCategory.amount);
+        if (
+          isNaN(currentCategoryAmount) ||
+          Math.abs(currentCategoryAmount - categoryAmount) > 0.001 // 使用一个小的容差
+        ) {
+          firstCategory.amount = String(categoryAmount);
+        }
       }
     }
   },
