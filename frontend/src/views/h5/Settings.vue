@@ -39,7 +39,7 @@
 
       <van-cell
         title="数据同步"
-        icon="sync"
+        icon="circle"
         is-link
         @click="navigateTo('/h5/sync')"
         :border="false"

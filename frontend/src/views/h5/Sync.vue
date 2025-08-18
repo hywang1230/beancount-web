@@ -1,8 +1,5 @@
 <template>
   <div class="sync-page">
-    <!-- 顶部导航 -->
-    <van-nav-bar title="数据同步" left-arrow @click-left="$router.back()" />
-
     <!-- 同步状态卡片 -->
     <div class="status-card">
       <van-cell-group inset>
@@ -23,7 +20,10 @@
         />
 
         <van-cell
-          v-if="syncStatus?.pending_files.length > 0"
+          v-if="
+            syncStatus?.pending_files?.length &&
+            syncStatus.pending_files.length > 0
+          "
           title="待同步文件"
           :value="`${syncStatus.pending_files.length} 个文件`"
         />
@@ -93,8 +93,11 @@
           <van-notice-bar
             left-icon="info-o"
             text="仅同步 .bean 和 .beancount 文件，其他文件类型将被忽略"
-            color="#1989fa"
-            background="#ecf5ff"
+            color="var(--van-primary-color)"
+            background="rgba(25, 137, 250, 0.1)"
+            :scrollable="false"
+            wrapable
+            class="sync-notice"
           />
         </div>
 
@@ -279,9 +282,6 @@ import {
 } from "@/api/sync";
 import { showToast } from "vant";
 import { computed, onMounted, reactive, ref } from "vue";
-import { useRouter } from "vue-router";
-
-const router = useRouter();
 
 // 响应式数据
 const syncStatus = ref<SyncStatusResponse | null>(null);
@@ -558,6 +558,11 @@ const loadHistory = async () => {
     } else {
       historyList.value.push(...result.history);
       historyPage.value++;
+
+      // 如果返回的记录数少于请求的数量，说明已经到底了
+      if (result.history.length < 20) {
+        historyFinished.value = true;
+      }
     }
   } catch (error) {
     console.error("加载历史记录失败:", error);
@@ -565,6 +570,8 @@ const loadHistory = async () => {
       type: "fail",
       message: "加载历史记录失败",
     });
+    // 发生错误时也要停止加载
+    historyFinished.value = true;
   } finally {
     historyLoading.value = false;
   }
@@ -681,12 +688,13 @@ onMounted(async () => {
 
 <style scoped>
 .sync-page {
-  background-color: #f7f8fa;
+  background-color: var(--van-background);
   min-height: 100vh;
+  transition: background-color 0.3s ease;
 }
 
 .status-card {
-  margin: 16px;
+  margin: 8px;
 }
 
 .status-icon {
@@ -695,17 +703,20 @@ onMounted(async () => {
 
 .sync-progress {
   padding: 16px;
+  background-color: var(--van-background-2);
+  transition: background-color 0.3s ease;
 }
 
 .progress-text {
   text-align: center;
   margin-top: 8px;
   font-size: 14px;
-  color: #969799;
+  color: var(--van-text-color-3);
+  transition: color 0.3s ease;
 }
 
 .action-buttons {
-  margin: 16px;
+  margin: 8px;
 }
 
 .button-row {
@@ -720,6 +731,8 @@ onMounted(async () => {
 
 .config-dialog .config-form {
   padding: 16px;
+  background-color: var(--van-background);
+  transition: background-color 0.3s ease;
 }
 
 .sync-info {
@@ -734,11 +747,15 @@ onMounted(async () => {
 .history-dialog .history-list {
   max-height: 400px;
   overflow-y: auto;
+  background-color: var(--van-background);
+  transition: background-color 0.3s ease;
 }
 
 .history-item {
   padding: 12px 16px;
-  border-bottom: 1px solid #ebedf0;
+  border-bottom: 1px solid var(--van-border-color);
+  background-color: var(--van-background-2);
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .history-header {
@@ -750,7 +767,8 @@ onMounted(async () => {
 
 .operation-type {
   font-weight: 500;
-  color: #323233;
+  color: var(--van-text-color);
+  transition: color 0.3s ease;
 }
 
 .status {
@@ -761,31 +779,138 @@ onMounted(async () => {
 }
 
 .status.success {
-  background-color: #07c160;
+  background-color: var(--van-success-color);
 }
 
 .status.failed {
-  background-color: #ee0a24;
+  background-color: var(--van-danger-color);
 }
 
 .status.syncing {
-  background-color: #1989fa;
+  background-color: var(--van-primary-color);
 }
 
 .history-content {
   display: flex;
   justify-content: space-between;
   font-size: 14px;
-  color: #969799;
+  color: var(--van-text-color-3);
+  transition: color 0.3s ease;
 }
 
 .history-message {
   margin-top: 4px;
   font-size: 12px;
-  color: #646566;
+  color: var(--van-text-color-2);
+  transition: color 0.3s ease;
 }
 
 .restore-dialog .restore-form {
   padding: 16px;
+  background-color: var(--van-background);
+  transition: background-color 0.3s ease;
+}
+
+/* 暗黑模式特定调整 */
+.van-theme-dark .config-dialog .config-form {
+  background-color: var(--van-background-2);
+}
+
+.van-theme-dark .history-dialog .history-list {
+  background-color: var(--van-background-2);
+}
+
+.van-theme-dark .restore-dialog .restore-form {
+  background-color: var(--van-background-2);
+}
+
+/* 确保对话框在暗黑模式下正确显示 */
+.van-theme-dark .van-dialog {
+  background-color: var(--van-background-2);
+  color: var(--van-text-color);
+}
+
+.van-theme-dark .van-popup {
+  background-color: var(--van-background-2);
+  color: var(--van-text-color);
+}
+
+/* 针对Notice Bar的暗黑模式优化 */
+.sync-notice {
+  background: rgba(25, 137, 250, 0.1) !important;
+  color: var(--van-primary-color) !important;
+  border: 1px solid rgba(25, 137, 250, 0.2);
+  border-radius: 8px;
+  transition: all 0.3s ease;
+}
+
+.van-theme-dark .sync-notice {
+  background: rgba(25, 137, 250, 0.15) !important;
+  color: #409eff !important;
+  border-color: rgba(25, 137, 250, 0.3);
+}
+
+/* Cell 组件暗黑模式优化 */
+.van-theme-dark .van-cell-group {
+  background-color: var(--van-background-2);
+}
+
+.van-theme-dark .van-cell {
+  background-color: var(--van-background-2);
+  color: var(--van-text-color);
+  border-bottom-color: var(--van-border-color);
+}
+
+.van-theme-dark .van-field {
+  background-color: var(--van-background-2);
+  color: var(--van-text-color);
+}
+
+.van-theme-dark .van-field__label {
+  color: var(--van-text-color-2);
+}
+
+.van-theme-dark .van-field__value {
+  color: var(--van-text-color);
+}
+
+/* Picker 组件暗黑模式优化 */
+.van-theme-dark .van-picker {
+  background-color: var(--van-background-2);
+}
+
+.van-theme-dark .van-picker-column__item {
+  color: var(--van-text-color);
+}
+
+/* Form 组件暗黑模式优化 */
+.van-theme-dark .van-form {
+  background-color: var(--van-background-2);
+}
+
+/* Button 组件在暗黑模式下的优化 */
+.van-theme-dark .van-button--default {
+  background-color: var(--van-background-3);
+  color: var(--van-text-color);
+  border-color: var(--van-border-color);
+}
+
+.van-theme-dark .van-button--default:active {
+  background-color: var(--van-active-color);
+}
+
+/* List 组件暗黑模式优化 */
+.van-theme-dark .van-list {
+  background-color: var(--van-background);
+}
+
+/* Progress 组件暗黑模式优化 */
+.van-theme-dark .van-progress {
+  background-color: var(--van-background-3);
+}
+
+.van-theme-dark .van-progress__pivot {
+  background-color: var(--van-primary-color);
+  color: white;
 }
 </style>
