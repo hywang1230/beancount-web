@@ -627,7 +627,7 @@ const loadTransactionData = async () => {
 
         // 更新收入表单数据
         const transactionData = {
-          amount: totalIncomeAmount.toString(),
+          amount: Math.abs(totalIncomeAmount).toString(),
           payee: transaction.payee || "",
           account: assetPosting.account,
           category: categories[0]?.category || "",

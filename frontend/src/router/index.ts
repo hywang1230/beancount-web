@@ -103,6 +103,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/views/h5/Settings.vue"),
         meta: { title: "设置", platform: "h5", requiresAuth: true },
       },
+      {
+        path: "sync",
+        name: "H5Sync",
+        component: () => import("@/views/h5/Sync.vue"),
+        meta: { title: "数据同步", platform: "h5", requiresAuth: true },
+      },
     ],
   },
 ];

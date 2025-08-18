@@ -15,4 +15,7 @@ apscheduler==3.10.4
 python-jose[cryptography]==3.3.0
 passlib[bcrypt]==1.7.4
 orjson==3.9.10
-portalocker==2.8.2 
+portalocker==2.8.2
+PyGithub==2.1.1
+watchdog==3.0.0
+cryptography==41.0.7 

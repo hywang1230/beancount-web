@@ -8,8 +8,25 @@ class Settings(BaseSettings):
     debug: bool = True
     
     # 数据目录配置
-    # Docker环境中使用 /app/data，本地开发使用 ../data
-    data_dir: Path = Path(os.getenv("DATA_DIR", "./data" if os.path.exists("/app") else "../data"))
+    # Docker环境中使用 /app/data，本地开发时动态确定data目录位置
+    @property
+    def data_dir(self) -> Path:
+        env_data_dir = os.getenv("DATA_DIR")
+        if env_data_dir:
+            return Path(env_data_dir)
+        
+        # Docker环境检测
+        if os.path.exists("/app"):
+            return Path("./data")
+        
+        # 本地开发环境：寻找项目根目录的data文件夹
+        current_dir = Path(__file__).resolve().parent.parent.parent.parent  # 从 backend/app/core 回到项目根目录
+        project_data_dir = current_dir / "data"
+        if project_data_dir.exists():
+            return project_data_dir
+        
+        # 如果项目根目录的data不存在，则使用相对路径
+        return Path("../data")
     default_beancount_file: str = "main.beancount"
     
     # API配置

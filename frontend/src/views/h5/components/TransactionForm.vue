@@ -426,6 +426,67 @@ watch(
   { immediate: true }
 );
 
+// 监听金额变化，用于编辑模式下单分类自动更新
+watch(
+  () => localFormData.value.amount,
+  (newAmount, oldAmount) => {
+    if (
+      localFormData.value.categories?.length === 1 &&
+      newAmount !== oldAmount &&
+      !isNaN(parseFloat(newAmount))
+    ) {
+      const amount = parseFloat(newAmount);
+      let categoryAmount = amount;
+      if (props.type === "income") {
+        categoryAmount = -amount;
+      }
+      localFormData.value.categories[0].amount = String(categoryAmount);
+    }
+  }
+);
+
+// 监听分类和金额变化，当只有一个分类时自动设置分类金额
+watch(
+  [
+    () => localFormData.value.amount,
+    () => localFormData.value.categories,
+    () => localFormData.value.categories?.[0]?.category,
+  ],
+  ([newAmount, newCategories]) => {
+    // 只有在非编辑模式且只有一个分类时处理
+    if (
+      !isEditingMultiCategory.value &&
+      newCategories &&
+      newCategories.length === 1 &&
+      newAmount &&
+      !isNaN(parseFloat(newAmount)) &&
+      parseFloat(newAmount) !== 0
+    ) {
+      const firstCategory = newCategories[0];
+      const amount = parseFloat(newAmount);
+
+      // 如果分类已选择但金额为空或为0，则自动设置金额
+      if (
+        firstCategory.category &&
+        (!firstCategory.amount || parseFloat(firstCategory.amount) === 0)
+      ) {
+        // 根据交易类型确定金额符号
+        let categoryAmount = amount;
+
+        // 支出：分类金额等于输入金额；收入：分类金额为输入金额相反数
+        if (props.type === "expense") {
+          categoryAmount = amount;
+        } else if (props.type === "income") {
+          categoryAmount = -amount;
+        }
+
+        firstCategory.amount = String(categoryAmount);
+      }
+    }
+  },
+  { deep: true, immediate: false }
+);
+
 // 弹窗状态
 const showCurrencySelector = ref(false);
 const showMultiCategorySheet = ref(false);
@@ -874,48 +935,6 @@ watch(
         nextTick(() => {
           isUpdatingFromProps = false;
         });
-      }
-    }
-  },
-  { deep: true, immediate: false }
-);
-
-// 监听分类和金额变化，当只有一个分类时自动设置分类金额
-watch(
-  [
-    () => localFormData.value.amount,
-    () => localFormData.value.categories,
-    () => localFormData.value.categories?.[0]?.category,
-  ],
-  ([newAmount, newCategories]) => {
-    // 只有在非编辑模式且只有一个分类时处理
-    if (
-      !isEditingMultiCategory.value &&
-      newCategories &&
-      newCategories.length === 1 &&
-      newAmount &&
-      !isNaN(parseFloat(newAmount)) &&
-      parseFloat(newAmount) !== 0
-    ) {
-      const firstCategory = newCategories[0];
-      const amount = parseFloat(newAmount);
-
-      // 如果分类已选择但金额为空或为0，则自动设置金额
-      if (
-        firstCategory.category &&
-        (!firstCategory.amount || parseFloat(firstCategory.amount) === 0)
-      ) {
-        // 根据交易类型确定金额符号
-        let categoryAmount = amount;
-
-        // 支出：分类金额等于输入金额；收入：分类金额为输入金额相反数
-        if (props.type === "expense") {
-          categoryAmount = amount;
-        } else if (props.type === "income") {
-          categoryAmount = -amount;
-        }
-
-        firstCategory.amount = String(categoryAmount);
       }
     }
   },

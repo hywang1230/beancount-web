@@ -1,5 +1,10 @@
 <template>
   <div class="h5-dashboard">
+    <!-- 同步状态指示器 -->
+    <div class="sync-status-container">
+      <SyncStatusIndicator />
+    </div>
+
     <!-- 账户概览卡片 -->
     <van-card class="balance-card">
       <template #title>
@@ -76,6 +81,7 @@
 
 <script setup lang="ts">
 import { getBalanceSheet, getMonthlySummary, getTrends } from "@/api/reports";
+import SyncStatusIndicator from "@/components/SyncStatusIndicator.vue";
 import { useThemeStore } from "@/stores/theme";
 import { LineChart } from "echarts/charts";
 import {
@@ -377,6 +383,13 @@ watch(isDark, () => {
   background-color: var(--van-background);
   min-height: 100vh;
   transition: background-color 0.3s ease;
+}
+
+.sync-status-container {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 100;
 }
 
 .balance-card {

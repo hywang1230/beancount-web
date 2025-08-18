@@ -116,6 +116,7 @@ const allMenuItems = [
   { path: "/h5/recurring", title: "周期记账", icon: "replay" },
   { path: "/h5/files", title: "文件管理", icon: "folder-o" },
   { path: "/h5/accounts", title: "账户管理", icon: "manager-o" },
+  { path: "/h5/sync", title: "数据同步", icon: "sync" },
 ];
 
 // 监听路由变化，更新当前激活的标签
@@ -190,7 +191,12 @@ const showMenu = computed(() => {
   }
 
   // 设置页面的子页面不显示菜单按钮
-  const settingsSubPages = ["/h5/recurring", "/h5/files", "/h5/accounts"];
+  const settingsSubPages = [
+    "/h5/recurring",
+    "/h5/files",
+    "/h5/accounts",
+    "/h5/sync",
+  ];
   if (settingsSubPages.includes(route.path)) {
     return false;
   }
