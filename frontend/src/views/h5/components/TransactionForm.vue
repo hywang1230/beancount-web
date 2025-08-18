@@ -333,6 +333,7 @@
       :show-confirm="false"
       @confirm="onDateConfirm"
       @close="showDateCalendar = false"
+      teleport="body"
     />
 
     <!-- 数字键盘 - 主金额输入 -->
@@ -1874,5 +1875,10 @@ onMounted(() => {
     min-height: 40px; /* 减小单元格高度 */
     padding: 6px 16px; /* 减小内边距 */
   }
+}
+
+/* 日历组件样式 - 确保在保存按钮之上 */
+:deep(.van-calendar) {
+  z-index: 2001 !important; /* 确保在保存按钮(z-index: 998)之上 */
 }
 </style>
