@@ -15,3 +15,7 @@ greenlet
 pydantic-settings
 python-multipart
 aiofiles
+# 代码质量工具
+black
+isort
+flake8

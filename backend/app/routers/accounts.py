@@ -4,19 +4,42 @@ from typing import List, Dict
 from app.services.beancount_service import beancount_service
 from app.services.account_order_service import account_order_service
 from app.models.schemas import AccountCreate, AccountClose, AccountRestore, AccountActionResponse
+from app.core.response import success_response, error_response, APIResponse
+from app.core.exceptions import BeancountWebException, AccountError
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 router = APIRouter()
 
-@router.get("/", response_model=List[str])
+@router.get("/")
 async def get_all_accounts():
     """获取活跃账户列表（排除已归档账户）"""
     try:
+        logger.info("Getting active accounts list")
         accounts = beancount_service.get_active_accounts()
         # 应用排序
         sorted_accounts = account_order_service.sort_accounts(accounts)
-        return sorted_accounts
+        
+        logger.info(f"Retrieved {len(sorted_accounts)} active accounts")
+        return success_response(
+            data=sorted_accounts,
+            message=f"成功获取 {len(sorted_accounts)} 个活跃账户"
+        )
+    except BeancountWebException as e:
+        logger.error(f"Business error getting accounts: {e.message}")
+        return error_response(
+            message=e.message,
+            code=e.code,
+            errors=[e.message]
+        )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"获取账户列表失败: {str(e)}")
+        logger.error(f"Unexpected error getting accounts: {e}")
+        return error_response(
+            message="获取账户列表失败",
+            code="INTERNAL_ERROR",
+            errors=[str(e)]
+        )
 
 @router.get("/archived", response_model=List[str])
 async def get_archived_accounts():
