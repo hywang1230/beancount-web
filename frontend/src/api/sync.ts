@@ -62,11 +62,11 @@ export interface SyncStatusResponse {
 }
 
 export interface SyncHistoryItem {
-  timestamp: string;
+  start_time: string;
   operation_type: "manual_sync" | "auto_sync" | "restore" | "conflict_resolve";
   status: SyncStatus;
   files_count: number;
-  message?: string;
+  logs?: string;
   duration?: number;
 }
 
