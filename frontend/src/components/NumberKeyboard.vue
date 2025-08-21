@@ -9,34 +9,6 @@
     @close="onClose"
   >
     <div class="number-keyboard">
-      <!-- 键盘标题栏 -->
-      <div class="keyboard-header">
-        <div class="keyboard-title">{{ title }}</div>
-        <div class="keyboard-actions">
-          <van-button
-            v-if="showClear"
-            type="default"
-            size="small"
-            @click="onClear"
-          >
-            清空
-          </van-button>
-          <van-button
-            v-if="showConfirm"
-            type="primary"
-            size="small"
-            @click="onConfirm"
-          >
-            确认
-          </van-button>
-        </div>
-      </div>
-
-      <!-- 输入值显示区域 -->
-      <div class="keyboard-display">
-        <div class="display-value">{{ displayValue }}</div>
-      </div>
-
       <!-- 键盘按键区域 -->
       <div class="keyboard-keys">
         <div class="key-row">
@@ -256,37 +228,7 @@ const visible = computed({
   set: (value) => emit("update:show", value),
 });
 
-// 显示值
-const displayValue = computed(() => {
-  // 如果在计算模式
-  if (props.showCalculation) {
-    // 如果有完整的表达式（计算结果），显示表达式
-    if (expression.value) {
-      return expression.value;
-    }
 
-    // 如果有操作符，构建表达式显示
-    if (currentOperator.value && previousValue.value) {
-      const baseExpression = `${previousValue.value} ${currentOperator.value}`;
-      // 如果有当前输入值，加上它；否则只显示操作符前的部分
-      return inputValue.value
-        ? `${baseExpression} ${inputValue.value}`
-        : baseExpression;
-    }
-  }
-
-  // 如果有当前输入值，格式化显示
-  if (inputValue.value) {
-    const value = inputValue.value;
-    // 如果是负数，确保负号在最前面
-    const isNegative = value.startsWith("-");
-    const cleanValue = isNegative ? value.slice(1) : value;
-    return isNegative ? `-${cleanValue}` : cleanValue;
-  }
-
-  // 如果什么都没有，返回空字符串（会显示placeholder）
-  return "";
-});
 
 // 检查是否可以添加小数点
 const canAddDecimal = computed(() => {
@@ -551,55 +493,7 @@ const onKeyTouchEnd = () => {
   -webkit-user-select: none;
 }
 
-/* 键盘标题栏 */
-.keyboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: var(--van-background);
-  border-bottom: 1px solid var(--van-border-color);
-}
 
-.keyboard-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--van-text-color);
-}
-
-.keyboard-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.keyboard-actions :deep(.van-button--small) {
-  height: 32px;
-  padding: 0 12px;
-  font-size: 14px;
-}
-
-/* 显示区域 */
-.keyboard-display {
-  padding: 16px 20px;
-  background: var(--van-background);
-  border-bottom: 1px solid var(--van-border-color);
-}
-
-.display-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--van-text-color);
-  text-align: right;
-  min-height: 32px;
-  line-height: 32px;
-  letter-spacing: 1px;
-}
-
-.display-value:empty::before {
-  content: attr(data-placeholder);
-  color: var(--van-text-color-3);
-  font-weight: normal;
-}
 
 /* 键盘按键区域 */
 .keyboard-keys {
