@@ -171,80 +171,6 @@ const uploadActions = [
   { name: "拍照上传", icon: "photograph" },
 ];
 
-const formatFileInfo = (file: any) => {
-  const sizeText = formatFileSize(file.size);
-  const dateText = new Date(file.uploadDate).toLocaleDateString("zh-CN");
-  return `${sizeText} • ${dateText}`;
-};
-
-const formatFileSize = (bytes: number) => {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-};
-
-const getFileIcon = (type: string) => {
-  const iconMap: Record<string, string> = {
-    beancount: "bill-o",
-    csv: "records",
-    excel: "records",
-    pdf: "description",
-    image: "photo-o",
-    other: "folder-o",
-  };
-  return iconMap[type] || "folder-o";
-};
-
-const viewFile = async (file: any) => {
-  try {
-    showLoadingToast({
-      message: "加载中...",
-      forbidClick: true,
-    });
-
-    const result = (await getFileContent(file.name)) as any;
-    const contentData = result || {};
-
-    currentFileName.value = file.name;
-    fileContent.value = contentData.content || "";
-    dialogMode.value = "view";
-    dialogTitle.value = `查看文件: ${file.name}`;
-    showFileDialog.value = true;
-
-    closeToast();
-  } catch (error) {
-    closeToast();
-    showToast("获取文件内容失败");
-    // console.error("获取文件内容失败:", error);
-  }
-};
-
-// 编辑文件
-const editFile = async (file: any) => {
-  try {
-    showLoadingToast({
-      message: "加载中...",
-      forbidClick: true,
-    });
-
-    const result = (await getFileContent(file.name)) as any;
-    const contentData = result || {};
-
-    currentFileName.value = file.name;
-    fileContent.value = contentData.content || "";
-    dialogMode.value = "edit";
-    dialogTitle.value = `编辑文件: ${file.name}`;
-    showFileDialog.value = true;
-
-    closeToast();
-  } catch (error) {
-    closeToast();
-    showToast("获取文件内容失败");
-    // console.error("获取文件内容失败:", error);
-  }
-};
 
 // 保存文件
 const saveFile = async () => {
@@ -274,100 +200,6 @@ const saveFile = async () => {
   }
 };
 
-// 验证文件
-const validateFileHandler = async (file: any) => {
-  try {
-    // 设置验证状态
-    file.validating = true;
-
-    const result = (await validateFile(file.name)) as any;
-    const validationData = result || {};
-
-    if (validationData.valid) {
-      showToast(
-        `文件验证通过，包含 ${validationData.entries_count || 0} 条记录`
-      );
-    } else {
-      showToast(
-        `文件验证失败，发现 ${validationData.errors_count || 0} 个错误`
-      );
-
-      if (validationData.errors && validationData.errors.length > 0) {
-        // 在移动端简化错误显示
-        const errorText = validationData.errors.slice(0, 3).join("\n");
-        const moreErrors =
-          validationData.errors.length > 3
-            ? `\n... 还有 ${validationData.errors.length - 3} 个错误`
-            : "";
-        showToast(`验证错误:\n${errorText}${moreErrors}`);
-      }
-    }
-  } catch (error) {
-    showToast("验证文件失败");
-    // console.error("验证文件失败:", error);
-  } finally {
-    file.validating = false;
-  }
-};
-
-const downloadFile = async (file: FileItem) => {
-  try {
-    showLoadingToast({
-      message: "下载中...",
-      forbidClick: true,
-    });
-
-    const result = (await getFileContent(file.name)) as any;
-    const contentData = result || {};
-    const content = contentData.content || "";
-
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = file.name;
-    link.click();
-
-    window.URL.revokeObjectURL(url);
-
-    closeToast();
-    showToast(`${file.name} 下载成功`);
-  } catch (error) {
-    closeToast();
-    showToast("下载失败");
-    // console.error("下载文件失败:", error);
-  }
-};
-
-const deleteFileHandler = async (file: any) => {
-  try {
-    await showConfirmDialog({
-      title: "确认删除",
-      message: "确定要删除这个文件吗？",
-    });
-
-    showLoadingToast({
-      message: "删除中...",
-      forbidClick: true,
-    });
-
-    await deleteFile(file.name);
-
-    // 从列表中移除
-    const index = files.value.findIndex((f) => f.id === file.id);
-    if (index > -1) {
-      files.value.splice(index, 1);
-    }
-
-    closeToast();
-    showToast("删除成功");
-  } catch (error) {
-    closeToast();
-    showToast("删除失败");
-    // console.error("删除文件失败:", error);
-  }
-};
 
 const onSearch = () => {
   loadFiles(true);
@@ -397,9 +229,6 @@ const onFileChanged = async () => {
   }
 };
 
-const onLoad = async () => {
-  await loadFiles(false);
-};
 
 const onUploadSelect = (action: any) => {
   showUploadAction.value = false;

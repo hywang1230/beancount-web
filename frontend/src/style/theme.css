@@ -8,6 +8,7 @@
   --color-warning: #ff976a;
   --color-danger: #ee0a24;
   --color-info: #909399;
+  --color-white: #ffffff;
   
   /* 应用背景色 - 使用 Vant 变量 */
   --app-background: var(--van-background);
@@ -21,15 +22,42 @@
   /* 边框颜色 - 使用 Vant 变量 */
   --app-border-color: var(--van-border-color);
   
+  /* 自定义变量映射到 Vant 变量 */
+  --bg-color: var(--van-background-2);
+  --bg-color-secondary: var(--van-background);
+  --bg-color-tertiary: var(--van-background-3, #f7f8fa);
+  
+  --text-color: var(--van-text-color);
+  --text-color-secondary: var(--van-text-color-2);
+  --text-color-tertiary: var(--van-text-color-3);
+  --text-color-placeholder: var(--van-text-color-3);
+  
+  --border-color: var(--van-border-color);
+  --border-color-lighter: var(--van-border-color);
+  
   /* 阴影效果 */
   --shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.1);
   --shadow-base: 0 2px 4px rgba(0, 0, 0, 0.12), 0 0 6px rgba(0, 0, 0, 0.04);
 }
 
-/* Vant 暗黑模式下的阴影调整 */
+/* Vant 暗黑模式下的变量调整 */
 .van-theme-dark {
+  /* 阴影调整 */
   --shadow-light: 0 2px 12px 0 rgba(0, 0, 0, 0.3);
   --shadow-base: 0 2px 4px rgba(0, 0, 0, 0.24), 0 0 6px rgba(0, 0, 0, 0.12);
+  
+  /* 暗黑模式下的自定义变量映射 */
+  --bg-color: var(--van-background-2);
+  --bg-color-secondary: var(--van-background);
+  --bg-color-tertiary: var(--van-background-3, #1f1f1f);
+  
+  --text-color: var(--van-text-color);
+  --text-color-secondary: var(--van-text-color-2);
+  --text-color-tertiary: var(--van-text-color-3);
+  --text-color-placeholder: var(--van-text-color-3);
+  
+  --border-color: var(--van-border-color);
+  --border-color-lighter: var(--van-border-color);
 }
 
 /* 基础样式应用主题变量 */
