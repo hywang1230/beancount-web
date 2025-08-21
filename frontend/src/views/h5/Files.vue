@@ -130,8 +130,8 @@ import {
   showToast,
 } from "vant";
 import { onMounted, ref } from "vue";
-import FileTreeNodeComponent from "./components/FileTreeNode.vue";
-import YearlyFileManager from "./components/YearlyFileManager.vue";
+import FileTreeNodeComponent from "@/views/h5/components/FileTreeNode.vue";
+import YearlyFileManager from "@/views/h5/components/YearlyFileManager.vue";
 
 // 视图状态
 const viewMode = ref<"tree" | "yearly">("tree");
