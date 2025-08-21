@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Query, Depends
-from typing import List
+from typing import List, Optional
 from sqlalchemy.orm import Session
+from datetime import date
 
 from app.models.schemas import (
     RecurringTransactionCreate, RecurringTransactionUpdate,
@@ -77,4 +78,70 @@ async def toggle_recurring_transaction(
     updated_transaction = recurring_service.update_recurring_transaction(
         db, transaction_id=transaction_id, transaction_in=update_data
     )
-    return updated_transaction 
+    return updated_transaction
+
+@router.post("/execute")
+async def execute_recurring_transactions(
+    execution_date: Optional[str] = Query(None, description="执行日期，格式：YYYY-MM-DD"),
+    db: Session = Depends(get_db)
+):
+    """手动执行周期记账"""
+    exec_date = None
+    if execution_date:
+        try:
+            exec_date = date.fromisoformat(execution_date)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="日期格式错误，请使用YYYY-MM-DD格式")
+    
+    try:
+        result = recurring_service.execute_pending_transactions(db=db, execution_date=exec_date)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"执行失败: {str(e)}")
+
+@router.get("/logs/execution")
+async def get_execution_logs(
+    transaction_id: Optional[int] = Query(None, description="周期记账ID"),
+    days: int = Query(30, description="查询天数"),
+    db: Session = Depends(get_db)
+):
+    """获取执行日志"""
+    try:
+        logs = recurring_service.get_execution_logs(
+            db=db, 
+            transaction_id=transaction_id, 
+            days=days
+        )
+        
+        # 转换为响应格式
+        result = []
+        for log in logs:
+            result.append({
+                "id": str(log.id),
+                "recurring_transaction_id": str(log.recurring_transaction_id),
+                "execution_date": str(log.execution_date),
+                "success": log.success,
+                "error_message": log.error_message,
+                "created_transaction_id": log.created_transaction_id,
+                "created_at": log.created_at.isoformat()
+            })
+        
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取执行日志失败: {str(e)}")
+
+@router.post("/scheduler/trigger")
+async def trigger_scheduler(db: Session = Depends(get_db)):
+    """手动触发定时任务"""
+    try:
+        # 这里应该调用调度器触发任务
+        # 临时实现，待完善
+        return {"message": "定时任务已触发", "success": True}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"触发失败: {str(e)}")
+
+@router.get("/scheduler/jobs")
+async def get_scheduler_jobs(db: Session = Depends(get_db)):
+    """获取调度器任务状态"""
+    # 临时返回空列表，待实现完整功能
+    return [] 

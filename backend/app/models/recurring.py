@@ -1,4 +1,5 @@
-from sqlalchemy import Column, Integer, String, Date, Float, JSON, Boolean, DateTime
+from sqlalchemy import Column, Integer, String, Date, Float, JSON, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy.orm import relationship
 from app.database import Base
 import datetime
 
@@ -26,3 +27,22 @@ class Recurring(Base):
     updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
     last_executed = Column(Date)
     next_execution = Column(Date)
+    
+    # 关联关系
+    execution_logs = relationship("RecurringExecutionLog", back_populates="recurring_transaction")
+
+
+class RecurringExecutionLog(Base):
+    """周期记账执行日志"""
+    __tablename__ = "recurring_execution_logs"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    recurring_transaction_id = Column(Integer, ForeignKey("recurring_transactions.id", ondelete="CASCADE"), nullable=False)
+    execution_date = Column(Date, nullable=False)
+    success = Column(Boolean, nullable=False)
+    error_message = Column(Text)
+    created_transaction_id = Column(String)  # 创建的交易ID
+    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    
+    # 关联关系
+    recurring_transaction = relationship("Recurring", back_populates="execution_logs")
