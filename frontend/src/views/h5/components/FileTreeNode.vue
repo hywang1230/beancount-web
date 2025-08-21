@@ -85,7 +85,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import type { FileTreeNode as FileTreeNodeType } from '@/api/files';
 
 interface Props {

@@ -249,10 +249,10 @@ const cleanupEmptyFiles = async () => {
       forbidClick: true,
     });
     
-    const result = await cleanupEmptyYearlyFiles();
+    const response = await cleanupEmptyYearlyFiles();
     
     closeToast();
-    showToast(result.message || '清理完成');
+    showToast((response as any).message || '清理完成');
     
     // 重新加载年份列表
     await loadYears();
