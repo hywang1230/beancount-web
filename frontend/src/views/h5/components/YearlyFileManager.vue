@@ -11,9 +11,9 @@
         @click="showYearActions(year)"
       >
         <template #right-icon>
-          <van-tag v-if="year === currentYear" type="primary" size="small">当前</van-tag>
-          <van-tag v-if="hasYearFile(year)" type="success" size="small">已创建</van-tag>
-          <van-tag v-else type="default" size="small">未创建</van-tag>
+          <van-tag v-if="year === currentYear" type="primary">当前</van-tag>
+          <van-tag v-if="hasYearFile(year)" type="success">已创建</van-tag>
+          <van-tag v-else type="default">未创建</van-tag>
         </template>
       </van-cell>
     </van-cell-group>

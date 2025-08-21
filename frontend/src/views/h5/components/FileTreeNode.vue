@@ -27,8 +27,8 @@
         
         <template #right-icon>
           <div class="file-node-actions">
-            <van-tag v-if="node.is_main" type="success" size="small">主文件</van-tag>
-            <van-tag v-if="node.error" type="danger" size="small">错误</van-tag>
+            <van-tag v-if="node.is_main" type="success">主文件</van-tag>
+            <van-tag v-if="node.error" type="danger">错误</van-tag>
             <van-button
               size="small"
               type="primary"
