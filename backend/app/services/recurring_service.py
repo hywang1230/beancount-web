@@ -9,6 +9,7 @@ from sqlalchemy import text
 from app.models.schemas import RecurringTransactionCreate, RecurringTransactionUpdate
 from app.models.recurring import Recurring as RecurringModel, RecurringExecutionLog
 from app.services.beancount_service import beancount_service
+from app.core.config import settings
 
 # 配置日志
 logger = logging.getLogger(__name__)

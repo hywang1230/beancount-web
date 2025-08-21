@@ -323,7 +323,7 @@ class GitHubSyncService:
     
     async def _add_history_record(self, operation_type: str, status: SyncStatus, files_count: int, message: str = None, duration: Optional[float] = None):
         """添加历史记录到数据库"""
-        start_time = datetime.now()
+        start_time = settings.now()
         log_entry = SyncLog(
             start_time=start_time,
             end_time=start_time + timedelta(seconds=duration) if duration is not None else start_time,

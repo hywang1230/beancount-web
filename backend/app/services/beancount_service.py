@@ -215,7 +215,7 @@ class BeancountService:
         entries, _, options_map = self._load_entries()
         
         if date_filter is None:
-            date_filter = datetime.now().date()
+            date_filter = settings.now().date()
         
         # 获取默认账户名称
         default_accounts = self._get_default_accounts()

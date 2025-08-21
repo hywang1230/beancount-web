@@ -95,6 +95,8 @@ class CacheManager:
     def _init_db(self):
         """初始化缓存数据库"""
         with sqlite3.connect(self.db_path) as conn:
+            # 设置时区为东八区
+            conn.execute("PRAGMA timezone = '+08:00'")
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS cache_entries (
                     key TEXT PRIMARY KEY,
@@ -147,7 +149,7 @@ class CacheManager:
                     cursor = conn.execute("""
                         SELECT value, version, expires_at FROM cache_entries 
                         WHERE key = ? AND (expires_at IS NULL OR expires_at > ?)
-                    """, (key, datetime.now().isoformat()))
+                    """, (key, settings.now().isoformat()))
                     
                     row = cursor.fetchone()
                     if row:
@@ -160,6 +162,7 @@ class CacheManager:
                             return value
             except Exception as e:
                 # print(f"读取持久化缓存失败: {e}")
+                pass
         
         return None
     
@@ -173,7 +176,7 @@ class CacheManager:
             try:
                 expires_at = None
                 if ttl_seconds:
-                    expires_at = (datetime.now().timestamp() + ttl_seconds)
+                    expires_at = (settings.now().timestamp() + ttl_seconds)
                     expires_at = datetime.fromtimestamp(expires_at).isoformat()
                 
                 value_str = self._serialize_value(value)
@@ -184,9 +187,10 @@ class CacheManager:
                         (key, value, version, created_at, expires_at)
                         VALUES (?, ?, ?, ?, ?)
                     """, (key, value_str, self.entries_version, 
-                          datetime.now().isoformat(), expires_at))
+                          settings.now().isoformat(), expires_at))
             except Exception as e:
                 # print(f"写入持久化缓存失败: {e}")
+                pass
     
     def invalidate_by_pattern(self, pattern: str):
         """按模式使缓存失效"""
@@ -197,6 +201,7 @@ class CacheManager:
                 conn.execute("DELETE FROM cache_entries WHERE key LIKE ?", (f"%{pattern}%",))
         except Exception as e:
             # print(f"清理持久化缓存失败: {e}")
+            pass
     
     def bump_version(self):
         """增加版本号，使所有缓存失效"""
@@ -210,9 +215,10 @@ class CacheManager:
                     conn.execute("""
                         DELETE FROM cache_entries 
                         WHERE version < ? OR (expires_at IS NOT NULL AND expires_at < ?)
-                    """, (self.entries_version, datetime.now().isoformat()))
+                    """, (self.entries_version, settings.now().isoformat()))
             except Exception as e:
                 # print(f"清理过期缓存失败: {e}")
+                pass
     
     def cache_key(self, prefix: str, **kwargs) -> str:
         """生成缓存键"""

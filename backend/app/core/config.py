@@ -1,11 +1,37 @@
 from pydantic_settings import BaseSettings
 from pathlib import Path
 import os
+import datetime
+from zoneinfo import ZoneInfo
 
 class Settings(BaseSettings):
     # 应用基础配置
     app_name: str = "Beancount Web"
     debug: bool = True
+    
+    # 时区配置
+    timezone: str = "Asia/Shanghai"
+    
+    @property
+    def tz(self) -> ZoneInfo:
+        """获取时区对象"""
+        return ZoneInfo(self.timezone)
+    
+    def now(self) -> datetime.datetime:
+        """获取当前时区的时间"""
+        return datetime.datetime.now(self.tz)
+    
+    def utc_to_local(self, utc_dt: datetime.datetime) -> datetime.datetime:
+        """将UTC时间转换为本地时间"""
+        if utc_dt.tzinfo is None:
+            utc_dt = utc_dt.replace(tzinfo=ZoneInfo("UTC"))
+        return utc_dt.astimezone(self.tz)
+    
+    def local_to_utc(self, local_dt: datetime.datetime) -> datetime.datetime:
+        """将本地时间转换为UTC时间"""
+        if local_dt.tzinfo is None:
+            local_dt = local_dt.replace(tzinfo=self.tz)
+        return local_dt.astimezone(ZoneInfo("UTC"))
     
     # 数据目录配置
     # Docker环境中使用 /app/data，本地开发时动态确定data目录位置

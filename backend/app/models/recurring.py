@@ -1,6 +1,7 @@
 from sqlalchemy import Column, Integer, String, Date, Float, JSON, Boolean, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
+from app.core.config import settings
 import datetime
 
 
@@ -23,8 +24,8 @@ class Recurring(Base):
     postings = Column(JSON, nullable=False) # The actual transaction postings
 
     is_active = Column(Boolean, default=True)
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.datetime.utcnow, onupdate=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: settings.now())
+    updated_at = Column(DateTime, default=lambda: settings.now(), onupdate=lambda: settings.now())
     last_executed = Column(Date)
     next_execution = Column(Date)
     
@@ -42,7 +43,7 @@ class RecurringExecutionLog(Base):
     success = Column(Boolean, nullable=False)
     error_message = Column(Text)
     created_transaction_id = Column(String)  # 创建的交易ID
-    created_at = Column(DateTime, default=datetime.datetime.utcnow)
+    created_at = Column(DateTime, default=lambda: settings.now())
     
     # 关联关系
     recurring_transaction = relationship("Recurring", back_populates="execution_logs")
