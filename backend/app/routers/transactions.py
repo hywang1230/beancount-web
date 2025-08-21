@@ -1,11 +1,28 @@
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Depends, BackgroundTasks
+from sqlalchemy.orm import Session
+from app.database import get_db
+from app.services.github_sync_service import GitHubSyncService
+
 from typing import List, Optional
 from datetime import date
 
 from app.models.schemas import TransactionResponse, TransactionCreate, TransactionFilter
 from app.services.beancount_service import beancount_service
+from app.utils.auth import get_current_user
 
 router = APIRouter()
+
+async def trigger_auto_sync(db: Session):
+    """Helper function to run sync in the background."""
+    sync_service = GitHubSyncService(db=db)
+    config = await sync_service.get_config()
+    if config and config.auto_sync:
+        try:
+            print("Auto-sync triggered by transaction change.")
+            await sync_service._auto_sync()
+        except Exception as e:
+            print(f"Background auto-sync failed: {e}")
+
 
 @router.get("/")
 async def get_transactions(
@@ -83,7 +100,12 @@ async def validate_transaction(transaction: TransactionCreate):
         raise HTTPException(status_code=500, detail=f"校验交易失败: {str(e)}")
 
 @router.post("/", response_model=dict)
-async def create_transaction(transaction: TransactionCreate):
+async def create_transaction(
+    transaction: TransactionCreate,
+    background_tasks: BackgroundTasks,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
     """创建新交易"""
     try:
         # 转换为字典格式
@@ -107,6 +129,8 @@ async def create_transaction(transaction: TransactionCreate):
         success = beancount_service.add_transaction(transaction_data)
         
         if success:
+            # Add the sync task to run in the background
+            background_tasks.add_task(trigger_auto_sync, db)
             return {"message": "交易创建成功", "success": True}
         else:
             raise HTTPException(status_code=400, detail="交易创建失败")

@@ -4,98 +4,37 @@ import hashlib
 import base64
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import List, Dict, Optional, Tuple, Any, TYPE_CHECKING
+from typing import List, Dict, Optional, Tuple, Any
 import asyncio
 import aiofiles
 from cryptography.fernet import Fernet
 
 from github import Github, GithubException
-from watchdog.events import FileSystemEventHandler
-
-if TYPE_CHECKING:
-    from watchdog.observers import Observer
+from sqlalchemy.orm import Session
 
 from app.core.config import settings
 from app.models.sync_schemas import (
     GitHubSyncConfig, SyncStatus, ConflictResolution, FileChangeInfo,
     SyncOperation, SyncStatusResponse, SyncHistoryItem, ConflictFile
 )
-
-
-class FileWatcher(FileSystemEventHandler):
-    """文件系统监控器"""
-    
-    def __init__(self, sync_service):
-        self.sync_service = sync_service
-        self.last_change_time = {}
-        self.debounce_time = 2  # 防抖时间(秒)
-    
-    def on_modified(self, event):
-        if event.is_directory:
-            return
-        
-        file_path = Path(event.src_path)
-        # 只监控data目录下的相关文件
-        if not self._should_sync_file(file_path):
-            return
-        
-        current_time = datetime.now()
-        last_time = self.last_change_time.get(str(file_path))
-        
-        # 防抖处理
-        if last_time and (current_time - last_time).seconds < self.debounce_time:
-            return
-        
-        self.last_change_time[str(file_path)] = current_time
-        
-        # 异步触发同步检查 - 使用线程安全的方式
-        try:
-            loop = asyncio.get_running_loop()
-            loop.create_task(self.sync_service._check_auto_sync())
-        except RuntimeError:
-            # 如果没有运行中的事件循环，使用新的事件循环
-            def run_sync_check():
-                asyncio.run(self.sync_service._check_auto_sync())
-            
-            import threading
-            thread = threading.Thread(target=run_sync_check)
-            thread.daemon = True
-            thread.start()
-    
-    def _should_sync_file(self, file_path: Path) -> bool:
-        """检查文件是否应该被同步 - 只监控 beancount 文件"""
-        try:
-            # 首先检查文件扩展名
-            file_path_str = str(file_path).lower()
-            if not (file_path_str.endswith('.bean') or file_path_str.endswith('.beancount')):
-                return False
-            
-            # 相对于data目录的路径
-            rel_path = file_path.relative_to(settings.data_dir)
-            return self.sync_service._match_patterns(str(rel_path))
-        except ValueError:
-            return False
+from app.models.setting import Setting
+from app.models.sync import SyncLog
+from app.models.github_sync import GitHubSync
 
 
 class GitHubSyncService:
     """GitHub同步服务"""
     
-    def __init__(self):
+    def __init__(self, db: Session):
+        self.db = db
         self.data_dir = settings.data_dir
-        self.config_file = self.data_dir / ".sync_config.json"
-        self.history_file = self.data_dir / ".sync_history.json"
-        self.status_file = self.data_dir / ".sync_status.json"
         
         self._config: Optional[GitHubSyncConfig] = None
         self._github_client: Optional[Github] = None
         self._current_status = SyncStatus.IDLE
         self._current_operation: Optional[SyncOperation] = None
-        self._file_watcher = None  # Optional[Observer]
         
-        # 加密密钥(在生产环境中应该从环境变量读取)
         self._encryption_key = self._get_or_create_encryption_key()
-        
-        # 标记是否已初始化
         self._initialized = False
     
     async def _ensure_initialized(self):
@@ -125,71 +64,62 @@ class GitHubSyncService:
         return fernet.decrypt(encrypted_token.encode()).decode()
     
     async def _load_config(self):
-        """加载同步配置"""
+        """从数据库加载同步配置 (github_sync table)"""
         try:
-            if self.config_file.exists():
-                async with aiofiles.open(self.config_file, 'r', encoding='utf-8') as f:
-                    config_data = json.loads(await f.read())
-                
-                # 解密token
-                if 'token' in config_data:
-                    config_data['token'] = self._decrypt_token(config_data['token'])
-                
-                self._config = GitHubSyncConfig(**config_data)
-                self._init_github_client()
-                
-                # 启动文件监控
-                if self._config.auto_sync:
-                    await self._start_file_watcher()
+            sync_config_db = self.db.query(GitHubSync).first()
+            if not sync_config_db:
+                return
+
+            config_data = {
+                "repository": sync_config_db.repository,
+                "branch": sync_config_db.branch,
+                "token": self._decrypt_token(sync_config_db.token),
+                "auto_sync": sync_config_db.auto_sync,
+                "sync_interval": sync_config_db.sync_interval,
+                "include_files": sync_config_db.include_files,
+                "exclude_files": sync_config_db.exclude_files,
+                "conflict_resolution": sync_config_db.conflict_resolution,
+            }
+            
+            self._config = GitHubSyncConfig(**config_data)
+            self._init_github_client()
         except Exception as e:
-            print(f"加载同步配置失败: {e}")
-    
+            print(f"从数据库加载同步配置失败: {e}")
+
     async def _save_config(self):
-        """保存同步配置"""
+        """保存同步配置到数据库 (github_sync table)"""
         if not self._config:
             return
         
-        config_data = self._config.model_dump()
-        # 加密token
-        config_data['token'] = self._encrypt_token(config_data['token'])
+        db_config = self.db.query(GitHubSync).first()
+        if not db_config:
+            db_config = GitHubSync()
+            self.db.add(db_config)
         
-        async with aiofiles.open(self.config_file, 'w', encoding='utf-8') as f:
-            await f.write(json.dumps(config_data, ensure_ascii=False, indent=2))
+        config_data = self._config.model_dump()
+        
+        for key, value in config_data.items():
+            if key == 'token':
+                setattr(db_config, key, self._encrypt_token(value))
+            else:
+                setattr(db_config, key, value)
+        
+        self.db.commit()
     
     def _init_github_client(self):
         """初始化GitHub客户端"""
         if self._config and self._config.token:
             self._github_client = Github(self._config.token)
     
-    async def _start_file_watcher(self):
-        """启动文件监控"""
-        if self._file_watcher:
-            self._file_watcher.stop()
-        
-        from watchdog.observers import Observer
-        self._file_watcher = Observer()
-        event_handler = FileWatcher(self)
-        self._file_watcher.schedule(event_handler, str(self.data_dir), recursive=True)
-        self._file_watcher.start()
-    
-    async def _stop_file_watcher(self):
-        """停止文件监控"""
-        if self._file_watcher:
-            self._file_watcher.stop()
-            self._file_watcher.join()
-            self._file_watcher = None
-    
     def _match_patterns(self, file_path: str) -> bool:
         """检查文件是否匹配同步模式 - 只同步 beancount 文件"""
         if not file_path:
             return False
         
-        # 直接检查文件扩展名，只同步 .bean 和 .beancount 文件
         file_path_lower = file_path.lower()
         if not (file_path_lower.endswith('.bean') or file_path_lower.endswith('.beancount')):
             return False
         
-        # 如果有配置，则额外检查排除模式
         if self._config:
             import fnmatch
             for pattern in self._config.exclude_files:
@@ -202,22 +132,10 @@ class GitHubSyncService:
         """配置GitHub同步"""
         await self._ensure_initialized()
         try:
-            # 创建配置对象
             self._config = GitHubSyncConfig(**config_request)
-            
-            # 测试GitHub连接
             self._init_github_client()
             await self._test_github_connection()
-            
-            # 保存配置
             await self._save_config()
-            
-            # 重新启动文件监控
-            if self._config.auto_sync:
-                await self._start_file_watcher()
-            else:
-                await self._stop_file_watcher()
-            
             return self._config
             
         except Exception as e:
@@ -318,14 +236,17 @@ class GitHubSyncService:
     
     async def manual_sync(self, force: bool = False, files: Optional[List[str]] = None) -> bool:
         """手动同步"""
+        await self._ensure_initialized()
         return await self._sync(operation_type="manual_sync", force=force, files=files)
     
     async def _auto_sync(self, force: bool = False, files: Optional[List[str]] = None) -> bool:
         """自动同步"""
+        await self._ensure_initialized()
         return await self._sync(operation_type="auto_sync", force=force, files=files)
     
     async def _sync(self, operation_type: str, force: bool = False, files: Optional[List[str]] = None) -> bool:
         """通用同步方法"""
+        await self._ensure_initialized()
         if self._current_status == SyncStatus.SYNCING:
             raise Exception("正在同步中，请稍后再试")
         
@@ -400,74 +321,39 @@ class GitHubSyncService:
                 print(f"同步文件 {file_info.file_path} 失败: {e}")
                 raise
     
-    async def _add_history_record(self, operation_type: str, status: SyncStatus, files_count: int, message: str = None):
-        """添加历史记录"""
-        try:
-            history = []
-            if self.history_file.exists():
-                async with aiofiles.open(self.history_file, 'r', encoding='utf-8') as f:
-                    history = json.loads(await f.read())
-            
-            history.insert(0, {
-                "timestamp": datetime.now().isoformat(),
-                "operation_type": operation_type,
-                "status": status.value,
-                "files_count": files_count,
-                "message": message
-            })
-            
-            # 保留最近100条记录
-            history = history[:100]
-            
-            async with aiofiles.open(self.history_file, 'w', encoding='utf-8') as f:
-                await f.write(json.dumps(history, ensure_ascii=False, indent=2))
-                
-        except Exception as e:
-            print(f"保存历史记录失败: {e}")
-    
+    async def _add_history_record(self, operation_type: str, status: SyncStatus, files_count: int, message: str = None, duration: Optional[float] = None):
+        """添加历史记录到数据库"""
+        start_time = datetime.now()
+        log_entry = SyncLog(
+            start_time=start_time,
+            end_time=start_time + timedelta(seconds=duration) if duration is not None else start_time,
+            status=status.value,
+            logs=message or "",
+            operation_type=operation_type,
+            files_count=files_count,
+            duration=duration
+        )
+        self.db.add(log_entry)
+        self.db.commit()
+
     async def get_sync_history(self, page: int = 1, page_size: int = 20) -> Dict:
-        """获取同步历史"""
-        try:
-            if not self.history_file.exists():
-                return {"history": [], "total_count": 0, "page": page, "page_size": page_size}
-            
-            async with aiofiles.open(self.history_file, 'r', encoding='utf-8') as f:
-                all_history = json.loads(await f.read())
-            
-            # 分页
-            start = (page - 1) * page_size
-            end = start + page_size
-            page_history = all_history[start:end]
-            
-            return {
-                "history": page_history,
-                "total_count": len(all_history),
-                "page": page,
-                "page_size": page_size
-            }
-            
-        except Exception as e:
-            print(f"获取历史记录失败: {e}")
-            return {"history": [], "total_count": 0, "page": page, "page_size": page_size}
-    
-    async def _check_auto_sync(self):
-        """检查是否需要自动同步"""
-        if not self._config or not self._config.auto_sync:
-            return
+        """从数据库获取同步历史"""
+        total_count = self.db.query(SyncLog).count()
         
-        if self._current_status == SyncStatus.SYNCING:
-            return
+        offset = (page - 1) * page_size
+        history_query = self.db.query(SyncLog).order_by(SyncLog.start_time.desc())
+        page_history = self.db.query(SyncLog).order_by(SyncLog.start_time.desc()).offset(offset).limit(page_size).all()
         
-        # 这里可以添加更复杂的自动同步逻辑
-        # 比如检查上次同步时间、文件变更数量等
-        
-        try:
-            await self._auto_sync()
-        except Exception as e:
-            print(f"自动同步失败: {e}")
+        return {
+            "history": page_history,
+            "total_count": total_count,
+            "page": page,
+            "page_size": page_size
+        }
     
     async def restore_from_github(self, commit_hash: Optional[str] = None, force: bool = False) -> bool:
         """从GitHub恢复数据"""
+        await self._ensure_initialized()
         if not self._config or not self._github_client:
             raise Exception("同步配置未设置")
         
@@ -542,8 +428,4 @@ class GitHubSyncService:
     
     async def shutdown(self):
         """关闭服务"""
-        await self._stop_file_watcher()
-
-
-# 全局同步服务实例
-github_sync_service = GitHubSyncService()
+        pass # No-op now that file watcher is removed

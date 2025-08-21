@@ -32,9 +32,11 @@ class Settings(BaseSettings):
     # API配置
     api_prefix: str = "/api"
     
-    # 数据库配置（可选，用于缓存）
-    database_url: str = "sqlite:///./cache.db"
-    
+    # 数据库配置
+    @property
+    def database_url(self) -> str:
+        return f"sqlite:///{self.data_dir / 'beancount-web.db'}"
+
     # Beancount配置
     default_currency: str = "CNY"
     
