@@ -4,7 +4,6 @@
 """
 from beancount.core.data import Transaction
 from beancount.core import getters
-from decimal import Decimal
 from datetime import date
 from typing import List, Optional, Dict, Any
 

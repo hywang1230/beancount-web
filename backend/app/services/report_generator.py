@@ -257,7 +257,10 @@ class ReportGenerator:
     
     def _process_accounts_with_exchange(self, accounts: List[AccountInfo], default_currency: str, entries: List[Any], date_filter: date) -> List[AccountInfo]:
         """处理账户汇率转换和货币统一"""
-        processed_accounts = []
+        return self._merge_and_convert_accounts(accounts, default_currency, entries, date_filter)
+    
+    def _merge_and_convert_accounts(self, accounts: List[AccountInfo], default_currency: str, entries: List[Any], date_filter: date) -> List[AccountInfo]:
+        """合并相同账户并进行汇率转换的通用方法"""
         merged_accounts = {}
         
         # 获取汇率信息
@@ -283,42 +286,15 @@ class ReportGenerator:
             else:
                 merged_accounts[display_acc.name] = display_acc
         
-        for account in merged_accounts.values():
-            processed_accounts.append(account)
-        
-        return processed_accounts
+        return list(merged_accounts.values())
     
     def _process_equity_accounts(self, equity: List[AccountInfo], default_currency: str, entries: List[Any], date_filter: date, current_earnings_account: str, current_conversions_account: str) -> List[AccountInfo]:
         """处理权益账户的特殊显示逻辑"""
-        processed_equity = []
-        merged_equity_accounts = {}
+        # 先进行通用的合并和转换
+        merged_accounts = self._merge_and_convert_accounts(equity, default_currency, entries, date_filter)
         
-        # 获取汇率信息
-        exchange_rates = self.exchange_service.get_latest_exchange_rates(entries, date_filter, default_currency)
-        
-        for acc in equity:
-            # 创建新的账户对象避免修改原始数据
-            display_acc = AccountInfo(
-                name=acc.name,
-                balance=acc.balance,
-                currency=acc.currency,
-                account_type=acc.account_type
-            )
-            
-            # 转换到基础货币
-            if display_acc.currency != default_currency and display_acc.currency in exchange_rates:
-                display_acc.balance = display_acc.balance * exchange_rates[display_acc.currency]
-                display_acc.currency = default_currency
-            
-            # 合并相同名称的账户
-            if display_acc.name in merged_equity_accounts:
-                merged_equity_accounts[display_acc.name].balance += display_acc.balance
-            else:
-                merged_equity_accounts[display_acc.name] = display_acc
-        
-        # 处理合并后的权益账户显示
-        for account_name, account in merged_equity_accounts.items():
-            # 权益账户显示逻辑
+        # 处理权益账户的特殊显示逻辑
+        for account in merged_accounts:
             if account.name == current_earnings_account:
                 # 当期收益：反转符号以正确显示
                 account.balance = -account.balance
@@ -328,7 +304,5 @@ class ReportGenerator:
             elif account.balance < 0:
                 # 其他权益账户：负数显示为正数（符合资产负债表惯例）
                 account.balance = abs(account.balance)
-                
-            processed_equity.append(account)
         
-        return processed_equity
+        return merged_accounts

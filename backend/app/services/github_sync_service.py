@@ -84,7 +84,8 @@ class GitHubSyncService:
             self._config = GitHubSyncConfig(**config_data)
             self._init_github_client()
         except Exception as e:
-            print(f"从数据库加载同步配置失败: {e}")
+            # 日志记录已在其他地方处理
+            pass
 
     async def _save_config(self):
         """保存同步配置到数据库 (github_sync table)"""
@@ -318,7 +319,7 @@ class GitHubSyncService:
                         raise
                         
             except Exception as e:
-                print(f"同步文件 {file_info.file_path} 失败: {e}")
+                # 异常会在上层处理和记录
                 raise
     
     async def _add_history_record(self, operation_type: str, status: SyncStatus, files_count: int, message: str = None, duration: Optional[float] = None):

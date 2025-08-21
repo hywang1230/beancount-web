@@ -7,7 +7,6 @@ import tempfile
 from typing import Dict, List
 from beancount import loader
 
-from app.core.exceptions import ValidationError
 from app.core.logging_config import get_logger
 
 logger = get_logger(__name__)

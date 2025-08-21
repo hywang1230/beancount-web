@@ -4,7 +4,6 @@
 """
 from typing import List, Dict, Optional
 from datetime import date
-from pathlib import Path
 
 from app.core.config import settings
 from app.models.schemas import (
