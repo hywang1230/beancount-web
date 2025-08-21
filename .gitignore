@@ -73,3 +73,5 @@ cache.db
 .history/
 /data/
 .cursor/
+
+backend/alembic/versions

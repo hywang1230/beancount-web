@@ -9,6 +9,7 @@ from app.models.sync_schemas import (
     ConflictResolutionRequest, SyncMetrics
 )
 from app.services.github_sync_service import GitHubSyncService
+from app.services.scheduler import scheduler
 from app.utils.auth import get_current_user
 from app.models.github_sync import GitHubSync
 
@@ -216,6 +217,54 @@ async def resume_auto_sync(current_user: dict = Depends(get_current_user)):
         return {"success": True, "message": "自动同步已恢复"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"恢复自动同步失败: {str(e)}")
+
+
+@router.post("/schedule-delayed-sync")
+async def schedule_delayed_sync(
+    delay_seconds: Optional[int] = None,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """手动安排延迟同步任务"""
+    try:
+        scheduler.schedule_delayed_sync(db, delay_seconds)
+        delay = delay_seconds or 30  # 使用默认值或配置值
+        return {
+            "success": True, 
+            "message": f"延迟同步任务已安排，将在 {delay} 秒后执行"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"安排延迟同步失败: {str(e)}")
+
+
+@router.delete("/delayed-sync")
+async def cancel_delayed_sync(current_user: dict = Depends(get_current_user)):
+    """取消延迟同步任务"""
+    try:
+        cancelled = scheduler.cancel_delayed_sync()
+        if cancelled:
+            return {"success": True, "message": "延迟同步任务已取消"}
+        else:
+            return {"success": False, "message": "没有活动的延迟同步任务"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"取消延迟同步失败: {str(e)}")
+
+
+@router.get("/delayed-sync/status")
+async def get_delayed_sync_status(current_user: dict = Depends(get_current_user)):
+    """获取延迟同步任务状态"""
+    try:
+        existing_job = scheduler.scheduler.get_job("delayed_auto_sync")
+        if existing_job:
+            return {
+                "active": True,
+                "next_run_time": existing_job.next_run_time.isoformat() if existing_job.next_run_time else None,
+                "name": existing_job.name
+            }
+        else:
+            return {"active": False}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取延迟同步状态失败: {str(e)}")
 
 
 @router.get("/branches")

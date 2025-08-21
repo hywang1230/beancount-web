@@ -49,6 +49,12 @@ class Settings(BaseSettings):
     username: str = os.getenv("USERNAME", "admin")
     password: str = os.getenv("PASSWORD", "admin123")  # 这里可以设置默认密码
     
+    # 同步配置
+    # 延迟同步的等待时间（秒），用于避免频繁同步
+    sync_delay_seconds: int = int(os.getenv("SYNC_DELAY_SECONDS", "30"))
+    # 周期记账执行后的延迟同步时间（秒）
+    recurring_sync_delay_seconds: int = int(os.getenv("RECURRING_SYNC_DELAY_SECONDS", "60"))
+    
     model_config = {
         "env_file": ".env",
         "case_sensitive": False,

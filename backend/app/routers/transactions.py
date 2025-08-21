@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException, Query, Depends, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.services.github_sync_service import GitHubSyncService
+from app.services.scheduler import scheduler
 
 from typing import List, Optional
 from datetime import date
@@ -9,11 +10,24 @@ from datetime import date
 from app.models.schemas import TransactionResponse, TransactionCreate, TransactionFilter
 from app.services.beancount_service import beancount_service
 from app.utils.auth import get_current_user
+from app.core.config import settings
 
 router = APIRouter()
 
+def schedule_delayed_sync(db: Session):
+    """安排延迟同步任务，避免频繁触发同步"""
+    try:
+        # 使用配置的延迟时间
+        scheduler.schedule_delayed_sync(db, delay_seconds=settings.sync_delay_seconds)
+    except Exception as e:
+        print(f"安排延迟同步失败: {e}")
+
+# 保留原函数用于向后兼容，但标记为已弃用
 async def trigger_auto_sync(db: Session):
-    """Helper function to run sync in the background."""
+    """Helper function to run sync in the background.
+    
+    @deprecated: 使用 schedule_delayed_sync 替代以避免频繁同步
+    """
     sync_service = GitHubSyncService(db=db)
     config = await sync_service.get_config()
     if config and config.auto_sync:
@@ -102,7 +116,6 @@ async def validate_transaction(transaction: TransactionCreate):
 @router.post("/", response_model=dict)
 async def create_transaction(
     transaction: TransactionCreate,
-    background_tasks: BackgroundTasks,
     db: Session = Depends(get_db),
     current_user: dict = Depends(get_current_user)
 ):
@@ -129,8 +142,8 @@ async def create_transaction(
         success = beancount_service.add_transaction(transaction_data)
         
         if success:
-            # Add the sync task to run in the background
-            background_tasks.add_task(trigger_auto_sync, db)
+            # 安排延迟同步任务，避免频繁同步
+            schedule_delayed_sync(db)
             return {"message": "交易创建成功", "success": True}
         else:
             raise HTTPException(status_code=400, detail="交易创建失败")
@@ -231,7 +244,12 @@ async def get_transaction_by_id(transaction_id: str):
         raise HTTPException(status_code=500, detail=f"获取交易失败: {str(e)}")
 
 @router.put("/{transaction_id}")
-async def update_transaction(transaction_id: str, transaction: TransactionCreate):
+async def update_transaction(
+    transaction_id: str, 
+    transaction: TransactionCreate,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
     """根据transaction_id更新交易"""
     try:
         if ':' not in transaction_id:
@@ -270,6 +288,8 @@ async def update_transaction(transaction_id: str, transaction: TransactionCreate
         success = beancount_service.update_transaction_by_location(filename, lineno, transaction_data)
         
         if success:
+            # 安排延迟同步任务
+            schedule_delayed_sync(db)
             return {"message": "交易更新成功", "success": True}
         else:
             raise HTTPException(status_code=400, detail="交易更新失败")
@@ -280,7 +300,11 @@ async def update_transaction(transaction_id: str, transaction: TransactionCreate
         raise HTTPException(status_code=500, detail=f"更新交易失败: {str(e)}")
 
 @router.delete("/{transaction_id}")
-async def delete_transaction(transaction_id: str):
+async def delete_transaction(
+    transaction_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
     """根据transaction_id删除交易"""
     try:
         if ':' not in transaction_id:
@@ -301,6 +325,8 @@ async def delete_transaction(transaction_id: str):
         success = beancount_service.delete_transaction_by_location(filename, lineno)
         
         if success:
+            # 安排延迟同步任务
+            schedule_delayed_sync(db)
             return {"message": "交易删除成功", "success": True}
         else:
             raise HTTPException(status_code=400, detail="交易删除失败")
