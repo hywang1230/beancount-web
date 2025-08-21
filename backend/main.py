@@ -10,17 +10,34 @@ from contextlib import asynccontextmanager
 from app.routers import transactions, reports, accounts, files, recurring, auth, sync, settings as settings_router
 from app.core.config import settings
 from app.services.scheduler import scheduler
+from app.database import init_database
 # from app.services.github_sync_service import github_sync_service # No longer a global singleton
+import logging
+
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时
+    logger.info("正在启动应用...")
+    
+    # 初始化数据库
+    try:
+        init_database()
+        logger.info("数据库初始化成功")
+    except Exception as e:
+        logger.error(f"数据库初始化失败: {e}")
+        raise
+    
     scheduler.start()
+    logger.info("调度器启动成功")
+    
     # 初始化GitHub同步服务 - This is now handled on-demand by dependency injection
     # await github_sync_service._load_config()
     yield
     # 关闭时
+    logger.info("正在关闭应用...")
     scheduler.shutdown()
     # await github_sync_service.shutdown() # Shutdown logic might need to be re-evaluated
 
