@@ -34,7 +34,7 @@
 
       <!-- 输入值显示区域 -->
       <div class="keyboard-display">
-        <div class="display-value">{{ displayValue || placeholder }}</div>
+        <div class="display-value">{{ displayValue }}</div>
       </div>
 
       <!-- 键盘按键区域 -->
