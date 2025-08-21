@@ -669,36 +669,36 @@ const onKeyTouchEnd = () => {
 
 /* 退格键 */
 .key-backspace {
-  background: #f7f8fa;
-  color: #646566;
+  background: var(--van-background-3);
+  color: var(--van-text-color-2);
 }
 
 .key-backspace:active {
-  background: #ebedf0;
+  background: var(--van-active-color);
 }
 
 /* 负号键 */
 .key-negative {
-  background: #fff7e6;
-  color: #fa8c16;
+  background: var(--van-orange-1);
+  color: var(--van-orange-6);
   font-size: 14px;
   font-weight: 600;
 }
 
 .key-negative:active {
-  background: #fff2d9;
+  background: var(--van-orange-2);
 }
 
 /* 小数点键 */
 .key-decimal {
-  background: #f6ffed;
-  color: #52c41a;
+  background: var(--van-green-1);
+  color: var(--van-green-6);
   font-size: 20px;
   font-weight: bold;
 }
 
 .key-decimal:active {
-  background: #f0f9e8;
+  background: var(--van-green-2);
 }
 
 /* 确认键 */
@@ -714,48 +714,48 @@ const onKeyTouchEnd = () => {
 
 /* 加号键 */
 .key-plus {
-  background: #e6f7ff;
-  color: #1890ff;
+  background: var(--van-blue-1);
+  color: var(--van-blue-6);
   font-size: 18px;
   font-weight: bold;
 }
 
 .key-plus:active {
-  background: #d9f0ff;
+  background: var(--van-blue-2);
 }
 
 /* 减号键 */
 .key-minus {
-  background: #fff1f0;
-  color: #ff4d4f;
+  background: var(--van-red-1);
+  color: var(--van-red-6);
   font-size: 18px;
   font-weight: bold;
 }
 
 .key-minus:active {
-  background: #ffe7e6;
+  background: var(--van-red-2);
 }
 
 /* 等号键 */
 .key-equals {
-  background: #f6ffed;
-  color: #52c41a;
+  background: var(--van-green-1);
+  color: var(--van-green-6);
   font-size: 18px;
   font-weight: bold;
 }
 
 .key-equals:active {
-  background: #f0f9e8;
+  background: var(--van-green-2);
 }
 
 /* 隐藏键 */
 .key-hide {
-  background: #f7f8fa;
-  color: #646566;
+  background: var(--van-background-3);
+  color: var(--van-text-color-2);
 }
 
 .key-hide:active {
-  background: #ebedf0;
+  background: var(--van-active-color);
 }
 
 /* 空白键 */
@@ -779,71 +779,8 @@ const onKeyTouchEnd = () => {
   background: var(--van-active-color);
 }
 
-/* 深色模式适配 */
-@media (prefers-color-scheme: dark) {
-  .key-backspace {
-    background: #2c2c2e;
-    color: #8e8e93;
-  }
-
-  .key-backspace:active {
-    background: #3a3a3c;
-  }
-
-  .key-negative {
-    background: #2c2415;
-    color: #fa8c16;
-  }
-
-  .key-negative:active {
-    background: #3d3018;
-  }
-
-  .key-decimal {
-    background: #162312;
-    color: #52c41a;
-  }
-
-  .key-decimal:active {
-    background: #1f2e18;
-  }
-
-  .key-hide {
-    background: #2c2c2e;
-    color: #8e8e93;
-  }
-
-  .key-hide:active {
-    background: #3a3a3c;
-  }
-
-  .key-plus {
-    background: #0d1420;
-    color: #1890ff;
-  }
-
-  .key-plus:active {
-    background: #141f2e;
-  }
-
-  .key-minus {
-    background: #2a1215;
-    color: #ff4d4f;
-  }
-
-  .key-minus:active {
-    background: #3a1d21;
-  }
-
-  .key-equals {
-    background: #162312;
-    color: #52c41a;
-  }
-
-  .key-equals:active {
-    background: #1f2e18;
-  }
-}
+/* 深色模式适配 - 现在使用 Vant 主题变量，无需额外覆盖 */
+/* Vant 的深色模式变量会自动适配所有按键样式 */
 
 /* 响应式设计 */
 @media (max-width: 375px) {
