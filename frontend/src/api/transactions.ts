@@ -102,3 +102,23 @@ export const getTransactionsByAccount = (
   }
   return api.get("/transactions/account-journal", { params });
 };
+
+// 获取可用年份列表
+export const getAvailableYears = (): Promise<number[]> => {
+  return api.get("/transactions/years");
+};
+
+// 创建年份文件
+export const createYearlyFile = (year: number) => {
+  return api.post(`/transactions/years/${year}/create`);
+};
+
+// 按年份迁移交易
+export const migrateTransactionsByYear = () => {
+  return api.post("/transactions/migrate-by-year");
+};
+
+// 清理空的年份文件
+export const cleanupEmptyYearlyFiles = () => {
+  return api.delete("/transactions/years/cleanup");
+};

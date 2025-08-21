@@ -69,9 +69,29 @@ class FileInfo(BaseModel):
     modified: datetime
     is_main: bool = False
 
+class FileTreeNode(BaseModel):
+    """文件树节点"""
+    name: str
+    path: str
+    size: int
+    type: str = "file"  # file or directory
+    is_main: bool = False
+    includes: List['FileTreeNode'] = Field(default_factory=list)
+    modified: Optional[float] = None
+    error: Optional[str] = None
+
+# 允许前向引用
+FileTreeNode.model_rebuild()
+
 class FileListResponse(BaseModel):
     files: List[FileInfo]
     main_file: Optional[str] = None
+
+class FileTreeResponse(BaseModel):
+    """文件树响应"""
+    tree: FileTreeNode
+    total_files: int
+    main_file: str
 
 class RecurrenceType(str, Enum):
     """周期类型枚举"""

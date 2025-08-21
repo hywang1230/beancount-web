@@ -5,8 +5,13 @@ from pathlib import Path
 from datetime import datetime
 
 from app.core.config import settings
-from app.models.schemas import FileInfo, FileListResponse
-from app.utils.file_utils import is_beancount_file, get_beancount_files
+from app.models.schemas import FileInfo, FileListResponse, FileTreeResponse, FileTreeNode
+from app.utils.file_utils import (
+    is_beancount_file, 
+    get_beancount_files, 
+    build_file_tree, 
+    get_all_included_files
+)
 
 router = APIRouter()
 
@@ -49,23 +54,71 @@ async def list_files():
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"获取文件列表失败: {str(e)}")
 
-@router.get("/{filename}/content")
-async def get_file_content(filename: str):
-    """获取指定文件的内容"""
+@router.get("/tree", response_model=FileTreeResponse)
+async def get_file_tree():
+    """获取账本文件的树状结构"""
     try:
-        file_path = settings.data_dir / filename
+        main_file = settings.data_dir / settings.default_beancount_file
         
-        if not file_path.exists():
+        if not main_file.exists():
+            raise HTTPException(status_code=404, detail="主账本文件不存在")
+        
+        # 构建文件树
+        tree_data = build_file_tree(main_file)
+        
+        # 转换为响应模型
+        def convert_to_tree_node(data: dict) -> FileTreeNode:
+            children = [convert_to_tree_node(child) for child in data.get("includes", [])]
+            return FileTreeNode(
+                name=data["name"],
+                path=data["path"],
+                size=data["size"],
+                type=data.get("type", "file"),
+                is_main=data.get("is_main", False),
+                includes=children,
+                modified=data.get("modified"),
+                error=data.get("error")
+            )
+        
+        tree = convert_to_tree_node(tree_data)
+        
+        # 计算总文件数
+        all_files = get_all_included_files(main_file)
+        
+        return FileTreeResponse(
+            tree=tree,
+            total_files=len(all_files),
+            main_file=settings.default_beancount_file
+        )
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取文件树失败: {str(e)}")
+
+@router.get("/content")
+async def get_file_content(file_path: str):
+    """获取指定文件的内容（支持相对路径）"""
+    try:
+        # 处理路径参数，支持子目录文件
+        full_path = settings.data_dir / file_path
+        
+        # 安全检查：确保文件在data目录内
+        try:
+            full_path.resolve().relative_to(settings.data_dir.resolve())
+        except ValueError:
+            raise HTTPException(status_code=400, detail="不允许访问data目录外的文件")
+        
+        if not full_path.exists():
             raise HTTPException(status_code=404, detail="文件不存在")
         
-        if not is_beancount_file(filename):
+        if not is_beancount_file(full_path.name):
             raise HTTPException(status_code=400, detail="只支持Beancount文件(.bean/.beancount)")
         
-        with open(file_path, 'r', encoding='utf-8') as f:
+        with open(full_path, 'r', encoding='utf-8') as f:
             content = f.read()
         
         return {
-            "filename": filename,
+            "filename": full_path.name,
+            "file_path": file_path,
             "content": content,
             "size": len(content),
             "lines": len(content.split('\n'))
@@ -76,27 +129,48 @@ async def get_file_content(filename: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"读取文件失败: {str(e)}")
 
-@router.put("/{filename}/content")
-async def update_file_content(filename: str, content: dict):
-    """更新指定文件的内容"""
+@router.get("/{filename}/content")
+async def get_file_content_legacy(filename: str):
+    """获取指定文件的内容（兼容旧接口）"""
+    return await get_file_content(filename)
+
+@router.put("/content")
+async def update_file_content(file_path: str, content: dict):
+    """更新指定文件的内容（支持相对路径）"""
     try:
-        file_path = settings.data_dir / filename
+        # 处理路径参数，支持子目录文件
+        full_path = settings.data_dir / file_path
         
-        if not is_beancount_file(filename):
+        # 安全检查：确保文件在data目录内
+        try:
+            full_path.resolve().relative_to(settings.data_dir.resolve())
+        except ValueError:
+            raise HTTPException(status_code=400, detail="不允许访问data目录外的文件")
+        
+        if not is_beancount_file(full_path.name):
             raise HTTPException(status_code=400, detail="只支持Beancount文件(.bean/.beancount)")
         
         # 写入新内容
-        with open(file_path, 'w', encoding='utf-8') as f:
+        with open(full_path, 'w', encoding='utf-8') as f:
             f.write(content.get('content', ''))
         
         # 重新加载beancount数据
         from app.services.beancount_service import beancount_service
-        beancount_service._load_entries(force_reload=True)
+        beancount_service.loader.load_entries(force_reload=True)
         
-        return {"message": "文件更新成功", "filename": filename}
+        return {
+            "message": "文件更新成功", 
+            "filename": full_path.name,
+            "file_path": file_path
+        }
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"更新文件失败: {str(e)}")
+
+@router.put("/{filename}/content")
+async def update_file_content_legacy(filename: str, content: dict):
+    """更新指定文件的内容（兼容旧接口）"""
+    return await update_file_content(filename, content)
 
 @router.post("/upload")
 async def upload_file(file: UploadFile = File(...)):
@@ -160,7 +234,24 @@ async def validate_file(filename: str):
         # 使用beancount加载器验证文件
         from beancount import loader
         
-        entries, errors, options_map = loader.load_file(str(file_path))
+        # 判断是否为主文件，如果不是主文件，则验证整个账本系统
+        if filename == settings.default_beancount_file:
+            # 直接验证主文件
+            entries, errors, options_map = loader.load_file(str(file_path))
+        else:
+            # 对于子文件，验证整个账本系统以确保所有引用都能正确解析
+            main_file_path = settings.data_dir / settings.default_beancount_file
+            if main_file_path.exists():
+                entries, errors, options_map = loader.load_file(str(main_file_path))
+                # 过滤出与当前文件相关的错误
+                file_specific_errors = []
+                for error in errors:
+                    if hasattr(error, 'source') and error.source and filename in str(error.source.get('filename', '')):
+                        file_specific_errors.append(error)
+                errors = file_specific_errors
+            else:
+                # 如果主文件不存在，直接验证单个文件
+                entries, errors, options_map = loader.load_file(str(file_path))
         
         return {
             "valid": len(errors) == 0,

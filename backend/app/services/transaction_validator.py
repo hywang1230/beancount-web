@@ -25,28 +25,52 @@ class TransactionValidator:
             # 构建交易字符串用于验证
             transaction_str = self._build_transaction_string(transaction_data)
             
-            # 创建临时验证内容
-            # 获取现有文件内容
-            if os.path.exists(self.main_file):
-                with open(self.main_file, 'r', encoding='utf-8') as f:
-                    existing_content = f.read()
-            else:
-                existing_content = ""
+            # 使用更简单的验证策略：在主文件的目录中创建临时文件
+            from app.core.config import settings
+            import uuid
             
-            # 拼接新交易用于验证
-            temp_content = existing_content + '\n' + transaction_str + '\n'
-            
-            # 创建临时文件进行验证
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.beancount', delete=False, encoding='utf-8') as temp_file:
-                temp_file.write(temp_content)
-                temp_file_path = temp_file.name
+            # 生成临时文件名
+            temp_filename = f"temp_validation_{uuid.uuid4().hex[:8]}.beancount"
+            temp_file_path = settings.data_dir / temp_filename
             
             try:
+                # 读取主文件内容，替换include指令为实际内容
+                main_file_path = settings.data_dir / settings.default_beancount_file
+                
+                if main_file_path.exists():
+                    with open(main_file_path, 'r', encoding='utf-8') as f:
+                        main_content = f.read()
+                    
+                    # 处理include指令，替换为实际文件内容
+                    temp_content = self._resolve_includes(main_content, settings.data_dir)
+                    temp_content += '\n' + transaction_str + '\n'
+                else:
+                    # 如果主文件不存在，使用基本模板
+                    temp_content = f"""
+option "title" "Validation Test"
+option "operating_currency" "CNY"
+
+; 基础账户定义
+1900-01-01 open Assets:Cash CNY
+1900-01-01 open Assets:Bank:Checking CNY
+1900-01-01 open Expenses:CY-餐饮 CNY
+1900-01-01 open Liabilities:XYK-信用卡:招行:8164 CNY
+1900-01-01 open Equity:Opening-Balances CNY
+
+; 用户交易
+{transaction_str}
+"""
+                
+                # 写入临时文件
+                with open(temp_file_path, 'w', encoding='utf-8') as f:
+                    f.write(temp_content)
+                
                 # 使用beancount加载器验证临时文件
-                entries, errors, options_map = loader.load_file(temp_file_path)
+                entries, errors, options_map = loader.load_file(str(temp_file_path))
                 
                 # 清理临时文件
-                os.unlink(temp_file_path)
+                if temp_file_path.exists():
+                    temp_file_path.unlink()
                 
                 # 解析错误信息，提供友好的提示
                 friendly_errors = []
@@ -79,8 +103,8 @@ class TransactionValidator:
                 
             except Exception as e:
                 # 清理临时文件
-                if os.path.exists(temp_file_path):
-                    os.unlink(temp_file_path)
+                if temp_file_path.exists():
+                    temp_file_path.unlink()
                 raise e
                 
         except Exception as e:
@@ -187,3 +211,47 @@ class TransactionValidator:
                 
         except Exception:
             return "数据校验失败，请检查输入内容"
+    
+    def _resolve_includes(self, content: str, base_dir) -> str:
+        """
+        解析并替换include指令为实际文件内容
+        
+        Args:
+            content: 主文件内容
+            base_dir: 文件基础目录
+            
+        Returns:
+            str: 解析后的内容
+        """
+        from pathlib import Path
+        lines = content.split('\n')
+        resolved_lines = []
+        
+        for line in lines:
+            stripped_line = line.strip()
+            if stripped_line.startswith('include '):
+                # 解析include指令
+                import re
+                match = re.match(r'include\s+["\']([^"\']+)["\']', stripped_line)
+                if match:
+                    include_filename = match.group(1)
+                    include_path = base_dir / include_filename
+                    
+                    if include_path.exists():
+                        try:
+                            with open(include_path, 'r', encoding='utf-8') as f:
+                                include_content = f.read()
+                            resolved_lines.append(f'; Contents from {include_filename}')
+                            resolved_lines.append(include_content)
+                        except Exception as e:
+                            logger.warning(f"Failed to read include file {include_filename}: {e}")
+                            resolved_lines.append(f'; Error reading {include_filename}')
+                    else:
+                        logger.warning(f"Include file not found: {include_filename}")
+                        resolved_lines.append(f'; Include file not found: {include_filename}')
+                else:
+                    resolved_lines.append(line)
+            else:
+                resolved_lines.append(line)
+        
+        return '\n'.join(resolved_lines)
