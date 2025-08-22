@@ -866,12 +866,12 @@ const showAmountKeyboard = (index: number) => {
   showNumberKeyboard.value = true;
 };
 
-const onAmountKeyboardConfirm = (value: string) => {
+const onAmountKeyboardConfirm = () => {
   showNumberKeyboard.value = false;
 };
 
 // 金额计算事件处理
-const onAmountCalculate = (expression: string, result: string) => {
+const onAmountCalculate = () => {
   // 计算结果会通过v-model自动更新到currentPostingAmount
 };
 
