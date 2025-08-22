@@ -20,11 +20,11 @@ fi
 
 # 创建并激活Python虚拟环境
 echo "🔧 设置Python虚拟环境..."
-if [ ! -d "venv" ]; then
-    python3 -m venv venv
+if [ ! -d ".venv" ]; then
+    python3 -m venv .venv
 fi
 
-source venv/bin/activate
+source .venv/bin/activate
 
 # 安装Python依赖
 echo "📥 安装后端依赖..."

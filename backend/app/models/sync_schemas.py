@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List, Dict, Literal
+from typing import Optional, List, Dict, Literal, Any
 from datetime import datetime
 from enum import Enum
 
@@ -84,12 +84,16 @@ class SyncStatusResponse(BaseModel):
 
 class SyncHistoryItem(BaseModel):
     """同步历史项"""
-    timestamp: datetime
-    operation_type: Literal["manual_sync", "auto_sync", "restore", "conflict_resolve"]
-    status: SyncStatus
+    timestamp: datetime = Field(..., alias="start_time")
+    operation_type: str
+    status: str
     files_count: int
-    message: Optional[str] = None
-    duration: Optional[float] = None  # 同步耗时(秒)
+    message: Optional[str] = Field(None, alias="logs")
+    duration: Optional[float] = None
+
+    class Config:
+        orm_mode = True
+        allow_population_by_field_name = True
 
 class SyncHistoryResponse(BaseModel):
     """同步历史响应"""

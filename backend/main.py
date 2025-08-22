@@ -7,22 +7,39 @@ import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from app.routers import transactions, reports, accounts, files, recurring, auth, sync
+from app.routers import transactions, reports, accounts, files, recurring, auth, sync, settings as settings_router
 from app.core.config import settings
 from app.services.scheduler import scheduler
-from app.services.github_sync_service import github_sync_service
+from app.database import init_database
+# from app.services.github_sync_service import github_sync_service # No longer a global singleton
+import logging
+
+logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时
+    logger.info("正在启动应用...")
+    
+    # 初始化数据库
+    try:
+        init_database()
+        logger.info("数据库初始化成功")
+    except Exception as e:
+        logger.error(f"数据库初始化失败: {e}")
+        raise
+    
     scheduler.start()
-    # 初始化GitHub同步服务
-    await github_sync_service._load_config()
+    logger.info("调度器启动成功")
+    
+    # 初始化GitHub同步服务 - This is now handled on-demand by dependency injection
+    # await github_sync_service._load_config()
     yield
     # 关闭时
+    logger.info("正在关闭应用...")
     scheduler.shutdown()
-    await github_sync_service.shutdown()
+    # await github_sync_service.shutdown() # Shutdown logic might need to be re-evaluated
 
 # 创建FastAPI应用
 app = FastAPI(
@@ -57,7 +74,15 @@ app.include_router(reports.router, prefix="/api/reports", tags=["报表"], depen
 app.include_router(accounts.router, prefix="/api/accounts", tags=["账户"], dependencies=[Depends(get_current_user)])
 app.include_router(files.router, prefix="/api/files", tags=["文件"], dependencies=[Depends(get_current_user)])
 app.include_router(recurring.router, prefix="/api/recurring", tags=["周期记账"], dependencies=[Depends(get_current_user)])
-app.include_router(sync.router, prefix="/api", tags=["同步管理"], dependencies=[Depends(get_current_user)])
+app.include_router(sync.router, prefix="/api/sync", tags=["同步管理"], dependencies=[Depends(get_current_user)])
+app.include_router(settings_router.router, prefix="/api/settings", tags=["应用设置"], dependencies=[Depends(get_current_user)])
+
+# --- DEBUG: Print all registered routes ---
+from fastapi.routing import APIRoute
+for route in app.routes:
+    if isinstance(route, APIRoute):
+        print(f"Path: {route.path}, Name: {route.name}, Methods: {route.methods}")
+# --- END DEBUG ---
 
 @app.get("/api")
 async def api_root():

@@ -1,389 +1,412 @@
-import json
 import uuid
+import logging
 from datetime import date, datetime, timedelta
-from typing import List, Optional, Dict, Any
-from pathlib import Path
-import calendar
+from typing import List, Optional
 
-from app.core.config import settings
-from app.models.schemas import (
-    RecurringTransactionCreate, RecurringTransactionUpdate, 
-    RecurringTransactionResponse, RecurrenceType,
-    RecurringExecutionLog, RecurringExecutionResult,
-    TransactionCreate
-)
+from sqlalchemy.orm import Session
+from sqlalchemy import text
+
+from app.models.schemas import RecurringTransactionCreate, RecurringTransactionUpdate
+from app.models.recurring import Recurring as RecurringModel, RecurringExecutionLog
 from app.services.beancount_service import beancount_service
+from app.core.config import settings
 
-def _parse_date(date_value) -> Optional[date]:
-    """安全解析日期，支持字符串和date对象"""
-    if date_value is None:
-        return None
-    if isinstance(date_value, date):
-        return date_value
-    if isinstance(date_value, str):
-        return datetime.fromisoformat(date_value).date()
-    return None
+# 配置日志
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
+
 
 class RecurringTransactionService:
-    def __init__(self):
-        self.data_file = settings.data_dir / "recurring_transactions.json"
-        self.log_file = settings.data_dir / "recurring_execution_logs.json"
-        self._ensure_data_files()
+    def _calculate_next_execution(self, transaction: RecurringModel) -> Optional[date]:
+        """计算下次执行日期"""
+        today = date.today()
+        
+        # 如果有结束日期且已过期，返回None
+        if transaction.end_date and today > transaction.end_date:
+            return None
+        
+        # 获取基准日期（上次执行日期或开始日期）
+        base_date = transaction.last_executed if transaction.last_executed else transaction.start_date
+        
+        # 根据周期类型计算下次执行日期
+        if transaction.recurrence_type == "daily":
+            next_date = base_date + timedelta(days=1)
+            
+        elif transaction.recurrence_type == "weekly":
+            # 每周特定几天
+            if not transaction.weekly_days:
+                # 如果没有指定周几，默认为每周的同一天
+                next_date = base_date + timedelta(weeks=1)
+            else:
+                # 找到下一个指定的周几
+                next_date = self._find_next_weekday(base_date, transaction.weekly_days)
+                
+        elif transaction.recurrence_type == "weekdays":
+            # 工作日（周一到周五）
+            next_date = self._find_next_weekday(base_date, [0, 1, 2, 3, 4])  # 0=周一, 4=周五
+            
+        elif transaction.recurrence_type == "monthly":
+            # 每月特定几天
+            if not transaction.monthly_days:
+                # 如果没有指定日期，默认为每月的同一天
+                if base_date.month == 12:
+                    next_date = base_date.replace(year=base_date.year + 1, month=1)
+                else:
+                    next_date = base_date.replace(month=base_date.month + 1)
+            else:
+                # 找到下一个指定的月日
+                next_date = self._find_next_monthly_date(base_date, transaction.monthly_days)
+        else:
+            logger.warning(f"未知的周期类型: {transaction.recurrence_type}")
+            return None
+        
+        # 确保下次执行日期不早于今天
+        if next_date <= today:
+            # 如果计算出的日期是今天或之前，需要再计算下一个周期
+            if transaction.recurrence_type == "daily":
+                while next_date <= today:
+                    next_date += timedelta(days=1)
+            elif transaction.recurrence_type == "weekly":
+                if transaction.weekly_days:
+                    next_date = self._find_next_weekday(today, transaction.weekly_days)
+                else:
+                    while next_date <= today:
+                        next_date += timedelta(weeks=1)
+            elif transaction.recurrence_type == "weekdays":
+                next_date = self._find_next_weekday(today, [0, 1, 2, 3, 4])
+            elif transaction.recurrence_type == "monthly":
+                if transaction.monthly_days:
+                    next_date = self._find_next_monthly_date(today, transaction.monthly_days)
+                else:
+                    while next_date <= today:
+                        if next_date.month == 12:
+                            next_date = next_date.replace(year=next_date.year + 1, month=1)
+                        else:
+                            next_date = next_date.replace(month=next_date.month + 1)
+        
+        # 检查是否超过结束日期
+        if transaction.end_date and next_date > transaction.end_date:
+            return None
+            
+        return next_date
     
-    def _ensure_data_files(self):
-        """确保数据文件存在"""
-        if not self.data_file.exists():
-            self.data_file.write_text("[]")
-        if not self.log_file.exists():
-            self.log_file.write_text("[]")
+    def _find_next_weekday(self, base_date: date, weekdays: List[int]) -> date:
+        """找到下一个指定的周几"""
+        current_weekday = base_date.weekday()  # 0=周一, 6=周日
+        
+        # 在当前周内查找下一个指定的周几
+        for day_offset in range(1, 8):
+            target_date = base_date + timedelta(days=day_offset)
+            if target_date.weekday() in weekdays:
+                return target_date
+        
+        # 如果在当前周内没找到，查找下一周
+        for day_offset in range(8, 15):
+            target_date = base_date + timedelta(days=day_offset)
+            if target_date.weekday() in weekdays:
+                return target_date
+                
+        # 默认返回下周的第一个指定日期
+        return base_date + timedelta(days=7)
     
-    def _load_recurring_transactions(self) -> List[Dict]:
-        """加载周期记账数据"""
+    def _find_next_monthly_date(self, base_date: date, monthly_days: List[int]) -> date:
+        """找到下一个指定的月日"""
+        import calendar
+        
+        # 在当前月内查找下一个指定日期
+        for day in sorted(monthly_days):
+            if day > base_date.day:
+                try:
+                    return base_date.replace(day=day)
+                except ValueError:
+                    # 如果当前月没有这一天（比如2月30日），跳过
+                    continue
+        
+        # 在当前月没找到，查找下一个月
+        next_month = base_date.month + 1
+        next_year = base_date.year
+        if next_month > 12:
+            next_month = 1
+            next_year += 1
+        
+        # 找到下个月的第一个有效日期
+        for day in sorted(monthly_days):
+            try:
+                # 检查下个月是否有这一天
+                max_day = calendar.monthrange(next_year, next_month)[1]
+                if day <= max_day:
+                    return date(next_year, next_month, day)
+            except ValueError:
+                continue
+        
+        # 如果都找不到，返回下个月的第一天
+        return date(next_year, next_month, 1)
+    
+    def _convert_to_beancount_transaction(self, transaction: RecurringModel, execution_date: date) -> dict:
+        """将周期记账转换为beancount交易格式"""
         try:
-            with open(self.data_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception:
-            return []
-    
-    def _save_recurring_transactions(self, transactions: List[Dict]):
-        """保存周期记账数据"""
-        with open(self.data_file, 'w', encoding='utf-8') as f:
-            json.dump(transactions, f, ensure_ascii=False, indent=2, default=str)
-    
-    def _load_execution_logs(self) -> List[Dict]:
-        """加载执行日志"""
-        try:
-            with open(self.log_file, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        except Exception:
-            return []
-    
-    def _save_execution_logs(self, logs: List[Dict]):
-        """保存执行日志"""
-        with open(self.log_file, 'w', encoding='utf-8') as f:
-            json.dump(logs, f, ensure_ascii=False, indent=2, default=str)
-    
-    def create_recurring_transaction(self, transaction: RecurringTransactionCreate) -> RecurringTransactionResponse:
+            # 构建交易数据
+            transaction_data = {
+                'date': execution_date.strftime('%Y-%m-%d'),
+                'flag': transaction.flag or '*',
+                'payee': transaction.payee,
+                'narration': transaction.narration,
+                'postings': []
+            }
+            
+            # 添加标签和链接信息到描述中
+            if transaction.tags:
+                tags_str = ' '.join(f"#{tag}" for tag in transaction.tags)
+                transaction_data['narration'] += f" {tags_str}"
+            
+            if transaction.links:
+                links_str = ' '.join(f"^{link}" for link in transaction.links)
+                transaction_data['narration'] += f" {links_str}"
+            
+            # 处理分录
+            if transaction.postings:
+                for posting in transaction.postings:
+                    posting_data = {
+                        'account': posting['account']
+                    }
+                    
+                    # 如果有金额和货币，添加到分录中
+                    if posting.get('amount') is not None and posting.get('currency'):
+                        posting_data['amount'] = posting['amount']
+                        posting_data['currency'] = posting['currency']
+                    
+                    transaction_data['postings'].append(posting_data)
+            
+            logger.debug(f"转换周期记账为beancount格式: {transaction_data}")
+            return transaction_data
+            
+        except Exception as e:
+            logger.error(f"转换周期记账格式失败: {str(e)}")
+            raise Exception(f"转换交易格式失败: {str(e)}")
+
+    def create_recurring_transaction(self, db: Session, transaction_in: RecurringTransactionCreate) -> RecurringModel:
         """创建周期记账"""
-        transactions = self._load_recurring_transactions()
         
-        # 生成唯一ID
-        transaction_id = str(uuid.uuid4())
-        now = datetime.now()
+        transaction_data = transaction_in.model_dump()
         
-        # 转换为字典
-        transaction_dict = transaction.model_dump()
-        transaction_dict.update({
-            "id": transaction_id,
-            "created_at": now.isoformat(),
-            "updated_at": now.isoformat(),
-            "last_executed": None,
-            "next_execution": self._calculate_next_execution(transaction, None)
-        })
+        db_transaction = RecurringModel(**transaction_data)
         
-        transactions.append(transaction_dict)
-        self._save_recurring_transactions(transactions)
-        
-        return RecurringTransactionResponse(**transaction_dict)
-    
-    def get_recurring_transactions(self, active_only: bool = False) -> List[RecurringTransactionResponse]:
+        # Calculate initial next_execution date
+        db_transaction.next_execution = self._calculate_next_execution(db_transaction)
+
+        db.add(db_transaction)
+        db.commit()
+        db.refresh(db_transaction)
+        return db_transaction
+
+    def get_recurring_transactions(self, db: Session, active_only: bool = False) -> List[RecurringModel]:
         """获取周期记账列表"""
-        transactions = self._load_recurring_transactions()
-        
+        query = db.query(RecurringModel)
         if active_only:
-            transactions = [t for t in transactions if t.get("is_active", True)]
+            query = query.filter(RecurringModel.is_active == True)
         
-        # 更新下次执行时间
-        for transaction in transactions:
-            transaction["next_execution"] = self._calculate_next_execution_from_dict(transaction)
+        # 添加SQL日志
+        sql_query = str(query.statement.compile(compile_kwargs={"literal_binds": True}))
+        logger.debug(f"获取周期记账列表SQL: {sql_query}")
         
-        return [RecurringTransactionResponse(**t) for t in transactions]
-    
-    def get_recurring_transaction(self, transaction_id: str) -> Optional[RecurringTransactionResponse]:
+        results = query.all()
+        logger.info(f"获取到 {len(results)} 个周期记账")
+        
+        for r in results:
+            logger.debug(f"周期记账: ID={r.id}, name={r.name}, is_active={r.is_active}, next_execution={r.next_execution}")
+        
+        return results
+
+    def get_recurring_transaction(self, db: Session, transaction_id: int) -> Optional[RecurringModel]:
         """获取单个周期记账"""
-        transactions = self._load_recurring_transactions()
-        
-        for transaction in transactions:
-            if transaction["id"] == transaction_id:
-                transaction["next_execution"] = self._calculate_next_execution_from_dict(transaction)
-                return RecurringTransactionResponse(**transaction)
-        
-        return None
-    
-    def update_recurring_transaction(self, transaction_id: str, update_data: RecurringTransactionUpdate) -> Optional[RecurringTransactionResponse]:
+        return db.query(RecurringModel).filter(RecurringModel.id == transaction_id).first()
+
+    def update_recurring_transaction(
+        self, db: Session, transaction_id: int, transaction_in: RecurringTransactionUpdate
+    ) -> Optional[RecurringModel]:
         """更新周期记账"""
-        transactions = self._load_recurring_transactions()
+        db_transaction = self.get_recurring_transaction(db, transaction_id)
+        if not db_transaction:
+            return None
+
+        update_data = transaction_in.model_dump(exclude_unset=True)
         
-        for i, transaction in enumerate(transactions):
-            if transaction["id"] == transaction_id:
-                # 更新字段
-                update_dict = update_data.model_dump(exclude_unset=True)
-                transaction.update(update_dict)
-                transaction["updated_at"] = datetime.now().isoformat()
-                
-                # 重新计算下次执行时间（考虑最后执行时间）
-                transaction["next_execution"] = self._calculate_next_execution_from_dict(transaction)
-                
-                transactions[i] = transaction
-                self._save_recurring_transactions(transactions)
-                
-                return RecurringTransactionResponse(**transaction)
+        # 检查是否更新了影响执行时间计算的字段
+        execution_affecting_fields = {
+            'recurrence_type', 'start_date', 'end_date', 
+            'weekly_days', 'monthly_days', 'is_active'
+        }
+        should_recalculate = any(field in update_data for field in execution_affecting_fields)
         
-        return None
-    
-    def delete_recurring_transaction(self, transaction_id: str) -> bool:
+        for key, value in update_data.items():
+            setattr(db_transaction, key, value)
+            
+        # 只有在相关字段改变时才重新计算下次执行时间
+        if should_recalculate:
+            logger.info(f"重新计算周期记账 {db_transaction.name} 的下次执行时间，因为相关字段发生变化")
+            db_transaction.next_execution = self._calculate_next_execution(db_transaction)
+        else:
+            logger.debug(f"周期记账 {db_transaction.name} 更新未影响执行时间计算字段，保持原有的 next_execution")
+
+        db.commit()
+        db.refresh(db_transaction)
+        return db_transaction
+
+    def delete_recurring_transaction(self, db: Session, transaction_id: int) -> bool:
         """删除周期记账"""
-        transactions = self._load_recurring_transactions()
+        db_transaction = self.get_recurring_transaction(db, transaction_id)
+        if not db_transaction:
+            return False
         
-        for i, transaction in enumerate(transactions):
-            if transaction["id"] == transaction_id:
-                del transactions[i]
-                self._save_recurring_transactions(transactions)
-                return True
-        
-        return False
-    
-    def execute_pending_transactions(self, execution_date: Optional[date] = None) -> RecurringExecutionResult:
+        try:
+            # 先删除相关的执行日志
+            execution_logs = db.query(RecurringExecutionLog).filter(
+                RecurringExecutionLog.recurring_transaction_id == transaction_id
+            ).all()
+            
+            logger.info(f"删除周期记账 {db_transaction.name} 及其 {len(execution_logs)} 条执行日志")
+            
+            for log in execution_logs:
+                db.delete(log)
+            
+            # 再删除周期记账本身
+            db.delete(db_transaction)
+            db.commit()
+            
+            logger.info(f"成功删除周期记账 {db_transaction.name}")
+            return True
+            
+        except Exception as e:
+            logger.error(f"删除周期记账失败: {str(e)}")
+            db.rollback()
+            raise
+
+    def execute_pending_transactions(self, db: Session, execution_date: Optional[date] = None):
         """执行待处理的周期记账"""
         if execution_date is None:
             execution_date = date.today()
         
-        transactions = self._load_recurring_transactions()
-        logs = self._load_execution_logs()
+        logger.info(f"开始执行周期记账，执行日期: {execution_date}")
+        
+        # 1. 查询需要执行的周期记账
+        query = db.query(RecurringModel).filter(
+            RecurringModel.is_active == True,
+            RecurringModel.next_execution <= execution_date
+        )
+        
+        # 添加SQL日志
+        sql_query = str(query.statement.compile(compile_kwargs={"literal_binds": True}))
+        logger.debug(f"执行SQL查询: {sql_query}")
+        
+        pending_transactions = query.all()
+        logger.info(f"找到 {len(pending_transactions)} 个待执行的周期记账")
         
         executed_count = 0
         failed_count = 0
         details = []
         
-        for transaction in transactions:
-            if not transaction.get("is_active", True):
-                continue
+        for transaction in pending_transactions:
+            logger.info(f"执行周期记账: {transaction.name} (ID: {transaction.id})")
+            execution_log = None
             
-            if self._should_execute_on_date(transaction, execution_date):
-                # 检查今天是否已经执行过
-                if self._already_executed_today(transaction["id"], execution_date, logs):
-                    continue
+            try:
+                # 2. 使用beancount_service创建交易
+                transaction_data = self._convert_to_beancount_transaction(transaction, execution_date)
+                success = beancount_service.add_transaction(transaction_data)
                 
-                try:
-                    # 创建交易
-                    success = self._execute_single_transaction(transaction, execution_date)
-                    
-                    if success:
-                        executed_count += 1
-                        # 更新最后执行时间
-                        transaction["last_executed"] = execution_date.isoformat()
-                        transaction["updated_at"] = datetime.now().isoformat()
-                        
-                        # 记录日志
-                        log_entry = {
-                            "id": str(uuid.uuid4()),
-                            "recurring_transaction_id": transaction["id"],
-                            "execution_date": execution_date.isoformat(),
-                            "success": True,
-                            "error_message": None,
-                            "created_at": datetime.now().isoformat()
-                        }
-                        logs.append(log_entry)
-                        
-                        details.append({
-                            "name": transaction["name"],
-                            "success": True,
-                            "message": "执行成功"
-                        })
-                    else:
-                        failed_count += 1
-                        details.append({
-                            "name": transaction["name"],
-                            "success": False,
-                            "message": "创建交易失败"
-                        })
+                if not success:
+                    raise Exception("写入账本文件失败")
                 
-                except Exception as e:
-                    failed_count += 1
-                    error_msg = str(e)
-                    
-                    # 记录错误日志
-                    log_entry = {
-                        "id": str(uuid.uuid4()),
-                        "recurring_transaction_id": transaction["id"],
-                        "execution_date": execution_date.isoformat(),
-                        "success": False,
-                        "error_message": error_msg,
-                        "created_at": datetime.now().isoformat()
-                    }
-                    logs.append(log_entry)
-                    
-                    details.append({
-                        "name": transaction["name"],
-                        "success": False,
-                        "message": f"执行失败: {error_msg}"
-                    })
+                # 生成交易ID用于记录
+                created_transaction_id = f"recurring_{transaction.id}_{execution_date}"
+                
+                # 3. 更新执行记录
+                transaction.last_executed = execution_date
+                transaction.next_execution = self._calculate_next_execution(transaction)
+                
+                # 4. 创建执行日志（成功）
+                execution_log = RecurringExecutionLog(
+                    recurring_transaction_id=transaction.id,
+                    execution_date=execution_date,
+                    success=True,
+                    created_transaction_id=created_transaction_id
+                )
+                db.add(execution_log)
+                
+                executed_count += 1
+                details.append({
+                    "name": transaction.name,
+                    "success": True,
+                    "message": "执行成功"
+                })
+                logger.info(f"周期记账 {transaction.name} 执行成功，下次执行: {transaction.next_execution}")
+                
+            except Exception as e:
+                failed_count += 1
+                error_msg = f"执行失败: {str(e)}"
+                
+                # 4. 创建执行日志（失败）
+                execution_log = RecurringExecutionLog(
+                    recurring_transaction_id=transaction.id,
+                    execution_date=execution_date,
+                    success=False,
+                    error_message=error_msg
+                )
+                db.add(execution_log)
+                
+                details.append({
+                    "name": transaction.name,
+                    "success": False,
+                    "message": error_msg
+                })
+                logger.error(f"周期记账 {transaction.name} 执行失败: {str(e)}")
         
-        # 保存更新后的数据
-        self._save_recurring_transactions(transactions)
-        self._save_execution_logs(logs)
-        
-        return RecurringExecutionResult(
-            success=failed_count == 0,
-            message=f"执行完成，成功 {executed_count} 个，失败 {failed_count} 个",
-            executed_count=executed_count,
-            failed_count=failed_count,
-            details=details
-        )
-    
-    def _execute_single_transaction(self, recurring_transaction: Dict, execution_date: date) -> bool:
-        """执行单个周期记账"""
+        # 提交数据库更改
         try:
-            # 构建交易数据
-            transaction_data = {
-                "date": execution_date.isoformat(),
-                "flag": recurring_transaction.get("flag", "*"),
-                "payee": recurring_transaction.get("payee"),
-                "narration": recurring_transaction["narration"],
-                "tags": recurring_transaction.get("tags", []),
-                "links": recurring_transaction.get("links", []),
-                "postings": recurring_transaction["postings"]
-            }
-            
-            # 使用beancount服务创建交易
-            return beancount_service.add_transaction(transaction_data)
-        
+            db.commit()
+            logger.info("数据库提交成功")
         except Exception as e:
-            # print(f"执行周期记账失败: {e}")
-            return False
+            db.rollback()
+            logger.error(f"数据库提交失败: {str(e)}")
+            raise
+        
+        result = {
+            "success": failed_count == 0,
+            "message": f"执行完成，成功 {executed_count} 个，失败 {failed_count} 个",
+            "executed_count": executed_count,
+            "failed_count": failed_count,
+            "details": details
+        }
+        
+        logger.info(f"周期记账执行完成: {result}")
+        return result
     
-    def _should_execute_on_date(self, transaction: Dict, target_date: date) -> bool:
-        """判断是否应该在指定日期执行"""
-        start_date = _parse_date(transaction["start_date"])
-        end_date = _parse_date(transaction.get("end_date"))
+    def get_execution_logs(self, db: Session, transaction_id: Optional[int] = None, days: int = 30) -> List[RecurringExecutionLog]:
+        """获取执行日志"""
+        from datetime import datetime, timedelta
         
-        if not start_date:
-            return False
+        # 计算查询的起始日期
+        start_date = datetime.now() - timedelta(days=days)
         
-        # 检查日期范围
-        if target_date < start_date:
-            return False
-        if end_date and target_date > end_date:
-            return False
-        
-        recurrence_type = transaction["recurrence_type"]
-        
-        if recurrence_type == RecurrenceType.DAILY:
-            return True
-        
-        elif recurrence_type == RecurrenceType.WEEKDAYS:
-            # 工作日（周一到周五）
-            return target_date.weekday() < 5
-        
-        elif recurrence_type == RecurrenceType.WEEKLY:
-            # 每周特定几天
-            weekly_days = transaction.get("weekly_days", [])
-            return target_date.weekday() in weekly_days
-        
-        elif recurrence_type == RecurrenceType.MONTHLY:
-            # 每月特定几天
-            monthly_days = transaction.get("monthly_days", [])
-            return target_date.day in monthly_days
-        
-        return False
-    
-    def _already_executed_today(self, transaction_id: str, execution_date: date, logs: List[Dict]) -> bool:
-        """检查今天是否已经执行过"""
-        execution_date_str = execution_date.isoformat()
-        
-        for log in logs:
-            if (log["recurring_transaction_id"] == transaction_id and 
-                log["execution_date"] == execution_date_str and 
-                log["success"]):
-                return True
-        
-        return False
-    
-    def _calculate_next_execution(self, transaction: RecurringTransactionCreate, last_executed: Optional[date]) -> Optional[str]:
-        """计算下次执行时间"""
-        today = date.today()
-        start_date = transaction.start_date
-        end_date = transaction.end_date
-        
-        # 如果有结束日期且已过期，返回None
-        if end_date and today > end_date:
-            return None
-        
-        # 确定开始搜索的日期
-        if last_executed:
-            # 如果已经执行过，从最后执行日期的下一天开始搜索
-            search_start = max(last_executed + timedelta(days=1), today)
-        else:
-            # 如果从未执行过，从今天或开始日期开始搜索
-            search_start = max(today, start_date)
-        
-        # 最多查找365天
-        for days_ahead in range(365):
-            check_date = search_start + timedelta(days=days_ahead)
-            
-            if end_date and check_date > end_date:
-                break
-            
-            if self._should_execute_on_date_obj(transaction, check_date):
-                return check_date.isoformat()
-        
-        return None
-    
-    def _calculate_next_execution_from_dict(self, transaction: Dict) -> Optional[str]:
-        """从字典计算下次执行时间"""
-        last_executed = _parse_date(transaction.get("last_executed"))
-        start_date = _parse_date(transaction["start_date"])
-        end_date = _parse_date(transaction.get("end_date"))
-        
-        if not start_date:
-            return None
-        
-        # 创建临时对象用于计算
-        temp_transaction = RecurringTransactionCreate(
-            name=transaction["name"],
-            recurrence_type=RecurrenceType(transaction["recurrence_type"]),
-            start_date=start_date,
-            end_date=end_date,
-            weekly_days=transaction.get("weekly_days"),
-            monthly_days=transaction.get("monthly_days"),
-            narration=transaction["narration"],
-            postings=transaction["postings"]
+        query = db.query(RecurringExecutionLog).filter(
+            RecurringExecutionLog.created_at >= start_date
         )
         
-        return self._calculate_next_execution(temp_transaction, last_executed)
-    
-    def _should_execute_on_date_obj(self, transaction: RecurringTransactionCreate, target_date: date) -> bool:
-        """判断是否应该在指定日期执行（基于对象）"""
-        if recurrence_type := transaction.recurrence_type:
-            if recurrence_type == RecurrenceType.DAILY:
-                return True
-            elif recurrence_type == RecurrenceType.WEEKDAYS:
-                return target_date.weekday() < 5
-            elif recurrence_type == RecurrenceType.WEEKLY:
-                return target_date.weekday() in (transaction.weekly_days or [])
-            elif recurrence_type == RecurrenceType.MONTHLY:
-                return target_date.day in (transaction.monthly_days or [])
+        if transaction_id:
+            query = query.filter(RecurringExecutionLog.recurring_transaction_id == transaction_id)
         
-        return False
-    
-    def get_execution_logs(self, transaction_id: Optional[str] = None, days: int = 30) -> List[RecurringExecutionLog]:
-        """获取执行日志"""
-        logs = self._load_execution_logs()
+        # 按创建时间降序排列
+        query = query.order_by(RecurringExecutionLog.created_at.desc())
         
-        # 过滤指定天数内的日志
-        cutoff_date = date.today() - timedelta(days=days)
+        # 添加SQL日志
+        sql_query = str(query.statement.compile(compile_kwargs={"literal_binds": True}))
+        logger.debug(f"获取执行日志SQL: {sql_query}")
         
-        filtered_logs = []
-        for log in logs:
-            log_date = _parse_date(log["execution_date"])
-            if log_date and log_date >= cutoff_date:
-                if transaction_id is None or log["recurring_transaction_id"] == transaction_id:
-                    filtered_logs.append(RecurringExecutionLog(**log))
+        results = query.all()
+        logger.info(f"获取到 {len(results)} 条执行日志")
         
-        # 按日期降序排列
-        filtered_logs.sort(key=lambda x: x.execution_date, reverse=True)
-        
-        return filtered_logs
+        return results
 
-# 创建全局服务实例
+# This service will no longer be a singleton instance.
+# It will be instantiated on-demand by the router with a DB session.
 recurring_service = RecurringTransactionService() 

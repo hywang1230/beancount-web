@@ -69,9 +69,29 @@ class FileInfo(BaseModel):
     modified: datetime
     is_main: bool = False
 
+class FileTreeNode(BaseModel):
+    """文件树节点"""
+    name: str
+    path: str
+    size: int
+    type: str = "file"  # file or directory
+    is_main: bool = False
+    includes: List['FileTreeNode'] = Field(default_factory=list)
+    modified: Optional[float] = None
+    error: Optional[str] = None
+
+# 允许前向引用
+FileTreeNode.model_rebuild()
+
 class FileListResponse(BaseModel):
     files: List[FileInfo]
     main_file: Optional[str] = None
+
+class FileTreeResponse(BaseModel):
+    """文件树响应"""
+    tree: FileTreeNode
+    total_files: int
+    main_file: str
 
 class RecurrenceType(str, Enum):
     """周期类型枚举"""
@@ -81,37 +101,28 @@ class RecurrenceType(str, Enum):
     MONTHLY = "monthly"  # 每月特定几天
 
 class RecurringTransactionBase(BaseModel):
-    """周期记账基础模型"""
-    name: str = Field(..., description="周期记账名称")
-    description: Optional[str] = Field(None, description="描述")
-    recurrence_type: RecurrenceType = Field(..., description="周期类型")
-    start_date: date = Field(..., description="开始日期")
-    end_date: Optional[date] = Field(None, description="结束日期，为空表示无限期")
-    
-    # 周期配置
-    weekly_days: Optional[List[int]] = Field(None, description="每周的第几天（0=周一，6=周日）")
-    monthly_days: Optional[List[int]] = Field(None, description="每月的第几日（1-31）")
-    
-    # 交易模板
-    flag: str = Field("*", description="交易标志")
-    payee: Optional[str] = Field(None, description="收付方")
-    narration: str = Field(..., description="摘要")
-    tags: Optional[List[str]] = Field(default_factory=list, description="标签")
-    links: Optional[List[str]] = Field(default_factory=list, description="链接")
-    postings: List[PostingBase] = Field(..., description="记账分录")
-    
-    # 状态
-    is_active: bool = Field(True, description="是否启用")
+    name: str
+    recurrence_type: str
+    start_date: date
+    end_date: Optional[date] = None
+    weekly_days: Optional[List[int]] = None
+    monthly_days: Optional[List[int]] = None
+    flag: Optional[str] = "*"
+    payee: Optional[str] = None
+    narration: str
+    tags: Optional[List[str]] = []
+    links: Optional[List[str]] = []
+    postings: List[Any] # Adjust 'Any' to a more specific Posting schema if available
+    is_active: Optional[bool] = True
+
 
 class RecurringTransactionCreate(RecurringTransactionBase):
-    """创建周期记账请求"""
     pass
 
+
 class RecurringTransactionUpdate(BaseModel):
-    """更新周期记账请求"""
     name: Optional[str] = None
-    description: Optional[str] = None
-    recurrence_type: Optional[RecurrenceType] = None
+    recurrence_type: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
     weekly_days: Optional[List[int]] = None
@@ -121,18 +132,19 @@ class RecurringTransactionUpdate(BaseModel):
     narration: Optional[str] = None
     tags: Optional[List[str]] = None
     links: Optional[List[str]] = None
-    postings: Optional[List[PostingBase]] = None
+    postings: Optional[List[Any]] = None
     is_active: Optional[bool] = None
 
+
 class RecurringTransactionResponse(RecurringTransactionBase):
-    """周期记账响应"""
-    id: str = Field(..., description="ID")
-    created_at: datetime = Field(..., description="创建时间")
-    updated_at: datetime = Field(..., description="更新时间")
-    last_executed: Optional[date] = Field(None, description="最后执行日期")
-    next_execution: Optional[date] = Field(None, description="下次执行日期")
-    
-    model_config = {"from_attributes": True}
+    id: int
+    created_at: datetime
+    updated_at: datetime
+    last_executed: Optional[date] = None
+    next_execution: Optional[date] = None
+
+    class Config:
+        orm_mode = True
 
 class RecurringExecutionLog(BaseModel):
     """周期记账执行日志"""

@@ -411,7 +411,7 @@
     <NumberKeyboard
       v-model="amountInput"
       v-model:show="showNumberKeyboard"
-      title="输入金额（支持加减运算）"
+      title="输入金额"
       placeholder="请输入金额"
       :show-decimal="true"
       :show-negative="true"

@@ -39,7 +39,7 @@
 
       <van-cell
         title="数据同步"
-        icon="circle"
+        icon="exchange"
         is-link
         @click="navigateTo('/h5/sync')"
         :border="false"
@@ -79,7 +79,7 @@
     </van-cell-group>
 
     <van-cell-group inset title="应用信息">
-      <van-cell title="版本信息" icon="info-o" value="1.0.0" :border="false" />
+      <van-cell title="版本信息" icon="info-o" value="1.1.0" :border="false" />
 
       <van-cell
         title="关于我们"

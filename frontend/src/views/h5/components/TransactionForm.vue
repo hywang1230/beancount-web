@@ -340,7 +340,7 @@
     <NumberKeyboard
       v-model="localFormData.amount"
       v-model:show="showNumberKeyboard"
-      title="输入金额（支持加减运算）"
+      title="输入金额"
       :placeholder="`请输入${
         props.type === 'expense'
           ? '支出'

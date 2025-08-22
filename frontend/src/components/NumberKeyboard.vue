@@ -9,34 +9,6 @@
     @close="onClose"
   >
     <div class="number-keyboard">
-      <!-- 键盘标题栏 -->
-      <div class="keyboard-header">
-        <div class="keyboard-title">{{ title }}</div>
-        <div class="keyboard-actions">
-          <van-button
-            v-if="showClear"
-            type="default"
-            size="small"
-            @click="onClear"
-          >
-            清空
-          </van-button>
-          <van-button
-            v-if="showConfirm"
-            type="primary"
-            size="small"
-            @click="onConfirm"
-          >
-            确认
-          </van-button>
-        </div>
-      </div>
-
-      <!-- 输入值显示区域 -->
-      <div class="keyboard-display">
-        <div class="display-value">{{ displayValue || placeholder }}</div>
-      </div>
-
       <!-- 键盘按键区域 -->
       <div class="keyboard-keys">
         <div class="key-row">
@@ -256,37 +228,7 @@ const visible = computed({
   set: (value) => emit("update:show", value),
 });
 
-// 显示值
-const displayValue = computed(() => {
-  // 如果在计算模式
-  if (props.showCalculation) {
-    // 如果有完整的表达式（计算结果），显示表达式
-    if (expression.value) {
-      return expression.value;
-    }
 
-    // 如果有操作符，构建表达式显示
-    if (currentOperator.value && previousValue.value) {
-      const baseExpression = `${previousValue.value} ${currentOperator.value}`;
-      // 如果有当前输入值，加上它；否则只显示操作符前的部分
-      return inputValue.value
-        ? `${baseExpression} ${inputValue.value}`
-        : baseExpression;
-    }
-  }
-
-  // 如果有当前输入值，格式化显示
-  if (inputValue.value) {
-    const value = inputValue.value;
-    // 如果是负数，确保负号在最前面
-    const isNegative = value.startsWith("-");
-    const cleanValue = isNegative ? value.slice(1) : value;
-    return isNegative ? `-${cleanValue}` : cleanValue;
-  }
-
-  // 如果什么都没有，返回空字符串（会显示placeholder）
-  return "";
-});
 
 // 检查是否可以添加小数点
 const canAddDecimal = computed(() => {
@@ -551,55 +493,7 @@ const onKeyTouchEnd = () => {
   -webkit-user-select: none;
 }
 
-/* 键盘标题栏 */
-.keyboard-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  background: var(--van-background);
-  border-bottom: 1px solid var(--van-border-color);
-}
 
-.keyboard-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--van-text-color);
-}
-
-.keyboard-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.keyboard-actions :deep(.van-button--small) {
-  height: 32px;
-  padding: 0 12px;
-  font-size: 14px;
-}
-
-/* 显示区域 */
-.keyboard-display {
-  padding: 16px 20px;
-  background: var(--van-background);
-  border-bottom: 1px solid var(--van-border-color);
-}
-
-.display-value {
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--van-text-color);
-  text-align: right;
-  min-height: 32px;
-  line-height: 32px;
-  letter-spacing: 1px;
-}
-
-.display-value:empty::before {
-  content: attr(data-placeholder);
-  color: var(--van-text-color-3);
-  font-weight: normal;
-}
 
 /* 键盘按键区域 */
 .keyboard-keys {
@@ -669,36 +563,36 @@ const onKeyTouchEnd = () => {
 
 /* 退格键 */
 .key-backspace {
-  background: #f7f8fa;
-  color: #646566;
+  background: var(--van-background-3);
+  color: var(--van-text-color-2);
 }
 
 .key-backspace:active {
-  background: #ebedf0;
+  background: var(--van-active-color);
 }
 
 /* 负号键 */
 .key-negative {
-  background: #fff7e6;
-  color: #fa8c16;
+  background: var(--van-orange-1);
+  color: var(--van-orange-6);
   font-size: 14px;
   font-weight: 600;
 }
 
 .key-negative:active {
-  background: #fff2d9;
+  background: var(--van-orange-2);
 }
 
 /* 小数点键 */
 .key-decimal {
-  background: #f6ffed;
-  color: #52c41a;
+  background: var(--van-green-1);
+  color: var(--van-green-6);
   font-size: 20px;
   font-weight: bold;
 }
 
 .key-decimal:active {
-  background: #f0f9e8;
+  background: var(--van-green-2);
 }
 
 /* 确认键 */
@@ -714,48 +608,48 @@ const onKeyTouchEnd = () => {
 
 /* 加号键 */
 .key-plus {
-  background: #e6f7ff;
-  color: #1890ff;
+  background: var(--van-blue-1);
+  color: var(--van-blue-6);
   font-size: 18px;
   font-weight: bold;
 }
 
 .key-plus:active {
-  background: #d9f0ff;
+  background: var(--van-blue-2);
 }
 
 /* 减号键 */
 .key-minus {
-  background: #fff1f0;
-  color: #ff4d4f;
+  background: var(--van-red-1);
+  color: var(--van-red-6);
   font-size: 18px;
   font-weight: bold;
 }
 
 .key-minus:active {
-  background: #ffe7e6;
+  background: var(--van-red-2);
 }
 
 /* 等号键 */
 .key-equals {
-  background: #f6ffed;
-  color: #52c41a;
+  background: var(--van-green-1);
+  color: var(--van-green-6);
   font-size: 18px;
   font-weight: bold;
 }
 
 .key-equals:active {
-  background: #f0f9e8;
+  background: var(--van-green-2);
 }
 
 /* 隐藏键 */
 .key-hide {
-  background: #f7f8fa;
-  color: #646566;
+  background: var(--van-background-3);
+  color: var(--van-text-color-2);
 }
 
 .key-hide:active {
-  background: #ebedf0;
+  background: var(--van-active-color);
 }
 
 /* 空白键 */
@@ -779,71 +673,8 @@ const onKeyTouchEnd = () => {
   background: var(--van-active-color);
 }
 
-/* 深色模式适配 */
-@media (prefers-color-scheme: dark) {
-  .key-backspace {
-    background: #2c2c2e;
-    color: #8e8e93;
-  }
-
-  .key-backspace:active {
-    background: #3a3a3c;
-  }
-
-  .key-negative {
-    background: #2c2415;
-    color: #fa8c16;
-  }
-
-  .key-negative:active {
-    background: #3d3018;
-  }
-
-  .key-decimal {
-    background: #162312;
-    color: #52c41a;
-  }
-
-  .key-decimal:active {
-    background: #1f2e18;
-  }
-
-  .key-hide {
-    background: #2c2c2e;
-    color: #8e8e93;
-  }
-
-  .key-hide:active {
-    background: #3a3a3c;
-  }
-
-  .key-plus {
-    background: #0d1420;
-    color: #1890ff;
-  }
-
-  .key-plus:active {
-    background: #141f2e;
-  }
-
-  .key-minus {
-    background: #2a1215;
-    color: #ff4d4f;
-  }
-
-  .key-minus:active {
-    background: #3a1d21;
-  }
-
-  .key-equals {
-    background: #162312;
-    color: #52c41a;
-  }
-
-  .key-equals:active {
-    background: #1f2e18;
-  }
-}
+/* 深色模式适配 - 现在使用 Vant 主题变量，无需额外覆盖 */
+/* Vant 的深色模式变量会自动适配所有按键样式 */
 
 /* 响应式设计 */
 @media (max-width: 375px) {

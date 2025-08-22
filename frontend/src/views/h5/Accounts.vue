@@ -1448,9 +1448,58 @@ onMounted(() => {
   background-color: var(--bg-color-secondary);
 }
 
+/* 专门针对新增账户弹窗的样式优化 */
+:deep(.van-popup) {
+  color: var(--text-color) !important;
+}
+
+:deep(.van-popup .create-form) {
+  background-color: var(--bg-color-secondary) !important;
+  color: var(--text-color) !important;
+}
+
+:deep(.van-popup .form-title) {
+  color: var(--text-color) !important;
+}
+
+:deep(.van-popup .van-field) {
+  background-color: var(--bg-color) !important;
+  color: var(--text-color) !important;
+}
+
+:deep(.van-popup .van-field__label) {
+  color: var(--text-color-secondary) !important;
+}
+
+:deep(.van-popup .van-field__control) {
+  color: var(--text-color) !important;
+}
+
+:deep(.van-popup .van-field__control::placeholder) {
+  color: var(--text-color-placeholder) !important;
+}
+
+/* Picker 样式优化 */
 :deep(.van-picker__toolbar) {
   padding: 16px;
   border-bottom: 1px solid var(--border-color);
+  background-color: var(--bg-color) !important;
+}
+
+:deep(.van-picker) {
+  background-color: var(--bg-color) !important;
+}
+
+:deep(.van-picker-column__item) {
+  color: var(--text-color) !important;
+}
+
+:deep(.van-picker__confirm) {
+  color: var(--color-primary) !important;
+}
+
+:deep(.van-picker__cancel) {
+  color: var(--text-color-secondary) !important;
 }
 
 :deep(.van-field__label) {
@@ -1482,6 +1531,33 @@ onMounted(() => {
 
 :deep(.van-button--plain) {
   background: transparent;
+}
+
+/* 弹窗中的主要按钮样式 */
+:deep(.van-popup .van-button--primary) {
+  background-color: var(--color-primary) !important;
+  border-color: var(--color-primary) !important;
+  color: var(--color-white) !important;
+}
+
+/* 日历组件样式优化 */
+:deep(.van-calendar) {
+  background-color: var(--bg-color) !important;
+  color: var(--text-color) !important;
+}
+
+:deep(.van-calendar__header) {
+  background-color: var(--bg-color) !important;
+  color: var(--text-color) !important;
+}
+
+:deep(.van-calendar__day) {
+  color: var(--text-color) !important;
+}
+
+:deep(.van-calendar__day--selected) {
+  background-color: var(--color-primary) !important;
+  color: var(--color-white) !important;
 }
 
 /* 响应式优化 */

@@ -1,7 +1,17 @@
 <template>
   <div class="h5-files">
-    <!-- 搜索栏 -->
+    <!-- 顶部切换视图模式 -->
     <van-sticky>
+      <div class="view-mode-section">
+        <van-tabs v-model:active="viewMode" @change="onViewModeChange">
+          <van-tab title="文件树" name="tree"></van-tab>
+          <van-tab title="年份管理" name="yearly"></van-tab>
+        </van-tabs>
+      </div>
+    </van-sticky>
+
+    <!-- 搜索栏 -->
+    <van-sticky :offset-top="44">
       <div class="search-section">
         <van-search
           v-model="searchKeyword"
@@ -11,70 +21,37 @@
       </div>
     </van-sticky>
 
-    <!-- 文件列表 -->
-    <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
-      <van-list
-        v-model:loading="loading"
-        :finished="finished"
-        finished-text="没有更多了"
-        @load="onLoad"
-      >
-        <van-cell-group>
-          <van-swipe-cell v-for="file in files" :key="file.id">
-            <van-cell
-              :title="file.name"
-              :label="formatFileInfo(file)"
-              is-link
-              @click="viewFile(file)"
-            >
-              <template #icon>
-                <div class="file-icon">
-                  <van-icon :name="getFileIcon(file.type)" />
-                </div>
-              </template>
-              <template #right-icon>
-                <div class="file-actions">
-                  <van-tag v-if="file.is_main" type="success">主文件</van-tag>
-                  <van-button
-                    size="small"
-                    type="primary"
-                    plain
-                    :loading="file.validating"
-                    @click.stop="validateFileHandler(file)"
-                    class="validate-btn"
-                  >
-                    验证
-                  </van-button>
-                </div>
-              </template>
-            </van-cell>
+    <!-- 文件树视图 -->
+    <div v-if="viewMode === 'tree'">
+      <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+        <div class="file-tree-container">
+          <div v-if="fileTreeData" class="tree-summary">
+            <van-cell title="文件统计" :value="`共 ${fileTreeData.total_files} 个文件`" />
+          </div>
+          
+          <van-cell-group v-if="fileTreeData">
+            <FileTreeNodeComponent 
+              :node="fileTreeData.tree" 
+              :level="0"
+              @node-click="onTreeNodeClick"
+              @validate-file="validateTreeFile"
+              @edit-file="editTreeFile"
+              @download-file="downloadTreeFile"
+              @delete-file="deleteTreeFile"
+            />
+          </van-cell-group>
+          
+          <van-empty v-if="!fileTreeData" description="暂无文件数据" />
+        </div>
+      </van-pull-refresh>
+    </div>
 
-            <!-- 滑动操作 -->
-            <template #right>
-              <van-button
-                square
-                type="primary"
-                text="编辑"
-                @click="editFile(file)"
-              />
-              <van-button
-                square
-                type="success"
-                text="下载"
-                @click="downloadFile(file)"
-              />
-              <van-button
-                v-if="!file.is_main"
-                square
-                type="danger"
-                text="删除"
-                @click="deleteFileHandler(file)"
-              />
-            </template>
-          </van-swipe-cell>
-        </van-cell-group>
-      </van-list>
-    </van-pull-refresh>
+
+
+    <!-- 年份管理视图 -->
+    <div v-if="viewMode === 'yearly'">
+      <YearlyFileManager @file-changed="onFileChanged" />
+    </div>
 
     <!-- 上传按钮 -->
     <van-floating-bubble
@@ -139,9 +116,12 @@ import {
   deleteFile,
   getFileContent,
   getFileList,
+  getFileTree,
   updateFileContent,
   uploadFile,
   validateFile,
+  type FileTreeResponse,
+  type FileTreeNode,
 } from "@/api/files";
 import {
   closeToast,
@@ -150,13 +130,20 @@ import {
   showToast,
 } from "vant";
 import { onMounted, ref } from "vue";
+import FileTreeNodeComponent from "@/views/h5/components/FileTreeNode.vue";
+import YearlyFileManager from "@/views/h5/components/YearlyFileManager.vue";
 
+// 视图状态
+const viewMode = ref<"tree" | "yearly">("tree");
 const searchKeyword = ref("");
 const refreshing = ref(false);
 const loading = ref(false);
 const finished = ref(false);
 const fabOffset = ref({ x: -24, y: -100 });
 const showUploadAction = ref(false);
+
+// 文件树数据
+const fileTreeData = ref<FileTreeResponse | null>(null);
 interface FileItem {
   id: number;
   name: string;
@@ -184,80 +171,6 @@ const uploadActions = [
   { name: "拍照上传", icon: "photograph" },
 ];
 
-const formatFileInfo = (file: any) => {
-  const sizeText = formatFileSize(file.size);
-  const dateText = new Date(file.uploadDate).toLocaleDateString("zh-CN");
-  return `${sizeText} • ${dateText}`;
-};
-
-const formatFileSize = (bytes: number) => {
-  if (bytes === 0) return "0 B";
-  const k = 1024;
-  const sizes = ["B", "KB", "MB", "GB"];
-  const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
-};
-
-const getFileIcon = (type: string) => {
-  const iconMap: Record<string, string> = {
-    beancount: "bill-o",
-    csv: "records",
-    excel: "records",
-    pdf: "description",
-    image: "photo-o",
-    other: "folder-o",
-  };
-  return iconMap[type] || "folder-o";
-};
-
-const viewFile = async (file: any) => {
-  try {
-    showLoadingToast({
-      message: "加载中...",
-      forbidClick: true,
-    });
-
-    const result = (await getFileContent(file.name)) as any;
-    const contentData = result || {};
-
-    currentFileName.value = file.name;
-    fileContent.value = contentData.content || "";
-    dialogMode.value = "view";
-    dialogTitle.value = `查看文件: ${file.name}`;
-    showFileDialog.value = true;
-
-    closeToast();
-  } catch (error) {
-    closeToast();
-    showToast("获取文件内容失败");
-    // console.error("获取文件内容失败:", error);
-  }
-};
-
-// 编辑文件
-const editFile = async (file: any) => {
-  try {
-    showLoadingToast({
-      message: "加载中...",
-      forbidClick: true,
-    });
-
-    const result = (await getFileContent(file.name)) as any;
-    const contentData = result || {};
-
-    currentFileName.value = file.name;
-    fileContent.value = contentData.content || "";
-    dialogMode.value = "edit";
-    dialogTitle.value = `编辑文件: ${file.name}`;
-    showFileDialog.value = true;
-
-    closeToast();
-  } catch (error) {
-    closeToast();
-    showToast("获取文件内容失败");
-    // console.error("获取文件内容失败:", error);
-  }
-};
 
 // 保存文件
 const saveFile = async () => {
@@ -287,113 +200,35 @@ const saveFile = async () => {
   }
 };
 
-// 验证文件
-const validateFileHandler = async (file: any) => {
-  try {
-    // 设置验证状态
-    file.validating = true;
-
-    const result = (await validateFile(file.name)) as any;
-    const validationData = result || {};
-
-    if (validationData.valid) {
-      showToast(
-        `文件验证通过，包含 ${validationData.entries_count || 0} 条记录`
-      );
-    } else {
-      showToast(
-        `文件验证失败，发现 ${validationData.errors_count || 0} 个错误`
-      );
-
-      if (validationData.errors && validationData.errors.length > 0) {
-        // 在移动端简化错误显示
-        const errorText = validationData.errors.slice(0, 3).join("\n");
-        const moreErrors =
-          validationData.errors.length > 3
-            ? `\n... 还有 ${validationData.errors.length - 3} 个错误`
-            : "";
-        showToast(`验证错误:\n${errorText}${moreErrors}`);
-      }
-    }
-  } catch (error) {
-    showToast("验证文件失败");
-    // console.error("验证文件失败:", error);
-  } finally {
-    file.validating = false;
-  }
-};
-
-const downloadFile = async (file: FileItem) => {
-  try {
-    showLoadingToast({
-      message: "下载中...",
-      forbidClick: true,
-    });
-
-    const result = (await getFileContent(file.name)) as any;
-    const contentData = result || {};
-    const content = contentData.content || "";
-
-    const blob = new Blob([content], { type: "text/plain" });
-    const url = window.URL.createObjectURL(blob);
-    const link = document.createElement("a");
-
-    link.href = url;
-    link.download = file.name;
-    link.click();
-
-    window.URL.revokeObjectURL(url);
-
-    closeToast();
-    showToast(`${file.name} 下载成功`);
-  } catch (error) {
-    closeToast();
-    showToast("下载失败");
-    // console.error("下载文件失败:", error);
-  }
-};
-
-const deleteFileHandler = async (file: any) => {
-  try {
-    await showConfirmDialog({
-      title: "确认删除",
-      message: "确定要删除这个文件吗？",
-    });
-
-    showLoadingToast({
-      message: "删除中...",
-      forbidClick: true,
-    });
-
-    await deleteFile(file.name);
-
-    // 从列表中移除
-    const index = files.value.findIndex((f) => f.id === file.id);
-    if (index > -1) {
-      files.value.splice(index, 1);
-    }
-
-    closeToast();
-    showToast("删除成功");
-  } catch (error) {
-    closeToast();
-    showToast("删除失败");
-    // console.error("删除文件失败:", error);
-  }
-};
 
 const onSearch = () => {
   loadFiles(true);
 };
 
 const onRefresh = async () => {
-  await loadFiles(true);
+  if (viewMode.value === "tree") {
+    await loadFileTree();
+  }
   refreshing.value = false;
 };
 
-const onLoad = async () => {
-  await loadFiles(false);
+// 视图模式切换
+const onViewModeChange = (name: string | number) => {
+  viewMode.value = name as "tree" | "yearly";
+  if (viewMode.value === "tree" && !fileTreeData.value) {
+    loadFileTree();
+  }
+  // yearly 模式由组件自己处理加载
 };
+
+// 文件变化处理函数
+const onFileChanged = async () => {
+  // 重新加载文件树
+  if (viewMode.value === "tree") {
+    await loadFileTree();
+  }
+};
+
 
 const onUploadSelect = (action: any) => {
   showUploadAction.value = false;
@@ -539,8 +374,162 @@ const loadFiles = async (isRefresh = false) => {
   }
 };
 
+// 加载文件树
+const loadFileTree = async () => {
+  try {
+    loading.value = true;
+    const response = (await getFileTree()) as any;
+    fileTreeData.value = response || null;
+  } catch (error) {
+    showToast("加载文件树失败");
+    console.error("加载文件树失败:", error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 文件树节点点击事件
+const onTreeNodeClick = async (node: FileTreeNode) => {
+  await viewTreeFile(node);
+};
+
+// 查看树节点文件
+const viewTreeFile = async (node: FileTreeNode) => {
+  try {
+    showLoadingToast({
+      message: "加载中...",
+      forbidClick: true,
+    });
+
+    const result = (await getFileContent(node.path)) as any;
+    const contentData = result || {};
+
+    currentFileName.value = node.name;
+    fileContent.value = contentData.content || "";
+    dialogMode.value = "view";
+    dialogTitle.value = `查看文件: ${node.name}`;
+    showFileDialog.value = true;
+
+    closeToast();
+  } catch (error) {
+    closeToast();
+    showToast("获取文件内容失败");
+    console.error("获取文件内容失败:", error);
+  }
+};
+
+// 编辑树节点文件
+const editTreeFile = async (node: FileTreeNode) => {
+  try {
+    showLoadingToast({
+      message: "加载中...",
+      forbidClick: true,
+    });
+
+    const result = (await getFileContent(node.path)) as any;
+    const contentData = result || {};
+
+    currentFileName.value = node.name;
+    fileContent.value = contentData.content || "";
+    dialogMode.value = "edit";
+    dialogTitle.value = `编辑文件: ${node.name}`;
+    showFileDialog.value = true;
+
+    closeToast();
+  } catch (error) {
+    closeToast();
+    showToast("获取文件内容失败");
+    console.error("获取文件内容失败:", error);
+  }
+};
+
+// 验证树节点文件
+const validateTreeFile = async (node: FileTreeNode) => {
+  try {
+    const result = (await validateFile(node.name)) as any;
+    const validationData = result || {};
+
+    if (validationData.valid) {
+      showToast(
+        `文件验证通过，包含 ${validationData.entries_count || 0} 条记录`
+      );
+    } else {
+      showToast(
+        `文件验证失败，发现 ${validationData.errors_count || 0} 个错误`
+      );
+    }
+  } catch (error) {
+    showToast("验证文件失败");
+    console.error("验证文件失败:", error);
+  }
+};
+
+// 下载树节点文件
+const downloadTreeFile = async (node: FileTreeNode) => {
+  try {
+    showLoadingToast({
+      message: "下载中...",
+      forbidClick: true,
+    });
+
+    const result = (await getFileContent(node.path)) as any;
+    const contentData = result || {};
+    const content = contentData.content || "";
+
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = node.name;
+    link.click();
+
+    window.URL.revokeObjectURL(url);
+
+    closeToast();
+    showToast(`${node.name} 下载成功`);
+  } catch (error) {
+    closeToast();
+    showToast("下载失败");
+    console.error("下载文件失败:", error);
+  }
+};
+
+// 删除树节点文件
+const deleteTreeFile = async (node: FileTreeNode) => {
+  if (node.is_main) {
+    showToast("不能删除主账本文件");
+    return;
+  }
+
+  try {
+    await showConfirmDialog({
+      title: "确认删除",
+      message: "确定要删除这个文件吗？",
+    });
+
+    showLoadingToast({
+      message: "删除中...",
+      forbidClick: true,
+    });
+
+    await deleteFile(node.name);
+
+    closeToast();
+    showToast("删除成功");
+    
+    // 重新加载文件树
+    await loadFileTree();
+  } catch (error) {
+    closeToast();
+    showToast("删除失败");
+    console.error("删除文件失败:", error);
+  }
+};
+
 onMounted(() => {
-  loadFiles(true);
+  // 默认加载文件树
+  loadFileTree();
 });
 </script>
 
@@ -552,6 +541,36 @@ onMounted(() => {
   /* 移除自己的滚动，让父容器 main-content 处理 */
   height: 100%;
   overflow: visible;
+}
+
+.view-mode-section {
+  background-color: var(--bg-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.view-mode-section :deep(.van-tabs) {
+  background-color: var(--bg-color);
+}
+
+.view-mode-section :deep(.van-tab) {
+  color: var(--text-color-secondary);
+}
+
+.view-mode-section :deep(.van-tab--active) {
+  color: var(--color-primary);
+}
+
+.file-tree-container {
+  padding: 8px 0;
+}
+
+.tree-summary {
+  margin-bottom: 8px;
+}
+
+.tree-summary :deep(.van-cell) {
+  background-color: var(--bg-color);
+  font-weight: 500;
 }
 
 .search-section {

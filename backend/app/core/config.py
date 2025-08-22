@@ -1,11 +1,37 @@
 from pydantic_settings import BaseSettings
 from pathlib import Path
 import os
+import datetime
+from zoneinfo import ZoneInfo
 
 class Settings(BaseSettings):
     # 应用基础配置
     app_name: str = "Beancount Web"
     debug: bool = True
+    
+    # 时区配置
+    timezone: str = "Asia/Shanghai"
+    
+    @property
+    def tz(self) -> ZoneInfo:
+        """获取时区对象"""
+        return ZoneInfo(self.timezone)
+    
+    def now(self) -> datetime.datetime:
+        """获取当前时区的时间"""
+        return datetime.datetime.now(self.tz)
+    
+    def utc_to_local(self, utc_dt: datetime.datetime) -> datetime.datetime:
+        """将UTC时间转换为本地时间"""
+        if utc_dt.tzinfo is None:
+            utc_dt = utc_dt.replace(tzinfo=ZoneInfo("UTC"))
+        return utc_dt.astimezone(self.tz)
+    
+    def local_to_utc(self, local_dt: datetime.datetime) -> datetime.datetime:
+        """将本地时间转换为UTC时间"""
+        if local_dt.tzinfo is None:
+            local_dt = local_dt.replace(tzinfo=self.tz)
+        return local_dt.astimezone(ZoneInfo("UTC"))
     
     # 数据目录配置
     # Docker环境中使用 /app/data，本地开发时动态确定data目录位置
@@ -32,9 +58,11 @@ class Settings(BaseSettings):
     # API配置
     api_prefix: str = "/api"
     
-    # 数据库配置（可选，用于缓存）
-    database_url: str = "sqlite:///./cache.db"
-    
+    # 数据库配置
+    @property
+    def database_url(self) -> str:
+        return f"sqlite:///{self.data_dir / 'beancount-web.db'}"
+
     # Beancount配置
     default_currency: str = "CNY"
     
@@ -46,6 +74,12 @@ class Settings(BaseSettings):
     # 单用户登录配置
     username: str = os.getenv("USERNAME", "admin")
     password: str = os.getenv("PASSWORD", "admin123")  # 这里可以设置默认密码
+    
+    # 同步配置
+    # 延迟同步的等待时间（秒），用于避免频繁同步
+    sync_delay_seconds: int = int(os.getenv("SYNC_DELAY_SECONDS", "30"))
+    # 周期记账执行后的延迟同步时间（秒）
+    recurring_sync_delay_seconds: int = int(os.getenv("RECURRING_SYNC_DELAY_SECONDS", "60"))
     
     model_config = {
         "env_file": ".env",

@@ -189,7 +189,7 @@
         >
           <div
             v-for="item in historyList"
-            :key="item.timestamp"
+            :key="item.start_time"
             class="history-item"
           >
             <div class="history-header">
@@ -202,10 +202,10 @@
             </div>
             <div class="history-content">
               <div class="files-count">{{ item.files_count }} 个文件</div>
-              <div class="timestamp">{{ formatTime(item.timestamp) }}</div>
+              <div class="timestamp">{{ formatTime(item.start_time) }}</div>
             </div>
-            <div v-if="item.message" class="history-message">
-              {{ item.message }}
+            <div v-if="item.logs" class="history-message">
+              {{ item.logs }}
             </div>
           </div>
         </van-list>

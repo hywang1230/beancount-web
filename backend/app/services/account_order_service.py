@@ -35,7 +35,7 @@ class AccountOrderService:
                     }
                 }
         except Exception as e:
-            print(f"加载账户排序配置失败: {e}")
+            # 使用默认配置，静默处理错误
             return {
                 "category_order": ["Assets", "Liabilities", "Income", "Expenses", "Equity"],
                 "subcategory_order": {
