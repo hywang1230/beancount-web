@@ -409,7 +409,7 @@
 
     <!-- 数字键盘 - 金额输入 -->
     <NumberKeyboard
-      v-model="amountInput"
+      v-model="currentPostingAmount"
       v-model:show="showNumberKeyboard"
       title="输入金额"
       placeholder="请输入金额"
@@ -503,8 +503,21 @@ const payeeList = ref<string[]>([]);
 
 // 数字键盘状态
 const showNumberKeyboard = ref(false);
-const amountInput = ref("");
 const currentAmountPostingIndex = ref(0);
+
+// 当前编辑的posting金额 - 用于数字键盘双向绑定
+const currentPostingAmount = computed({
+  get: () => {
+    const index = currentAmountPostingIndex.value;
+    return String(form.value.postings[index]?.amount || "");
+  },
+  set: (value: string) => {
+    const index = currentAmountPostingIndex.value;
+    if (form.value.postings[index]) {
+      form.value.postings[index].amount = value;
+    }
+  }
+});
 
 const recurrenceTypeColumns = [
   { text: "每日", value: "daily" },
@@ -850,26 +863,16 @@ const loadEditData = async () => {
 // 数字键盘相关方法
 const showAmountKeyboard = (index: number) => {
   currentAmountPostingIndex.value = index;
-  amountInput.value = String(form.value.postings[index]?.amount || "");
   showNumberKeyboard.value = true;
 };
 
-const onAmountKeyboardConfirm = (value: string) => {
-  const index = currentAmountPostingIndex.value;
-  if (form.value.postings[index]) {
-    form.value.postings[index].amount = value;
-  }
+const onAmountKeyboardConfirm = () => {
   showNumberKeyboard.value = false;
-  amountInput.value = "";
 };
 
 // 金额计算事件处理
-const onAmountCalculate = (result: string) => {
-  const index = currentAmountPostingIndex.value;
-  if (form.value.postings[index]) {
-    form.value.postings[index].amount = result;
-  }
-  amountInput.value = result;
+const onAmountCalculate = () => {
+  // 计算结果会通过v-model自动更新到currentPostingAmount
 };
 
 onMounted(async () => {
