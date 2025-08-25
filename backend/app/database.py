@@ -42,6 +42,7 @@ def init_database():
         from app.models.sync import SyncLog
         from app.models.setting import Setting
         from app.models.github_sync import GitHubSync
+        from app.models.account_order import AccountOrder
         
         logger.info("正在初始化数据库表...")
         

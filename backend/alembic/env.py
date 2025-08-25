@@ -27,6 +27,7 @@ from app.models.recurring import Recurring
 from app.models.sync import SyncLog
 from app.models.setting import Setting
 from app.models.github_sync import GitHubSync
+from app.models.account_order import AccountOrder
 
 target_metadata = Base.metadata
 
