@@ -5,6 +5,7 @@
 import os
 import re
 from typing import Dict, Optional
+from datetime import date
 from beancount.core.data import Transaction
 
 
@@ -14,6 +15,9 @@ class TransactionRepository:
     def __init__(self, main_file: str, loader):
         self.main_file = main_file
         self.loader = loader
+        # 导入年份文件管理器
+        from app.services.yearly_file_manager import yearly_file_manager
+        self.yearly_file_manager = yearly_file_manager
     
     def add_transaction(self, transaction_data: Dict) -> bool:
         """添加新交易到账本文件"""
@@ -21,13 +25,20 @@ class TransactionRepository:
             # 构建交易字符串
             transaction_str = self._build_transaction_string(transaction_data)
             
-            # 追加到主文件
-            with open(self.main_file, 'a', encoding='utf-8') as f:
-                f.write('\n' + transaction_str + '\n')
+            # 解析交易日期
+            transaction_date = date.fromisoformat(transaction_data['date'])
             
-            # 重新加载条目
-            self.loader.load_entries(force_reload=True)
-            return True
+            # 使用年份文件管理器将交易写入对应年份文件
+            success = self.yearly_file_manager.add_transaction_to_yearly_file(
+                transaction_date, transaction_str
+            )
+            
+            if success:
+                # 重新加载条目
+                self.loader.load_entries(force_reload=True)
+                return True
+            else:
+                return False
             
         except Exception as e:
             # Transaction addition failed
