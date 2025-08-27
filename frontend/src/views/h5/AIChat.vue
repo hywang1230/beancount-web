@@ -425,8 +425,9 @@ onMounted(async () => {
   height: 100dvh;
   display: flex;
   flex-direction: column;
-  background-color: #f5f5f5;
+  background-color: var(--van-background);
   padding-bottom: 60px; /* 为底部导航栏留出空间 */
+  transition: background-color 0.3s ease;
 }
 
 .chat-container {
@@ -447,9 +448,10 @@ onMounted(async () => {
   align-items: flex-start;
   gap: 12px;
   padding: 16px;
-  background: white;
+  background: var(--van-background-2);
   border-radius: 12px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-light);
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .ai-avatar {
@@ -459,21 +461,24 @@ onMounted(async () => {
 
 .welcome-text h3 {
   margin: 0 0 8px 0;
-  color: #333;
+  color: var(--van-text-color);
   font-size: 16px;
+  transition: color 0.3s ease;
 }
 
 .welcome-text p {
   margin: 8px 0;
-  color: #666;
+  color: var(--van-text-color-2);
   font-size: 14px;
+  transition: color 0.3s ease;
 }
 
 .welcome-text ul {
   margin: 8px 0;
   padding-left: 16px;
-  color: #666;
+  color: var(--van-text-color-2);
   font-size: 14px;
+  transition: color 0.3s ease;
 }
 
 .welcome-text li {
@@ -486,17 +491,22 @@ onMounted(async () => {
   gap: 8px;
   padding: 8px 12px;
   margin: 12px 0;
-  background: #f5f5f5;
+  background: var(--van-background);
   border-radius: 8px;
-  border-left: 4px solid #ddd;
+  border-left: 4px solid var(--van-border-color);
   font-size: 14px;
-  color: #666;
+  color: var(--van-text-color-2);
+  transition: all 0.3s ease;
 }
 
 .context-status.enabled {
-  background: #e8f4fd;
+  background: rgba(24, 144, 255, 0.1);
   border-left-color: #1890ff;
   color: #1890ff;
+}
+
+.van-theme-dark .context-status.enabled {
+  background: rgba(24, 144, 255, 0.2);
 }
 
 .context-status .van-icon {
@@ -527,8 +537,13 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #e8f4fd;
+  background-color: rgba(24, 144, 255, 0.1);
   flex-shrink: 0;
+  transition: background-color 0.3s ease;
+}
+
+.van-theme-dark .message-avatar {
+  background-color: rgba(24, 144, 255, 0.2);
 }
 
 .message-item.user .message-avatar {
@@ -548,10 +563,11 @@ onMounted(async () => {
 }
 
 .message-bubble {
-  background: white;
+  background: var(--van-background-2);
+  color: var(--van-text-color);
   padding: 12px 16px;
   border-radius: 12px;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-base);
   word-wrap: break-word;
   transition: all 0.3s ease;
 }
@@ -585,8 +601,6 @@ onMounted(async () => {
   }
 }
 
-
-
 .message-item.user .message-bubble {
   background: #07c160;
   color: white;
@@ -596,7 +610,8 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: #999;
+  color: var(--van-text-color-3);
+  transition: color 0.3s ease;
 }
 
 .streaming-content {
@@ -627,9 +642,10 @@ onMounted(async () => {
 .message-meta {
   margin-top: 8px;
   padding-top: 8px;
-  border-top: 1px solid rgba(0, 0, 0, 0.1);
+  border-top: 1px solid var(--van-border-color);
   font-size: 12px;
-  color: #999;
+  color: var(--van-text-color-3);
+  transition: all 0.3s ease;
 }
 
 .message-item.user .message-meta {
@@ -640,10 +656,11 @@ onMounted(async () => {
 .message-time {
   margin-top: 4px;
   font-size: 12px;
-  color: #999;
+  color: var(--van-text-color-3);
   display: flex;
   align-items: center;
   gap: 4px;
+  transition: color 0.3s ease;
 }
 
 .context-indicator {
@@ -664,12 +681,13 @@ onMounted(async () => {
   bottom: 60px; /* 位于底部导航栏之上 */
   left: 0;
   right: 0;
-  background: white;
-  border-top: 1px solid #eee;
+  background: var(--van-background-2);
+  border-top: 1px solid var(--van-border-color);
   padding: 12px 16px;
   z-index: 999; /* 低于导航栏的z-index */
   /* 适配安全区域 */
   padding-bottom: max(12px, env(safe-area-inset-bottom));
+  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .input-container {
@@ -680,14 +698,17 @@ onMounted(async () => {
 
 .input-container :deep(.van-field) {
   flex: 1;
-  background: #f7f8fa;
+  background: var(--van-background);
   border-radius: 20px;
+  transition: background-color 0.3s ease;
 }
 
 .input-container :deep(.van-field__control) {
   padding: 8px 16px;
   border: none;
   max-height: 80px;
+  color: var(--van-text-color);
+  transition: color 0.3s ease;
 }
 
 .send-button {
@@ -695,6 +716,4 @@ onMounted(async () => {
   min-width: 60px;
   border-radius: 18px;
 }
-
-
 </style>

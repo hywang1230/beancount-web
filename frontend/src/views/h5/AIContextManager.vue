@@ -373,8 +373,9 @@ onMounted(async () => {
 <style scoped>
 .context-manager-page {
   min-height: 100vh;
-  background-color: #f5f5f5;
+  background-color: var(--van-background);
   padding-bottom: 60px;
+  transition: background-color 0.3s ease;
 }
 
 .page-content {
@@ -389,6 +390,11 @@ onMounted(async () => {
   border-radius: 12px;
   color: white;
   margin-bottom: 8px;
+  /* 暗黑模式下使用稍微暗一点的渐变 */
+}
+
+.van-theme-dark .stats-card {
+  background: linear-gradient(135deg, #4a5b8c 0%, #5d4674 100%);
 }
 
 .stats-title {
@@ -428,6 +434,8 @@ onMounted(async () => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  background-color: var(--van-background-2);
+  transition: background-color 0.3s ease;
 }
 
 .popup-header {
@@ -435,14 +443,17 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   padding-bottom: 16px;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid var(--van-border-color);
   margin-bottom: 16px;
+  transition: border-color 0.3s ease;
 }
 
 .popup-header h3 {
   margin: 0;
   font-size: 18px;
   font-weight: 600;
+  color: var(--van-text-color);
+  transition: color 0.3s ease;
 }
 
 .settings-content {
@@ -456,12 +467,11 @@ onMounted(async () => {
   padding-top: 16px;
 }
 
-
-
 .help-content {
   font-size: 14px;
   line-height: 1.6;
-  color: #666;
+  color: var(--van-text-color-2);
+  transition: color 0.3s ease;
 }
 
 .help-content ul {
@@ -474,21 +484,7 @@ onMounted(async () => {
 }
 
 .help-content strong {
-  color: #333;
-}
-
-/* 深色主题适配 */
-@media (prefers-color-scheme: dark) {
-  .context-manager-page {
-    background-color: #1a1a1a;
-  }
-  
-  .help-content {
-    color: #999;
-  }
-  
-  .help-content strong {
-    color: #e6e6e6;
-  }
+  color: var(--van-text-color);
+  transition: color 0.3s ease;
 }
 </style>
