@@ -83,7 +83,6 @@ import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { showToast } from "vant";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
 
 // 注册 ECharts 组件
 echarts.use([
@@ -95,7 +94,6 @@ echarts.use([
   GridComponent,
 ]);
 
-const router = useRouter();
 const themeStore = useThemeStore();
 
 const isDark = computed(() => themeStore.isDark);

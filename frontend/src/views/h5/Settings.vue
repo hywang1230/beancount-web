@@ -62,6 +62,18 @@
           <span class="cell-desc">配置AI模型和参数</span>
         </template>
       </van-cell>
+
+      <van-cell
+        title="上下文管理"
+        icon="cluster-o"
+        is-link
+        @click="navigateTo('/h5/ai-context')"
+        :border="false"
+      >
+        <template #label>
+          <span class="cell-desc">管理AI对话记忆和上下文</span>
+        </template>
+      </van-cell>
     </van-cell-group>
 
     <van-cell-group inset title="外观设置">

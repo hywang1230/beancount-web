@@ -8,7 +8,27 @@
       fixed
       placeholder
     >
-
+      <template #right>
+        <van-icon 
+          name="setting-o" 
+          @click="$router.push('/h5/ai-context')"
+          style="font-size: 18px; margin-right: 8px;"
+          title="上下文管理"
+        />
+        <van-icon 
+          name="info-o" 
+          @click="showContextInfo"
+          style="font-size: 18px; margin-right: 8px;"
+          title="对话信息"
+        />
+        <van-icon 
+          v-if="conversationId && messages.length > 0"
+          name="delete-o" 
+          @click="clearCurrentConversation"
+          style="font-size: 18px;"
+          title="清除对话"
+        />
+      </template>
     </van-nav-bar>
 
     <!-- 聊天消息列表 -->
@@ -19,6 +39,21 @@
           <div class="ai-avatar">🤖</div>
           <div class="welcome-text">
             <h3>你好！我是你的AI记账助手</h3>
+            
+            <!-- 上下文状态指示 -->
+            <div class="context-status" :class="{ 'enabled': contextEnabled }">
+              <van-icon :name="contextEnabled ? 'cluster-o' : 'cluster'" />
+              <span>上下文记忆：{{ contextEnabled ? '已启用' : '已禁用' }}</span>
+              <van-button 
+                size="mini" 
+                type="primary" 
+                plain 
+                @click="$router.push('/h5/ai-context')"
+              >
+                管理
+              </van-button>
+            </div>
+            
             <p>我可以帮助你：</p>
             <ul>
               <li>🔍 自然语言记账：「今天在星巴克花了35元」</li>
@@ -55,12 +90,14 @@
               <div v-else class="message-text">
                 {{ message.content }}
               </div>
-              <div v-if="message.intent" class="message-meta">
-                意图：{{ getIntentText(message.intent) }}
+              <div v-if="message.intent || (!message.isUser && message.contextUsed)" class="message-meta">
+                <span v-if="message.intent">意图：{{ getIntentText(message.intent) }}</span>
+                <span v-if="!message.isUser && message.contextUsed" class="context-indicator" title="使用了上下文记忆">🧠</span>
               </div>
             </div>
             <div class="message-time">
               {{ formatTime(message.timestamp) }}
+              <span v-if="!message.isUser && message.conversationId" class="conversation-id" :title="`对话ID: ${message.conversationId}`">💬</span>
             </div>
           </div>
         </div>
@@ -97,9 +134,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted, nextTick } from 'vue'
+import { ref, onMounted, nextTick } from 'vue'
 import { showToast, showDialog } from 'vant'
-import { aiChatApi, aiConfigApi, type AIChatRequest, type AIConfig } from '@/api/ai'
+import { aiChatApi, aiContextApi, type AIChatRequest } from '@/api/ai'
 
 interface ChatMessage {
   content: string
@@ -109,6 +146,8 @@ interface ChatMessage {
   intent?: string
   chainId?: string
   isStreaming?: boolean
+  conversationId?: string
+  contextUsed?: boolean
 }
 
 // 响应式数据
@@ -116,6 +155,11 @@ const messages = ref<ChatMessage[]>([])
 const inputMessage = ref('')
 const sending = ref(false)
 const chatContainer = ref<HTMLElement>()
+const conversationId = ref<string>('')
+const contextEnabled = ref(true)
+const contextStats = ref({
+  context_enabled: false
+})
 
 // 意图文本映射
 const intentMap: Record<string, string> = {
@@ -146,14 +190,95 @@ const scrollToBottom = async () => {
   }
 }
 
+// 生成新的对话ID
+const generateConversationId = (): string => {
+  const newId = 'conv_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+  // 保存到localStorage
+  localStorage.setItem('ai-conversation-id', newId)
+  return newId
+}
+
+// 构建聊天历史
+const buildChatHistory = () => {
+  return messages.value
+    .filter(msg => msg.status === 'completed')
+    .map(msg => ({
+      role: msg.isUser ? 'user' : 'assistant',
+      content: msg.content
+    }))
+}
+
+// 获取上下文统计信息
+const fetchContextStats = async () => {
+  try {
+    const result = await aiContextApi.getStats()
+    contextStats.value = result.stats
+    contextEnabled.value = result.stats.context_enabled
+  } catch (error) {
+    console.error('获取上下文统计失败:', error)
+  }
+}
+
+// 清除当前对话上下文
+const clearCurrentConversation = async () => {
+  if (!conversationId.value) return
+  
+  try {
+    await aiContextApi.clearConversation(conversationId.value)
+    showToast('对话上下文已清除')
+    // 重新开始新对话
+    conversationId.value = ''
+    messages.value = []
+    // 清除localStorage中的对话ID
+    localStorage.removeItem('ai-conversation-id')
+    await fetchContextStats()
+  } catch (error) {
+    console.error('清除对话失败:', error)
+    showToast('清除对话失败')
+  }
+}
+
+// 显示上下文信息
+const showContextInfo = async () => {
+  await fetchContextStats()
+  const stats = contextStats.value
+  
+  showDialog({
+    title: '上下文信息',
+    message: `
+      <div style="text-align: left;">
+        <p><strong>上下文状态:</strong> ${stats.context_enabled ? '已启用' : '已禁用'}</p>
+        <p><strong>记忆类型:</strong> 缓冲记忆</p>
+        <p><strong>当前对话ID:</strong> ${conversationId.value || '未创建'}</p>
+        <p><strong>消息数量:</strong> ${messages.value.filter(m => m.status === 'completed').length}</p>
+      </div>
+    `,
+    allowHtml: true,
+    showCancelButton: conversationId.value ? true : false,
+    cancelButtonText: '清除对话',
+    confirmButtonText: '关闭'
+  }).then(() => {
+    // 确认按钮 - 关闭
+  }).catch(() => {
+    // 取消按钮 - 清除对话
+    clearCurrentConversation()
+  })
+}
+
 // 发送消息
 const sendMessage = async () => {
   if (!inputMessage.value.trim() || sending.value) return
 
+  // 如果还没有对话ID，创建一个新的
+  if (!conversationId.value) {
+    conversationId.value = generateConversationId()
+  }
+
   const userMessage: ChatMessage = {
     content: inputMessage.value.trim(),
     isUser: true,
-    timestamp: new Date()
+    timestamp: new Date(),
+    conversationId: conversationId.value
   }
 
   // 添加用户消息
@@ -165,7 +290,8 @@ const sendMessage = async () => {
     isUser: false,
     timestamp: new Date(),
     status: 'loading',
-    isStreaming: true
+    isStreaming: true,
+    conversationId: conversationId.value
   }
   messages.value.push(aiMessage)
 
@@ -176,9 +302,12 @@ const sendMessage = async () => {
   await scrollToBottom()
 
   try {
+    // 构建请求，包含对话ID和历史记录
     const request: AIChatRequest = {
       message: messageContent,
-      context: {}
+      context: {},
+      conversation_id: conversationId.value,
+      chat_history: contextEnabled.value ? buildChatHistory() : undefined
     }
 
     // 使用流式API
@@ -192,20 +321,28 @@ const sendMessage = async () => {
           case 'start':
             lastMessage.status = 'loading'
             lastMessage.chainId = chunk.chain_id
+            lastMessage.conversationId = chunk.conversation_id
+            lastMessage.contextUsed = chunk.context_enabled
             break
             
           case 'intent':
             lastMessage.intent = chunk.intent
             break
             
+          case 'context_loaded':
+            lastMessage.content = chunk.message || 'AI正在思考...'
+            break
+            
           case 'thinking':
             lastMessage.status = 'loading'
             lastMessage.content = chunk.message
+            lastMessage.contextUsed = chunk.context_used
             break
             
           case 'message_chunk':
             lastMessage.status = 'streaming'
             lastMessage.content = chunk.full_content || chunk.content
+            lastMessage.contextUsed = chunk.context_used
             scrollToBottom()
             break
             
@@ -213,11 +350,19 @@ const sendMessage = async () => {
             lastMessage.status = 'completed'
             lastMessage.content = chunk.message
             lastMessage.intent = chunk.intent
+            lastMessage.conversationId = chunk.conversation_id
+            lastMessage.contextUsed = chunk.context_used
             break
             
           case 'message_complete':
             lastMessage.status = 'completed'
             lastMessage.isStreaming = false
+            lastMessage.conversationId = chunk.conversation_id
+            lastMessage.contextUsed = chunk.context_used
+            // 更新对话ID（如果后端返回了新的）
+            if (chunk.conversation_id && chunk.conversation_id !== conversationId.value) {
+              conversationId.value = chunk.conversation_id
+            }
             break
             
           case 'error':
@@ -261,6 +406,16 @@ const sendMessage = async () => {
   }
 }
 
+// 初始化
+onMounted(async () => {
+  await fetchContextStats()
+  
+  // 尝试恢复之前的对话ID
+  const savedConversationId = localStorage.getItem('ai-conversation-id')
+  if (savedConversationId) {
+    conversationId.value = savedConversationId
+  }
+})
 
 </script>
 
@@ -323,6 +478,37 @@ const sendMessage = async () => {
 
 .welcome-text li {
   margin: 4px 0;
+}
+
+.context-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin: 12px 0;
+  background: #f5f5f5;
+  border-radius: 8px;
+  border-left: 4px solid #ddd;
+  font-size: 14px;
+  color: #666;
+}
+
+.context-status.enabled {
+  background: #e8f4fd;
+  border-left-color: #1890ff;
+  color: #1890ff;
+}
+
+.context-status .van-icon {
+  font-size: 16px;
+}
+
+.context-status span {
+  flex: 1;
+}
+
+.context-status .van-button {
+  font-size: 12px;
 }
 
 .message-item {
@@ -455,6 +641,22 @@ const sendMessage = async () => {
   margin-top: 4px;
   font-size: 12px;
   color: #999;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.context-indicator {
+  font-size: 14px;
+  margin-left: 8px;
+  opacity: 0.7;
+  cursor: help;
+}
+
+.conversation-id {
+  font-size: 12px;
+  opacity: 0.6;
+  cursor: help;
 }
 
 .input-area {

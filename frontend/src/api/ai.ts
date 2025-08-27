@@ -27,6 +27,8 @@ export interface AIConfigDict {
 export interface AIChatRequest {
   message: string
   context?: Record<string, any>
+  conversation_id?: string
+  chat_history?: Array<{ role: string; content: string }>
 }
 
 export interface AIChatResponse {
@@ -35,6 +37,8 @@ export interface AIChatResponse {
   data: Record<string, any>
   chain_id?: string
   message: string
+  conversation_id?: string
+  context_used?: boolean
 }
 
 export interface AIConfirmRequest {
@@ -162,4 +166,43 @@ export const aiChatApi = {
   }> => {
     return api.post('/ai/confirm', data)
   }
+}
+
+// AI上下文管理API
+export const aiContextApi = {
+  // 初始化上下文配置
+  initConfigs: (): Promise<{
+    message: string
+    created_count: number
+  }> => {
+    return api.post('/ai/context/init')
+  },
+
+  // 获取上下文统计信息
+  getStats: (): Promise<{
+    stats: {
+      context_enabled: boolean
+    }
+    message: string
+  }> => {
+    return api.get('/ai/context/stats')
+  },
+
+  // 清除指定对话的上下文
+  clearConversation: (conversationId: string): Promise<{
+    message: string
+    conversation_id: string
+  }> => {
+    return api.delete(`/ai/context/conversation/${conversationId}`)
+  },
+
+  // 清理过期的对话缓存
+  cleanupExpired: (): Promise<{
+    message: string
+    cleaned_count: number
+  }> => {
+    return api.post('/ai/context/cleanup')
+  },
+
+
 }

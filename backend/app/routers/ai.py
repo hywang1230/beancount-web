@@ -1,4 +1,4 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
@@ -12,6 +12,7 @@ from app.models.ai_schemas import (
 )
 from app.services.ai_config_service import AIConfigService
 from app.services.ai_chat_service import AIChatService
+from app.services.context_manager import ContextManager
 from app.utils.auth import get_current_user
 import logging
 
@@ -336,3 +337,122 @@ async def ai_confirm(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="AI确认处理失败"
         )
+
+
+@router.post("/context/init")
+async def init_context_configs(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """初始化上下文配置项"""
+    try:
+        ai_service = AIConfigService(db)
+        
+        # 上下文配置项
+        context_configs = {
+            "context_enabled": "true",
+            "context_buffer_window": "10"
+        }
+        
+        created_count = 0
+        for key, value in context_configs.items():
+            existing_config = ai_service.get_config(key)
+            if not existing_config:
+                from app.models.ai_schemas import DEFAULT_AI_CONFIGS
+                description = DEFAULT_AI_CONFIGS.get(key, {}).get("description", "")
+                ai_service.upsert_config(key, value, description)
+                created_count += 1
+                logger.info(f"创建上下文配置: {key}")
+        
+        return {
+            "message": f"上下文配置初始化完成，创建了 {created_count} 个配置项",
+            "created_count": created_count
+        }
+        
+    except Exception as e:
+        logger.error(f"初始化上下文配置失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="初始化上下文配置失败"
+        )
+
+
+@router.get("/context/stats")
+async def get_context_stats(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """获取上下文统计信息"""
+    try:
+        context_manager = ContextManager(db)
+        stats = context_manager.get_conversation_stats()
+        
+        return {
+            "stats": stats,
+            "message": "获取上下文统计信息成功"
+        }
+        
+    except Exception as e:
+        logger.error(f"获取上下文统计失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="获取上下文统计失败"
+        )
+
+
+@router.delete("/context/conversation/{conversation_id}")
+async def clear_conversation(
+    conversation_id: str,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """清除指定对话的上下文"""
+    try:
+        context_manager = ContextManager(db)
+        success = context_manager.clear_conversation(conversation_id)
+        
+        if success:
+            return {
+                "message": f"对话 {conversation_id} 的上下文已清除",
+                "conversation_id": conversation_id
+            }
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"对话 {conversation_id} 不存在"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"清除对话上下文失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="清除对话上下文失败"
+        )
+
+
+@router.post("/context/cleanup")
+async def cleanup_expired_conversations(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """清理过期的对话缓存"""
+    try:
+        context_manager = ContextManager(db)
+        cleaned_count = context_manager.cleanup_expired_conversations()
+        
+        return {
+            "message": f"清理了 {cleaned_count} 个过期对话",
+            "cleaned_count": cleaned_count
+        }
+        
+    except Exception as e:
+        logger.error(f"清理过期对话失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="清理过期对话失败"
+        )
+
+
+

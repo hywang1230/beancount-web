@@ -40,6 +40,8 @@ class AIChatRequest(BaseModel):
     """AI聊天请求模型"""
     message: str = Field(..., min_length=1, max_length=2000, description="用户输入消息")
     context: Optional[Dict[str, Any]] = Field(default_factory=dict, description="上下文信息")
+    conversation_id: Optional[str] = Field(None, description="对话会话ID，用于维护上下文")
+    chat_history: Optional[list] = Field(default_factory=list, description="聊天历史记录")
 
 
 class AIChatResponse(BaseModel):
@@ -49,6 +51,8 @@ class AIChatResponse(BaseModel):
     data: Dict[str, Any] = Field(default_factory=dict, description="响应数据")
     chain_id: Optional[str] = Field(None, description="LangChain执行ID")
     message: str = Field(default="", description="响应消息")
+    conversation_id: Optional[str] = Field(None, description="对话会话ID")
+    context_used: Optional[bool] = Field(False, description="是否使用了上下文")
 
 
 class AIConfirmRequest(BaseModel):
@@ -95,5 +99,15 @@ DEFAULT_AI_CONFIGS = {
     "langsmith_tracing": {
         "value": "false",
         "description": "是否启用LangSmith追踪"
+    },
+
+
+    "context_buffer_window": {
+        "value": "10",
+        "description": "缓冲窗口大小（消息条数）"
+    },
+    "context_enabled": {
+        "value": "true",
+        "description": "是否启用上下文记忆功能"
     }
 }

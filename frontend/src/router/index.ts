@@ -115,6 +115,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/views/h5/AIChat.vue"),
         meta: { title: "AI智能助手", platform: "h5", requiresAuth: true },
       },
+      {
+        path: "ai-context",
+        name: "H5AIContextManager",
+        component: () => import("@/views/h5/AIContextManager.vue"),
+        meta: { title: "上下文管理", platform: "h5", requiresAuth: true },
+      },
     ],
   },
 ];
