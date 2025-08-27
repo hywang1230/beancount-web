@@ -46,6 +46,12 @@
                 <van-loading size="16" />
                 <span>AI正在思考...</span>
               </div>
+              <div v-else-if="message.status === 'streaming'" class="streaming-content">
+                <div class="message-text">
+                  {{ message.content }}
+                  <span class="cursor-blink">|</span>
+                </div>
+              </div>
               <div v-else class="message-text">
                 {{ message.content }}
               </div>
@@ -99,9 +105,10 @@ interface ChatMessage {
   content: string
   isUser: boolean
   timestamp: Date
-  status?: 'loading' | 'completed' | 'failed'
+  status?: 'loading' | 'completed' | 'failed' | 'streaming'
   intent?: string
   chainId?: string
+  isStreaming?: boolean
 }
 
 // 响应式数据
@@ -152,12 +159,13 @@ const sendMessage = async () => {
   // 添加用户消息
   messages.value.push(userMessage)
   
-  // 添加AI加载消息
+  // 添加AI流式消息
   const aiMessage: ChatMessage = {
     content: '',
     isUser: false,
     timestamp: new Date(),
-    status: 'loading'
+    status: 'loading',
+    isStreaming: true
   }
   messages.value.push(aiMessage)
 
@@ -173,16 +181,72 @@ const sendMessage = async () => {
       context: {}
     }
 
-    const response = await aiChatApi.chat(request)
-
-    // 更新AI消息
-    const lastMessage = messages.value[messages.value.length - 1]
-    lastMessage.content = response.message
-    lastMessage.status = response.status === 'completed' ? 'completed' : 'failed'
-    lastMessage.intent = response.intent
-    lastMessage.chainId = response.chain_id
-
-    await scrollToBottom()
+    // 使用流式API
+    aiChatApi.chatStream(
+      request,
+      // onMessage: 处理流式数据
+      (chunk) => {
+        const lastMessage = messages.value[messages.value.length - 1]
+        
+        switch (chunk.type) {
+          case 'start':
+            lastMessage.status = 'loading'
+            lastMessage.chainId = chunk.chain_id
+            break
+            
+          case 'intent':
+            lastMessage.intent = chunk.intent
+            break
+            
+          case 'thinking':
+            lastMessage.status = 'loading'
+            lastMessage.content = chunk.message
+            break
+            
+          case 'message_chunk':
+            lastMessage.status = 'streaming'
+            lastMessage.content = chunk.full_content || chunk.content
+            scrollToBottom()
+            break
+            
+          case 'message':
+            lastMessage.status = 'completed'
+            lastMessage.content = chunk.message
+            lastMessage.intent = chunk.intent
+            break
+            
+          case 'message_complete':
+            lastMessage.status = 'completed'
+            lastMessage.isStreaming = false
+            break
+            
+          case 'error':
+            lastMessage.status = 'failed'
+            lastMessage.content = chunk.message || '处理失败，请重试'
+            showToast(chunk.message || '发送失败，请重试')
+            break
+        }
+        
+        scrollToBottom()
+      },
+      // onError: 处理错误
+      (error) => {
+        console.error('流式聊天失败:', error)
+        const lastMessage = messages.value[messages.value.length - 1]
+        lastMessage.content = '抱歉，我暂时无法回复。请检查网络连接或AI配置。'
+        lastMessage.status = 'failed'
+        showToast('发送失败，请重试')
+      },
+      // onComplete: 完成回调
+      () => {
+        sending.value = false
+        const lastMessage = messages.value[messages.value.length - 1]
+        if (lastMessage.status === 'streaming') {
+          lastMessage.status = 'completed'
+        }
+        lastMessage.isStreaming = false
+      }
+    )
 
   } catch (error: any) {
     console.error('发送消息失败:', error)
@@ -193,7 +257,6 @@ const sendMessage = async () => {
     lastMessage.status = 'failed'
 
     showToast('发送失败，请重试')
-  } finally {
     sending.value = false
   }
 }
@@ -304,7 +367,39 @@ const sendMessage = async () => {
   border-radius: 12px;
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
   word-wrap: break-word;
+  transition: all 0.3s ease;
 }
+
+.message-item:not(.user) .message-bubble {
+  position: relative;
+}
+
+.streaming-content .message-bubble::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px;
+  box-shadow: 0 0 0 2px rgba(24, 144, 255, 0.3);
+  animation: streaming-pulse 2s infinite;
+  pointer-events: none;
+}
+
+@keyframes streaming-pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0.4);
+  }
+  70% {
+    box-shadow: 0 0 0 6px rgba(24, 144, 255, 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgba(24, 144, 255, 0);
+  }
+}
+
+
 
 .message-item.user .message-bubble {
   background: #07c160;
@@ -316,6 +411,26 @@ const sendMessage = async () => {
   align-items: center;
   gap: 8px;
   color: #999;
+}
+
+.streaming-content {
+  position: relative;
+}
+
+.cursor-blink {
+  display: inline-block;
+  animation: blink 1s infinite;
+  color: #1890ff;
+  font-weight: bold;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
 }
 
 .message-text {

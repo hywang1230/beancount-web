@@ -1,6 +1,9 @@
 from typing import List, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
+import json
+import asyncio
 
 from app.database import get_db
 from app.models.ai_schemas import (
@@ -217,6 +220,57 @@ async def ai_chat(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="AI聊天处理失败"
+        )
+
+
+@router.post("/chat/stream")
+async def ai_chat_stream(
+    request: AIChatRequest,
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """AI流式聊天接口"""
+    try:
+        logger.info(f"收到AI流式聊天请求: {request.message}")
+        
+        # 创建AI聊天服务实例
+        chat_service = AIChatService(db)
+        
+        # 创建流式响应生成器
+        async def generate_stream():
+            try:
+                async for chunk in chat_service.process_chat_stream(request):
+                    # 发送SSE格式的数据
+                    yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+                
+                # 发送结束信号
+                yield f"data: {json.dumps({'type': 'done'}, ensure_ascii=False)}\n\n"
+                
+            except Exception as e:
+                logger.error(f"流式聊天处理失败: {e}")
+                error_chunk = {
+                    "type": "error",
+                    "error": str(e),
+                    "message": "处理失败，请重试"
+                }
+                yield f"data: {json.dumps(error_chunk, ensure_ascii=False)}\n\n"
+        
+        # 返回流式响应
+        return StreamingResponse(
+            generate_stream(),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no",  # 禁用nginx缓存
+            }
+        )
+        
+    except Exception as e:
+        logger.error(f"AI流式聊天处理失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="AI流式聊天处理失败"
         )
 
 

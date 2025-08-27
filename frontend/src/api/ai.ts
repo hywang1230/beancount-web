@@ -94,6 +94,66 @@ export const aiChatApi = {
     return api.post('/ai/chat', data)
   },
 
+  // 创建流式聊天连接
+  chatStream: (data: AIChatRequest, onMessage: (chunk: any) => void, onError?: (error: any) => void, onComplete?: () => void): void => {
+    // 直接从localStorage获取token，使用正确的键名
+    const token = localStorage.getItem('beancount-auth-token')
+    
+    // 创建POST请求发送数据，然后建立SSE连接
+    fetch('/api/ai/chat/stream', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': token ? `Bearer ${token}` : ''
+      },
+      body: JSON.stringify(data)
+    }).then(response => {
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
+      }
+      
+      // 创建EventSource来接收流式数据
+      const reader = response.body?.getReader()
+      const decoder = new TextDecoder()
+      
+      const readStream = async () => {
+        try {
+          while (true) {
+            const { done, value } = await reader!.read()
+            if (done) break
+            
+            const chunk = decoder.decode(value, { stream: true })
+            const lines = chunk.split('\n')
+            
+            for (const line of lines) {
+              if (line.startsWith('data: ')) {
+                try {
+                  const data = JSON.parse(line.slice(6))
+                  onMessage(data)
+                  
+                  if (data.type === 'done' || data.type === 'message_complete') {
+                    onComplete?.()
+                    return
+                  }
+                } catch (e) {
+                  console.error('解析SSE数据失败:', e)
+                }
+              }
+            }
+          }
+        } catch (error) {
+          console.error('读取流式数据失败:', error)
+          onError?.(error)
+        }
+      }
+      
+      readStream()
+    }).catch(error => {
+      console.error('流式聊天请求失败:', error)
+      onError?.(error)
+    })
+  },
+
   // 确认操作
   confirm: (data: AIConfirmRequest): Promise<{
     message: string

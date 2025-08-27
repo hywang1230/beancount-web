@@ -4,6 +4,8 @@ from app.models.ai_schemas import AIChatRequest, AIChatResponse
 from app.services.ai_config_service import AIConfigService
 import logging
 import uuid
+import asyncio
+from typing import AsyncGenerator
 
 logger = logging.getLogger(__name__)
 
@@ -55,12 +57,6 @@ class AIChatService:
                 if provider_url and provider_url != "https://api.openai.com/v1":
                     llm_params["base_url"] = provider_url
                 return ChatOpenAI(**llm_params)
-            
-            elif "anthropic" in provider_url.lower():
-                from langchain_anthropic import ChatAnthropic
-                llm_params.pop("api_key")  # Anthropic使用不同的参数名
-                llm_params["anthropic_api_key"] = api_key
-                return ChatAnthropic(**llm_params)
             
             else:
                 # 默认使用OpenAI兼容接口
@@ -153,6 +149,134 @@ class AIChatService:
                 data={},
                 chain_id=chain_id if 'chain_id' in locals() else None
             )
+    
+    async def process_chat_stream(self, request: AIChatRequest) -> AsyncGenerator[Dict[str, Any], None]:
+        """处理流式聊天请求"""
+        chain_id = str(uuid.uuid4())
+        
+        try:
+            logger.info(f"处理流式聊天请求[{chain_id}]: {request.message}")
+            
+            # 发送开始信号
+            yield {
+                "type": "start",
+                "chain_id": chain_id,
+                "message": "开始处理您的请求..."
+            }
+            
+            # 分类意图
+            intent = self.classify_intent(request.message)
+            
+            # 发送意图识别结果
+            yield {
+                "type": "intent",
+                "intent": intent,
+                "message": f"识别意图: {intent}"
+            }
+            
+            # 验证配置
+            config_errors = self.config_service.validate_config()
+            if config_errors:
+                yield {
+                    "type": "error",
+                    "error": "配置不完整",
+                    "message": "AI配置不完整，请先完成配置",
+                    "data": {"config_errors": config_errors}
+                }
+                return
+            
+            # 根据意图处理不同类型的请求
+            if intent == "general":
+                async for chunk in self._process_general_stream(request, chain_id):
+                    yield chunk
+            else:
+                # 其他意图暂时使用非流式处理
+                yield {
+                    "type": "message",
+                    "message": f"识别到{intent}需求，此功能正在开发中，暂不支持流式输出。",
+                    "intent": intent
+                }
+                
+        except Exception as e:
+            logger.error(f"流式聊天处理失败: {e}")
+            yield {
+                "type": "error",
+                "error": str(e),
+                "message": "处理失败，请重试"
+            }
+    
+    async def _process_general_stream(self, request: AIChatRequest, chain_id: str) -> AsyncGenerator[Dict[str, Any], None]:
+        """处理通用对话的流式输出"""
+        try:
+            # 创建LLM实例进行通用对话
+            llm = self.create_llm_instance()
+            
+            # 简单的对话处理
+            system_prompt = """你是Beancount Web记账系统的AI助手。你可以帮助用户：
+1. 记录交易和账目
+2. 查询和分析财务数据
+3. 管理系统设置
+
+请用简洁友好的方式回复用户。如果用户想要记账、查询或设置功能，引导他们使用更具体的描述。"""
+            
+            from langchain.schema import HumanMessage, SystemMessage
+            
+            messages = [
+                SystemMessage(content=system_prompt),
+                HumanMessage(content=request.message)
+            ]
+            
+            # 发送思考状态
+            yield {
+                "type": "thinking",
+                "message": "AI正在思考..."
+            }
+            
+            # 检查LLM是否支持流式输出
+            if hasattr(llm, 'astream'):
+                # 使用LangChain的流式输出
+                full_response = ""
+                async for chunk in llm.astream(messages):
+                    if hasattr(chunk, 'content') and chunk.content:
+                        full_response += chunk.content
+                        yield {
+                            "type": "message_chunk",
+                            "content": chunk.content,
+                            "full_content": full_response
+                        }
+            else:
+                # 降级到非流式处理，但模拟流式效果
+                response = llm.invoke(messages)
+                content = response.content
+                
+                # 模拟逐字输出效果
+                words = content.split()
+                accumulated_text = ""
+                
+                for i, word in enumerate(words):
+                    accumulated_text += word + " "
+                    yield {
+                        "type": "message_chunk",
+                        "content": word + " ",
+                        "full_content": accumulated_text.strip()
+                    }
+                    # 添加小延迟模拟打字效果
+                    await asyncio.sleep(0.05)
+            
+            # 发送完成信号
+            yield {
+                "type": "message_complete",
+                "intent": "general",
+                "chain_id": chain_id
+            }
+            
+        except Exception as e:
+            logger.error(f"通用对话流式处理失败: {e}")
+            yield {
+                "type": "error",
+                "error": str(e),
+                "message": "对话处理失败，请检查AI配置是否正确"
+            }
     
     async def _process_transaction_intent(self, request: AIChatRequest, chain_id: str) -> AIChatResponse:
         """处理记账意图"""
