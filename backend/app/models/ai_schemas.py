@@ -83,5 +83,17 @@ DEFAULT_AI_CONFIGS = {
     "langchain_verbose": {
         "value": "false",
         "description": "LangChain调试模式"
+    },
+    "langsmith_api_key": {
+        "value": "",
+        "description": "LangSmith API密钥"
+    },
+    "langsmith_project": {
+        "value": "beancount-web-ai",
+        "description": "LangSmith项目名称"
+    },
+    "langsmith_tracing": {
+        "value": "false",
+        "description": "是否启用LangSmith追踪"
     }
 }

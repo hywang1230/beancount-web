@@ -197,6 +197,45 @@ async def validate_ai_config(
         )
 
 
+@router.post("/config/init-langsmith")
+async def init_langsmith_configs(
+    db: Session = Depends(get_db),
+    current_user: dict = Depends(get_current_user)
+):
+    """初始化LangSmith配置项"""
+    try:
+        ai_service = AIConfigService(db)
+        
+        # LangSmith配置项
+        langsmith_configs = {
+            "langsmith_api_key": "",
+            "langsmith_project": "beancount-web-ai", 
+            "langsmith_tracing": "false"
+        }
+        
+        created_count = 0
+        for key, value in langsmith_configs.items():
+            existing_config = ai_service.get_config(key)
+            if not existing_config:
+                from app.models.ai_schemas import DEFAULT_AI_CONFIGS
+                description = DEFAULT_AI_CONFIGS.get(key, {}).get("description", "")
+                ai_service.upsert_config(key, value, description)
+                created_count += 1
+                logger.info(f"创建LangSmith配置: {key}")
+        
+        return {
+            "message": f"LangSmith配置初始化完成，创建了 {created_count} 个配置项",
+            "created_count": created_count
+        }
+        
+    except Exception as e:
+        logger.error(f"初始化LangSmith配置失败: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="初始化LangSmith配置失败"
+        )
+
+
 @router.post("/chat", response_model=AIChatResponse)
 async def ai_chat(
     request: AIChatRequest,

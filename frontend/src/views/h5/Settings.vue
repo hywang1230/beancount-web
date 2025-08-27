@@ -153,6 +153,34 @@
             type="number"
           />
           
+          <!-- LangSmith配置分组 -->
+          <van-divider>LangSmith 监控配置</van-divider>
+          
+          <van-field name="langsmith_tracing" label="启用追踪">
+            <template #input>
+              <van-switch 
+                v-model="langsmithTracingEnabled" 
+                @change="handleLangsmithTracingChange"
+              />
+            </template>
+          </van-field>
+          
+          <van-field
+            v-model="aiConfigForm.langsmith_api_key"
+            name="langsmith_api_key"
+            label="LangSmith API密钥"
+            placeholder="请输入LangSmith API密钥"
+            type="password"
+            :disabled="!langsmithTracingEnabled"
+          />
+          
+          <van-field
+            v-model="aiConfigForm.langsmith_project"
+            name="langsmith_project"
+            label="项目名称"
+            placeholder="请输入项目名称"
+            :disabled="!langsmithTracingEnabled"
+          />
 
         </van-form>
       </div>
@@ -190,7 +218,18 @@ const aiConfigForm = reactive({
   llm_api_key: '',
   llm_provider_url: 'https://api.openai.com/v1',
   temperature: '0.7',
-  max_tokens: '2000'
+  max_tokens: '2000',
+  langsmith_api_key: '',
+  langsmith_project: 'beancount-web-ai',
+  langsmith_tracing: 'false'
+});
+
+// LangSmith追踪开关
+const langsmithTracingEnabled = computed({
+  get: () => aiConfigForm.langsmith_tracing === 'true',
+  set: (value: boolean) => {
+    aiConfigForm.langsmith_tracing = value ? 'true' : 'false'
+  }
 });
 
 // 主题设置
@@ -203,6 +242,14 @@ const themeSetting = computed({
 
 const navigateTo = (path: string) => {
   router.push(path);
+};
+
+// 处理LangSmith追踪开关变化
+const handleLangsmithTracingChange = (value: boolean) => {
+  if (!value) {
+    // 禁用追踪时清空相关字段
+    aiConfigForm.langsmith_api_key = '';
+  }
 };
 
 // AI配置相关函数

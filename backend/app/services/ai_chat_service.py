@@ -5,6 +5,7 @@ from app.services.ai_config_service import AIConfigService
 import logging
 import uuid
 import asyncio
+import os
 from typing import AsyncGenerator
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,38 @@ class AIChatService:
     def __init__(self, db: Session):
         self.db = db
         self.config_service = AIConfigService(db)
+        self._setup_langsmith()
+    
+    def _setup_langsmith(self):
+        """设置LangSmith追踪"""
+        try:
+            configs = self.config_service.get_configs_dict()
+            
+            # 检查是否启用LangSmith追踪
+            tracing_enabled = configs.get("langsmith_tracing", "false").lower() == "true"
+            langsmith_api_key = configs.get("langsmith_api_key", "")
+            langsmith_project = configs.get("langsmith_project", "beancount-web-ai")
+            
+            if tracing_enabled and langsmith_api_key:
+                # 设置LangSmith环境变量
+                os.environ["LANGCHAIN_TRACING_V2"] = "true"
+                os.environ["LANGCHAIN_API_KEY"] = langsmith_api_key
+                os.environ["LANGCHAIN_PROJECT"] = langsmith_project
+                os.environ["LANGCHAIN_ENDPOINT"] = "https://api.smith.langchain.com"
+                
+                logger.info(f"LangSmith追踪已启用，项目: {langsmith_project}")
+            else:
+                # 禁用LangSmith追踪
+                os.environ.pop("LANGCHAIN_TRACING_V2", None)
+                os.environ.pop("LANGCHAIN_API_KEY", None)
+                os.environ.pop("LANGCHAIN_PROJECT", None)
+                os.environ.pop("LANGCHAIN_ENDPOINT", None)
+                
+                if tracing_enabled and not langsmith_api_key:
+                    logger.warning("LangSmith追踪已启用但未配置API密钥")
+                
+        except Exception as e:
+            logger.error(f"设置LangSmith失败: {e}")
     
     def get_llm_config(self) -> Dict[str, str]:
         """获取LLM配置"""
@@ -110,6 +143,9 @@ class AIChatService:
     
     async def process_chat(self, request: AIChatRequest) -> AIChatResponse:
         """处理聊天请求"""
+        # 每次处理前重新设置LangSmith（配置可能已更新）
+        self._setup_langsmith()
+        
         try:
             # 生成会话ID
             chain_id = str(uuid.uuid4())
@@ -152,6 +188,9 @@ class AIChatService:
     
     async def process_chat_stream(self, request: AIChatRequest) -> AsyncGenerator[Dict[str, Any], None]:
         """处理流式聊天请求"""
+        # 每次处理前重新设置LangSmith（配置可能已更新）
+        self._setup_langsmith()
+        
         chain_id = str(uuid.uuid4())
         
         try:
@@ -225,6 +264,20 @@ class AIChatService:
                 SystemMessage(content=system_prompt),
                 HumanMessage(content=request.message)
             ]
+            
+            # 添加LangSmith追踪的上下文信息
+            try:
+                import langsmith
+                
+                # 设置当前会话的标签和元数据
+                langsmith.trace.current_run_tree.extra["chain_id"] = chain_id
+                langsmith.trace.current_run_tree.extra["intent"] = "general"
+                langsmith.trace.current_run_tree.extra["user_message"] = request.message
+                langsmith.trace.current_run_tree.extra["message_length"] = len(request.message)
+                
+            except (ImportError, AttributeError):
+                # LangSmith不可用或未正确配置
+                pass
             
             # 发送思考状态
             yield {
