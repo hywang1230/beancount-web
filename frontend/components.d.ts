@@ -8,6 +8,7 @@ export {}
 declare module 'vue' {
   export interface GlobalComponents {
     CalculatorKeyboardExample: typeof import('./src/components/CalculatorKeyboardExample.vue')['default']
+    FloatingAIButton: typeof import('./src/components/FloatingAIButton.vue')['default']
     NumberKeyboard: typeof import('./src/components/NumberKeyboard.vue')['default']
     PWAUpdatePrompt: typeof import('./src/components/PWAUpdatePrompt.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']

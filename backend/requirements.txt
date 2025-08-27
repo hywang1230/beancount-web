@@ -15,6 +15,11 @@ greenlet
 pydantic-settings
 python-multipart
 aiofiles
+# AI相关依赖
+langchain>=0.1.0
+langchain-openai>=0.1.0
+langchain-community>=0.0.20
+langsmith>=0.0.80
 # 代码质量工具
 black
 isort

@@ -50,6 +50,20 @@
       </van-cell>
     </van-cell-group>
 
+    <van-cell-group inset title="AI设置">
+      <van-cell
+        title="AI助手配置"
+        icon="chat-o"
+        is-link
+        @click="showAIConfig = true"
+        :border="false"
+      >
+        <template #label>
+          <span class="cell-desc">配置AI模型和参数</span>
+        </template>
+      </van-cell>
+    </van-cell-group>
+
     <van-cell-group inset title="外观设置">
       <van-cell title="主题模式" icon="diamond-o" :border="false">
         <template #label>
@@ -90,6 +104,60 @@
       />
     </van-cell-group>
 
+    <!-- AI配置对话框 -->
+    <van-dialog
+      v-model:show="showAIConfig"
+      title="AI助手配置"
+      :show-cancel-button="true"
+      cancel-button-text="取消"
+      confirm-button-text="保存"
+      @confirm="saveAIConfig"
+      @cancel="showAIConfig = false"
+      class="ai-config-dialog"
+    >
+      <div class="ai-config-content">
+        <van-form @submit="saveAIConfig">
+          <van-field
+            v-model="aiConfigForm.llm_model"
+            name="llm_model"
+            label="模型"
+            placeholder="请输入模型名称"
+            required
+          />
+          <van-field
+            v-model="aiConfigForm.llm_api_key"
+            name="llm_api_key"
+            label="API密钥"
+            placeholder="请输入API密钥"
+            type="password"
+            required
+          />
+          <van-field
+            v-model="aiConfigForm.llm_provider_url"
+            name="llm_provider_url"
+            label="服务地址"
+            placeholder="请输入服务地址"
+          />
+          <van-field
+            v-model="aiConfigForm.temperature"
+            name="temperature"
+            label="创造性"
+            placeholder="0-2之间的数值"
+            type="number"
+          />
+          <van-field
+            v-model="aiConfigForm.max_tokens"
+            name="max_tokens"
+            label="最大词数"
+            placeholder="请输入最大词数"
+            type="number"
+          />
+          
+
+        </van-form>
+      </div>
+    </van-dialog>
+
     <!-- 关于弹窗 -->
     <van-dialog
       v-model:show="showAbout"
@@ -105,13 +173,25 @@
 import { useAuthStore } from "@/stores/auth";
 import { useThemeStore, type ThemeSetting } from "@/stores/theme";
 import { showConfirmDialog, showToast } from "vant";
-import { computed, ref } from "vue";
+import { computed, ref, reactive, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { aiConfigApi } from "@/api/ai";
 
 const router = useRouter();
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
 const showAbout = ref(false);
+
+// AI配置相关状态
+const showAIConfig = ref(false);
+const aiConfigLoading = ref(false);
+const aiConfigForm = reactive({
+  llm_model: 'gpt-3.5-turbo',
+  llm_api_key: '',
+  llm_provider_url: 'https://api.openai.com/v1',
+  temperature: '0.7',
+  max_tokens: '2000'
+});
 
 // 主题设置
 const themeSetting = computed({
@@ -124,6 +204,50 @@ const themeSetting = computed({
 const navigateTo = (path: string) => {
   router.push(path);
 };
+
+// AI配置相关函数
+const loadAIConfig = async () => {
+  try {
+    const configs = await aiConfigApi.getConfigsDict();
+    
+    // 更新配置表单
+    Object.keys(aiConfigForm).forEach(key => {
+      if (configs.configs[key]) {
+        (aiConfigForm as any)[key] = configs.configs[key];
+      }
+    });
+  } catch (error: any) {
+    console.error('加载AI配置失败:', error);
+  }
+};
+
+const saveAIConfig = async () => {
+  aiConfigLoading.value = true;
+  
+  try {
+    // 逐个更新配置项
+    for (const [key, value] of Object.entries(aiConfigForm)) {
+      await aiConfigApi.updateConfig(key, { value: value.toString() });
+    }
+    
+    showToast('AI配置保存成功');
+    showAIConfig.value = false;
+  } catch (error: any) {
+    console.error('保存AI配置失败:', error);
+    showToast('保存AI配置失败');
+  } finally {
+    aiConfigLoading.value = false;
+  }
+};
+
+
+
+
+
+// 组件挂载时加载AI配置
+onMounted(() => {
+  loadAIConfig();
+});
 
 const handleThemeChange = (value: ThemeSetting) => {
   const themeNames = {
@@ -202,4 +326,16 @@ const handleLogout = async () => {
 .logout-cell {
   color: var(--van-danger-color);
 }
+
+/* AI配置对话框样式 */
+.ai-config-dialog :deep(.van-dialog) {
+  width: 90%;
+  max-width: 400px;
+}
+
+.ai-config-content {
+  padding: 16px 0;
+}
+
+
 </style>

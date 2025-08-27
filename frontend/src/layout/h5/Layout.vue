@@ -22,6 +22,9 @@
       </router-view>
     </div>
 
+    <!-- 悬浮AI按钮 -->
+    <FloatingAIButton />
+
     <!-- 底部导航 -->
     <van-tabbar v-model="activeTab" @change="onTabChange" class="bottom-tabbar">
       <van-tabbar-item
@@ -85,6 +88,7 @@ import { useAuthStore } from "@/stores/auth";
 import { showConfirmDialog, showToast } from "vant";
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import FloatingAIButton from "@/components/FloatingAIButton.vue";
 
 const route = useRoute();
 const router = useRouter();

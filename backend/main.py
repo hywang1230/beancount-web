@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from app.routers import transactions, reports, accounts, files, recurring, auth, sync, settings as settings_router
+from app.routers import transactions, reports, accounts, files, recurring, auth, sync, settings as settings_router, ai
 from app.core.config import settings
 from app.services.scheduler import scheduler
 from app.database import init_database
@@ -76,6 +76,7 @@ app.include_router(files.router, prefix="/api/files", tags=["文件"], dependenc
 app.include_router(recurring.router, prefix="/api/recurring", tags=["周期记账"], dependencies=[Depends(get_current_user)])
 app.include_router(sync.router, prefix="/api/sync", tags=["同步管理"], dependencies=[Depends(get_current_user)])
 app.include_router(settings_router.router, prefix="/api/settings", tags=["应用设置"], dependencies=[Depends(get_current_user)])
+app.include_router(ai.router, prefix="/api", tags=["AI智能助手"], dependencies=[Depends(get_current_user)])
 
 # --- DEBUG: Print all registered routes ---
 from fastapi.routing import APIRoute

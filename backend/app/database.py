@@ -43,6 +43,7 @@ def init_database():
         from app.models.setting import Setting
         from app.models.github_sync import GitHubSync
         from app.models.account_order import AccountOrder
+        from app.models.ai_config import AIConfig
         
         logger.info("正在初始化数据库表...")
         
