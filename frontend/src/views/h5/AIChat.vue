@@ -1,35 +1,5 @@
 <template>
   <div class="ai-chat-page">
-    <!-- 头部 -->
-    <van-nav-bar 
-      title="AI智能助手" 
-      left-arrow 
-      @click-left="$router.back()"
-      fixed
-      placeholder
-    >
-      <template #right>
-        <van-icon 
-          name="setting-o" 
-          @click="$router.push('/h5/ai-context')"
-          style="font-size: 18px; margin-right: 8px;"
-          title="上下文管理"
-        />
-        <van-icon 
-          name="info-o" 
-          @click="showContextInfo"
-          style="font-size: 18px; margin-right: 8px;"
-          title="对话信息"
-        />
-        <van-icon 
-          v-if="conversationId && messages.length > 0"
-          name="delete-o" 
-          @click="clearCurrentConversation"
-          style="font-size: 18px;"
-          title="清除对话"
-        />
-      </template>
-    </van-nav-bar>
 
     <!-- 聊天消息列表 -->
     <div class="chat-container" ref="chatContainer">
@@ -134,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, nextTick } from 'vue'
+import { ref, onMounted, onUnmounted, nextTick } from 'vue'
 import { showToast, showDialog } from 'vant'
 import { aiChatApi, aiContextApi, type AIChatRequest } from '@/api/ai'
 
@@ -406,6 +376,15 @@ const sendMessage = async () => {
   }
 }
 
+// 监听来自Layout的事件
+const handleContextInfoEvent = () => {
+  showContextInfo()
+}
+
+const handleClearConversationEvent = () => {
+  clearCurrentConversation()
+}
+
 // 初始化
 onMounted(async () => {
   await fetchContextStats()
@@ -415,26 +394,35 @@ onMounted(async () => {
   if (savedConversationId) {
     conversationId.value = savedConversationId
   }
+  
+  // 监听Layout传来的事件
+  window.addEventListener('ai-chat-show-context-info', handleContextInfoEvent)
+  window.addEventListener('ai-chat-clear-conversation', handleClearConversationEvent)
+})
+
+// 组件卸载时清理事件监听器
+onUnmounted(() => {
+  window.removeEventListener('ai-chat-show-context-info', handleContextInfoEvent)
+  window.removeEventListener('ai-chat-clear-conversation', handleClearConversationEvent)
 })
 
 </script>
 
 <style scoped>
 .ai-chat-page {
-  height: 100vh;
-  height: 100dvh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   background-color: var(--van-background);
-  padding-bottom: 60px; /* 为底部导航栏留出空间 */
   transition: background-color 0.3s ease;
+  position: relative;
 }
 
 .chat-container {
   flex: 1;
   overflow-y: auto;
   padding: 16px;
-  margin-bottom: 100px; /* 增加底部边距以避开输入框 */
+  padding-bottom: 100px; /* 为输入框留出空间 */
 }
 
 .chat-messages {
@@ -678,13 +666,13 @@ onMounted(async () => {
 
 .input-area {
   position: fixed;
-  bottom: 60px; /* 位于底部导航栏之上 */
+  bottom: 0; /* 贴底显示 */
   left: 0;
   right: 0;
   background: var(--van-background-2);
   border-top: 1px solid var(--van-border-color);
   padding: 12px 16px;
-  z-index: 999; /* 低于导航栏的z-index */
+  z-index: 999;
   /* 适配安全区域 */
   padding-bottom: max(12px, env(safe-area-inset-bottom));
   transition: background-color 0.3s ease, border-color 0.3s ease;
@@ -715,5 +703,65 @@ onMounted(async () => {
   height: 36px;
   min-width: 60px;
   border-radius: 18px;
+  flex-shrink: 0; /* 防止按钮被压缩 */
+}
+
+/* PWA模式和移动端特殊优化 */
+@media screen and (max-width: 768px) {
+  .input-area {
+    /* 使用env()来适配不同的移动设备 */
+    padding-bottom: max(12px, env(safe-area-inset-bottom));
+    /* 确保在虚拟键盘环境下的最小高度 */
+    min-height: 60px;
+  }
+  
+  .input-container {
+    /* 移动端对齐优化 */
+    align-items: center;
+    min-height: 36px;
+  }
+  
+  .input-container :deep(.van-field) {
+    /* 移动端输入框优化 */
+    border: 1px solid var(--van-border-color);
+  }
+  
+  .input-container :deep(.van-field__control) {
+    /* 移动端文本输入优化 */
+    font-size: 16px; /* 防止iOS缩放 */
+    line-height: 1.4;
+    /* 优化触摸目标大小 */
+    min-height: 20px;
+    padding: 10px 16px;
+  }
+  
+  /* 聚焦状态优化 */
+  .input-container :deep(.van-field--focused) {
+    border-color: var(--van-primary-color);
+    box-shadow: 0 0 0 1px var(--van-primary-color);
+  }
+}
+
+/* PWA模式特殊适配 */
+:global(.pwa-mode) .input-area {
+  /* PWA模式下的额外安全区域适配 */
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+}
+
+:global(.pwa-ios) .input-area {
+  /* iOS PWA模式的特殊处理 */
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+}
+
+/* 修复iOS Safari中的输入框问题 */
+@supports (-webkit-touch-callout: none) {
+  .message-input :deep(.van-field__control) {
+    /* iOS Safari特定修复 */
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+    /* 确保光标正确显示 */
+    caret-color: var(--van-primary-color);
+  }
 }
 </style>

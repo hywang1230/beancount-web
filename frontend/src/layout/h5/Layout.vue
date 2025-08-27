@@ -10,10 +10,35 @@
       <template #right v-if="showMenu">
         <van-icon name="wap-nav" @click="showMenuPopup = true" />
       </template>
+      <!-- AI聊天页面的右侧按钮 -->
+      <template #right v-if="isAIChatPage">
+        <van-icon 
+          name="setting-o" 
+          @click="$router.push('/h5/ai-context')"
+          style="font-size: 18px; margin-right: 8px;"
+          title="上下文管理"
+        />
+        <van-icon 
+          name="info-o" 
+          @click="showAIContextInfo"
+          style="font-size: 18px; margin-right: 8px;"
+          title="对话信息"
+        />
+        <van-icon 
+          name="delete-o" 
+          @click="clearAIConversation"
+          style="font-size: 18px;"
+          title="清除对话"
+        />
+      </template>
     </van-nav-bar>
 
     <!-- 主内容 -->
-    <div class="main-content" ref="mainContentRef">
+    <div 
+      class="main-content" 
+      ref="mainContentRef"
+      :class="{ 'no-tabbar': !showTabbar }"
+    >
       <!-- 添加 keep-alive 缓存关键页面 -->
       <router-view v-slot="{ Component, route }">
         <keep-alive include="H5Transactions,H5Reports,H5Accounts,H5Dashboard">
@@ -26,7 +51,12 @@
     <FloatingAIButton />
 
     <!-- 底部导航 -->
-    <van-tabbar v-model="activeTab" @change="onTabChange" class="bottom-tabbar">
+    <van-tabbar 
+      v-show="showTabbar" 
+      v-model="activeTab" 
+      @change="onTabChange" 
+      class="bottom-tabbar"
+    >
       <van-tabbar-item
         v-for="item in tabbarItems"
         :key="item.name"
@@ -222,6 +252,23 @@ const showBackArrow = computed(() => {
   return !isTabbarPage;
 });
 
+// 判断是否显示底部导航栏
+const showTabbar = computed(() => {
+  // 需要隐藏底部导航栏的页面
+  const hideTabbarPages = [
+    '/h5/ai-chat',          // AI聊天页面
+    '/h5/ai-context',       // AI上下文管理页面
+  ];
+  
+  // 检查当前路径是否在隐藏列表中
+  return !hideTabbarPages.includes(route.path);
+});
+
+// 判断是否为AI聊天页面
+const isAIChatPage = computed(() => {
+  return route.path === '/h5/ai-chat';
+});
+
 const onBack = () => {
   if (window.history.length > 1) {
     router.back();
@@ -262,6 +309,17 @@ const handleLogout = async () => {
     }
   }
 };
+
+// AI聊天页面相关方法
+const showAIContextInfo = () => {
+  // 通过事件总线或者全局状态来通信
+  window.dispatchEvent(new CustomEvent('ai-chat-show-context-info'));
+};
+
+const clearAIConversation = () => {
+  // 通过事件总线来通信
+  window.dispatchEvent(new CustomEvent('ai-chat-clear-conversation'));
+};
 </script>
 
 <style scoped>
@@ -286,6 +344,11 @@ const handleLogout = async () => {
   padding-bottom: 60px; /* 为底部导航留出更多空间 */
   -webkit-overflow-scrolling: touch; /* 启用iOS平滑滚动 */
   transition: padding-bottom 0.3s ease; /* 添加过渡动画 */
+}
+
+/* 当隐藏底部导航栏时，移除底部padding */
+.main-content.no-tabbar {
+  padding-bottom: 0;
 }
 
 /* 底部导航栏样式 */
