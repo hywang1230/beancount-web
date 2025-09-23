@@ -19,6 +19,9 @@ export interface Posting {
   amount?: string | number;
   currency?: string;
   price?: any;
+  // 原始金额和货币信息（用于汇率转换显示）
+  original_amount?: string | number;
+  original_currency?: string;
 }
 
 export interface TransactionFilter {

@@ -70,7 +70,7 @@
                                 subAccount.name
                               }}</span>
                               <span class="account-amount">{{
-                                formatCurrency(subAccount.balance)
+                                formatMultiCurrency(subAccount)
                               }}</span>
                             </div>
                           </div>
@@ -91,7 +91,7 @@
                     >
                       <span class="account-name">{{ account.name }}</span>
                       <span class="account-amount">{{
-                        formatCurrency(account.balance)
+                        formatMultiCurrency(account)
                       }}</span>
                     </div>
                   </template>
@@ -127,7 +127,7 @@
                         <van-collapse-item
                           :name="account.fullName"
                           :title="account.name"
-                          :value="formatCurrency(Math.abs(account.balance))"
+                          :value="formatMultiCurrency({...account, balance: Math.abs(account.balance)})"
                         >
                           <div class="sub-account-list">
                             <div
@@ -169,7 +169,7 @@
                         formatAccountName(account.name)
                       }}</span>
                       <span class="account-amount">{{
-                        formatCurrency(Math.abs(account.balance))
+                        formatMultiCurrency({...account, balance: Math.abs(account.balance)})
                       }}</span>
                     </div>
                   </template>
@@ -224,7 +224,7 @@
                                 subAccount.name
                               }}</span>
                               <span class="account-amount">{{
-                                formatCurrency(subAccount.balance)
+                                formatMultiCurrency(subAccount)
                               }}</span>
                             </div>
                           </div>
@@ -245,7 +245,7 @@
                     >
                       <span class="account-name">{{ account.name }}</span>
                       <span class="account-amount">{{
-                        formatCurrency(account.balance)
+                        formatMultiCurrency(account)
                       }}</span>
                     </div>
                   </template>
@@ -301,7 +301,7 @@
                       formatAccountName(account.name)
                     }}</span>
                     <span class="account-amount positive">{{
-                      formatCurrency(Math.abs(account.balance))
+                      formatMultiCurrency({...account, balance: Math.abs(account.balance)})
                     }}</span>
                   </div>
                 </div>
@@ -338,7 +338,7 @@
                       formatAccountName(account.name)
                     }}</span>
                     <span class="account-amount negative">{{
-                      formatCurrency(Math.abs(account.balance))
+                      formatMultiCurrency({...account, balance: Math.abs(account.balance)})
                     }}</span>
                   </div>
                 </div>
@@ -505,7 +505,7 @@
               v-for="account in sortedMonthlyIncomeAccounts"
               :key="account.name"
               :title="formatAccountName(account.name.replace('Income:', ''))"
-              :value="formatCurrency(Math.abs(account.balance))"
+              :value="formatMultiCurrency({...account, balance: Math.abs(account.balance)})"
               value-class="positive"
               is-link
               @click="
@@ -523,7 +523,7 @@
               v-for="account in sortedMonthlyExpenseAccounts"
               :key="account.name"
               :title="formatAccountName(account.name.replace('Expenses:', ''))"
-              :value="formatCurrency(Math.abs(account.balance))"
+              :value="formatMultiCurrency({...account, balance: Math.abs(account.balance)})"
               value-class="negative"
               is-link
               @click="
@@ -721,6 +721,50 @@ const formatCurrency = (amount: number) => {
   }).format(amount);
 };
 
+// 格式化多币种显示 - 根据设计文档同时显示主币和原币金额
+const formatMultiCurrency = (account: any) => {
+  const mainAmount = formatCurrency(account.balance);
+  
+  // 如果没有原币信息、原币与主币相同、或者是混合币种，只显示主币
+  if (!account.original_currency || 
+      !account.original_balance || 
+      account.original_currency === account.currency ||
+      account.original_currency === "CNY" ||  // 主币是人民币时，原币也是人民币就不显示
+      account.original_currency === "MIXED") {
+    return mainAmount;
+  }
+  
+  // 如果有原币信息且与主币不同，显示原币金额
+  const originalAmountNumber = new Intl.NumberFormat("zh-CN", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(account.original_balance);
+  
+  // 根据币种添加对应的符号
+  let currencySymbol = '';
+  switch(account.original_currency) {
+    case 'USD':
+      currencySymbol = '$';
+      break;
+    case 'EUR':
+      currencySymbol = '€';
+      break;
+    case 'GBP':
+      currencySymbol = '£';
+      break;
+    case 'JPY':
+      currencySymbol = '¥';
+      break;
+    case 'HKD':
+      currencySymbol = 'HK$';
+      break;
+    default:
+      currencySymbol = account.original_currency;
+  }
+  
+  return `${mainAmount} (${account.original_currency}：${currencySymbol}${originalAmountNumber})`;
+};
+
 // 格式化日期显示
 const formatDateDisplay = (dateStr: string) => {
   if (!dateStr) return "选择日期";
@@ -879,6 +923,8 @@ const groupAccountsByCategory = (accounts: any[], _prefix: string) => {
         name: formatAccountName(account.name.split(":").pop() || ""),
         balance: account.balance,
         fullName: account.name,
+        original_balance: account.original_balance,
+        original_currency: account.original_currency,
       });
     } else if (remainingParts.length === 1) {
       // 只有一级子账户，直接添加
@@ -886,6 +932,8 @@ const groupAccountsByCategory = (accounts: any[], _prefix: string) => {
         name: formatAccountName(remainingParts[0]),
         balance: account.balance,
         fullName: account.name,
+        original_balance: account.original_balance,
+        original_currency: account.original_currency,
       });
     } else {
       // 有多级子账户，按第一级分组
@@ -905,6 +953,8 @@ const groupAccountsByCategory = (accounts: any[], _prefix: string) => {
         name: finalAccountName,
         balance: account.balance,
         fullName: account.name,
+        original_balance: account.original_balance,
+        original_currency: account.original_currency,
       });
     }
   });

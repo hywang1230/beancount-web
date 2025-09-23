@@ -12,6 +12,7 @@ from app.models.schemas import (
     TransactionResponse, AccountInfo, TransactionFilter, PostingBase
 )
 from .exchange_service import ExchangeService
+from .ledger_options_service import LedgerOptionsService
 
 
 class LedgerQuery:
@@ -19,7 +20,8 @@ class LedgerQuery:
     
     def __init__(self, loader):
         self.loader = loader
-        self.exchange_service = ExchangeService()
+        self.options_service = LedgerOptionsService(loader)
+        self.exchange_service = ExchangeService(self.options_service)
     
     def get_transactions(self, filter_params: Optional[TransactionFilter] = None) -> List[TransactionResponse]:
         """获取交易列表"""
@@ -137,12 +139,8 @@ class LedgerQuery:
     
     def _convert_entry_to_response(self, entry: Transaction) -> TransactionResponse:
         """将Beancount交易条目转换为响应格式"""
-        # 获取基础货币设置
-        entries, _, options_map = self.loader.load_entries()
-        default_currency = options_map.get('operating_currency', ['CNY'])[0]
-        
-        # 获取汇率信息
-        exchange_rates = self.exchange_service.get_latest_exchange_rates(entries, entry.date, default_currency)
+        # 获取主币种
+        operating_currency = self.options_service.get_operating_currency()
         
         # 转换分录
         postings = []
@@ -154,11 +152,20 @@ class LedgerQuery:
             converted_amount = original_amount
             display_currency = original_currency
             
-            if original_amount and original_currency and original_currency != default_currency:
-                if original_currency in exchange_rates:
-                    # 转换为基础货币
-                    converted_amount = original_amount * exchange_rates[original_currency]
-                    display_currency = default_currency
+            if original_amount and original_currency:
+                if original_currency == operating_currency:
+                    # 本身就是主币种，直接使用
+                    converted_amount = original_amount
+                    display_currency = operating_currency
+                else:
+                    # 尝试转换为主币种
+                    rate = self.options_service.get_effective_rate(
+                        entry.date, original_currency, operating_currency
+                    )
+                    if rate is not None:
+                        converted_amount = original_amount * rate
+                        display_currency = operating_currency
+                    # 如果没有汇率，保持原币种
             
             posting_data = PostingBase(
                 account=posting.account,

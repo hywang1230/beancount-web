@@ -5,6 +5,9 @@ export interface AccountInfo {
   balance: number
   currency: string
   account_type: string
+  // 添加原币金额和币种信息，用于多币种显示
+  original_balance?: number
+  original_currency?: string
 }
 
 export interface BalanceSheet {

@@ -48,6 +48,18 @@
           <span class="cell-desc">同步账本到GitHub仓库</span>
         </template>
       </van-cell>
+
+      <van-cell
+        title="货币设置"
+        icon="gold-coin-o"
+        is-link
+        @click="navigateTo('/h5/currency-settings')"
+        :border="false"
+      >
+        <template #label>
+          <span class="cell-desc">设置主币种和汇率价格</span>
+        </template>
+      </van-cell>
     </van-cell-group>
 
     <van-cell-group inset title="外观设置">

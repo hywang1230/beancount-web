@@ -5,15 +5,19 @@
 from beancount.core.data import Price
 from decimal import Decimal
 from datetime import date
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
+from app.services.ledger_options_service import LedgerOptionsService
 
 
 class ExchangeService:
     """汇率服务"""
     
+    def __init__(self, options_service: Optional[LedgerOptionsService] = None):
+        self.options_service = options_service
+    
     @staticmethod
     def get_latest_exchange_rates(entries: List[Any], date_filter: date, base_currency: str) -> Dict[str, Decimal]:
-        """获取最新汇率信息"""
+        """获取最新汇率信息（兼容旧版本）"""
         exchange_rates = {base_currency: Decimal('1')}  # 基础货币汇率为1
         
         # 收集所有价格信息
@@ -35,6 +39,23 @@ class ExchangeService:
                 exchange_rates[from_currency] = rate
         
         return exchange_rates
+    
+    def get_effective_rate(self, date_: date, from_currency: str, to_currency: Optional[str] = None) -> Optional[Decimal]:
+        """获取指定日期的有效汇率"""
+        if self.options_service:
+            return self.options_service.get_effective_rate(date_, from_currency, to_currency)
+        return None
+    
+    def convert_amount(self, amount: Decimal, from_currency: str, 
+                      to_currency: str, date_: date) -> Optional[Decimal]:
+        """转换金额"""
+        if from_currency == to_currency:
+            return amount
+        
+        rate = self.get_effective_rate(date_, from_currency, to_currency)
+        if rate is not None:
+            return amount * rate
+        return None
     
     @staticmethod
     def calculate_total_with_currency_conversion(accounts: List[Any], 
