@@ -17,6 +17,9 @@ class PostingBase(BaseModel):
     amount: Optional[Decimal] = None
     currency: Optional[str] = None
     price: Optional[Dict[str, Any]] = None
+    # 原始金额和货币信息（用于汇率转换显示）
+    original_amount: Optional[Decimal] = None
+    original_currency: Optional[str] = None
 
 class TransactionCreate(TransactionBase):
     postings: List[PostingBase]
