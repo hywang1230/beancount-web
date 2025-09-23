@@ -322,7 +322,7 @@ const savePriceEntry = async () => {
     await pricesApi.create({
       date: priceForm.date,
       from_currency: priceForm.from_currency.toUpperCase(),
-      to_currency: priceForm.to_currency.toUpperCase() || undefined,
+      to_currency: priceForm.to_currency?.toUpperCase(),
       rate: Number(priceForm.rate)
     })
     
