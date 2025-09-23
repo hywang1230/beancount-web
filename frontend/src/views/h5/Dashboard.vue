@@ -39,18 +39,6 @@
       </template>
     </van-card>
 
-    <!-- 快捷操作 -->
-    <div class="quick-actions">
-      <van-grid :column-num="4" :border="false">
-        <van-grid-item
-          v-for="action in quickActions"
-          :key="action.name"
-          :icon="action.icon"
-          :text="action.text"
-          @click="action.onClick"
-        />
-      </van-grid>
-    </div>
 
     <!-- 收支趋势 -->
     <van-cell-group title="收支趋势">
@@ -94,7 +82,6 @@ import * as echarts from "echarts/core";
 import { CanvasRenderer } from "echarts/renderers";
 import { showToast } from "vant";
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { useRouter } from "vue-router";
 
 // 注册 ECharts 组件
 echarts.use([
@@ -106,7 +93,6 @@ echarts.use([
   GridComponent,
 ]);
 
-const router = useRouter();
 const themeStore = useThemeStore();
 
 const isDark = computed(() => themeStore.isDark);
@@ -128,32 +114,6 @@ const trendsOption = ref<any>(null);
 const trendsData = ref<any>(null);
 let chartInstance: echarts.ECharts | null = null;
 
-const quickActions = [
-  {
-    name: "expense",
-    icon: "minus",
-    text: "支出",
-    onClick: () => router.push("/h5/add-transaction?type=expense"),
-  },
-  {
-    name: "income",
-    icon: "plus",
-    text: "收入",
-    onClick: () => router.push("/h5/add-transaction?type=income"),
-  },
-  {
-    name: "transfer",
-    icon: "exchange",
-    text: "转账",
-    onClick: () => router.push("/h5/add-transaction?type=transfer"),
-  },
-  {
-    name: "reports",
-    icon: "bar-chart-o",
-    text: "报表",
-    onClick: () => router.push("/h5/reports"),
-  },
-];
 
 const toggleBalanceVisibility = () => {
   showBalance.value = !showBalance.value;
@@ -454,28 +414,6 @@ watch(isDark, () => {
   font-size: 28px;
 }
 
-.quick-actions {
-  margin-bottom: 16px;
-  background-color: var(--van-background-2);
-  border-radius: 12px;
-  padding: 16px;
-  transition: background-color 0.3s ease;
-}
-
-.quick-actions :deep(.van-grid-item__content) {
-  padding: 16px 8px;
-}
-
-.quick-actions :deep(.van-grid-item__icon) {
-  font-size: 24px;
-  color: var(--van-primary-color);
-}
-
-.quick-actions :deep(.van-grid-item__text) {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--van-text-color-2);
-}
 
 :deep(.van-cell-group) {
   margin-bottom: 16px;
