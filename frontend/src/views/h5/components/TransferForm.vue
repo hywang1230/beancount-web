@@ -649,15 +649,15 @@ const loadAccountOptions = async () => {
 };
 
 // 数字键盘相关方法
-const onAmountKeyboardConfirm = (value: string) => {
-  localFormData.value.amount = value;
+const onAmountKeyboardConfirm = () => {
+  // v-model已经自动更新了localFormData.amount，这里只需要关闭键盘
   showNumberKeyboard.value = false;
 };
 
 // 转账金额计算事件处理
 const onAmountCalculate = (expression: string, result: string) => {
   console.log("转账金额计算:", expression, "=", result);
-  localFormData.value.amount = result;
+  // v-model已经自动更新了localFormData.amount，无需手动设置
   showToast(`计算结果: ${expression} = ${result}`);
 };
 

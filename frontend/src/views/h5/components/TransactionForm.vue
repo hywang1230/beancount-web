@@ -419,10 +419,15 @@ const localFormData = ref({
   ],
 });
 
-// 调试：监听amount变化
+// 监听amount变化
 watch(
   () => localFormData.value.amount,
-  () => {},
+  (newAmount) => {
+    // 当金额变化时触发父组件更新
+    if (newAmount !== undefined) {
+      emit("update", localFormData.value);
+    }
+  },
   { immediate: true }
 );
 
@@ -1347,14 +1352,15 @@ const loadOptions = async () => {
 };
 
 // 数字键盘相关方法
-const onAmountKeyboardConfirm = (value: string) => {
-  localFormData.value.amount = value;
+const onAmountKeyboardConfirm = () => {
+  // v-model已经自动更新了localFormData.amount，这里只需要关闭键盘
   showNumberKeyboard.value = false;
 };
 
 // 主金额计算事件处理
-const onAmountCalculate = (result: string) => {
-  localFormData.value.amount = result;
+const onAmountCalculate = () => {
+  // v-model已经自动更新了localFormData.amount，无需手动设置
+  // 计算结果会通过v-model自动更新
 };
 
 const showCategoryAmountKeyboard = (index: number) => {
