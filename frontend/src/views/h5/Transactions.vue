@@ -456,13 +456,6 @@ const applyDateFilter = () => {
   dateFilterDropdown.value?.toggle();
 };
 
-// 方法
-const formatAmount = (amount: number) => {
-  return new Intl.NumberFormat("zh-CN", {
-    style: "currency",
-    currency: "CNY",
-  }).format(amount);
-};
 
 // 格式化金额（支持指定货币）
 const formatAmountWithCurrency = (amount: number, currency: string) => {
