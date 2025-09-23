@@ -446,6 +446,23 @@ const currentEditingCategoryIndex = ref(0);
 const tempCategories = ref<CategoryItem[]>([]);
 const isEditingMultiCategory = ref(false);
 
+// 监听分类金额输入变化，实时同步到分类数组
+watch(
+  () => categoryAmountInput.value,
+  (newValue) => {
+    if (showCategoryAmountKeyboardVisible.value && currentEditingCategoryIndex.value >= 0) {
+      const index = currentEditingCategoryIndex.value;
+      const targetCategories = isEditingMultiCategory.value
+        ? tempCategories.value
+        : localFormData.value.categories;
+      
+      if (targetCategories[index]) {
+        targetCategories[index].amount = newValue;
+      }
+    }
+  }
+);
+
 // 临时数据
 const currentCategoryIndex = ref(0);
 
@@ -1376,36 +1393,17 @@ const showCategoryAmountKeyboard = (index: number) => {
   showCategoryAmountKeyboardVisible.value = true;
 };
 
-const onCategoryAmountKeyboardConfirm = (value: string) => {
-  const index = currentEditingCategoryIndex.value;
-
-  // 获取当前编辑的分类数组
-  const targetCategories = isEditingMultiCategory.value
-    ? tempCategories.value
-    : localFormData.value.categories;
-
-  if (targetCategories[index]) {
-    targetCategories[index].amount = value;
-  }
-
+const onCategoryAmountKeyboardConfirm = () => {
+  // watch函数已经实时同步了categoryAmountInput.value到分类项
+  // 这里只需要关闭键盘并清空输入
   showCategoryAmountKeyboardVisible.value = false;
   categoryAmountInput.value = "";
 };
 
 // 分类金额计算事件处理
-const onCategoryAmountCalculate = (result: string) => {
-  const index = currentEditingCategoryIndex.value;
-
-  // 获取当前编辑的分类数组
-  const targetCategories = isEditingMultiCategory.value
-    ? tempCategories.value
-    : localFormData.value.categories;
-
-  if (targetCategories[index]) {
-    targetCategories[index].amount = result;
-  }
-
-  categoryAmountInput.value = result;
+const onCategoryAmountCalculate = () => {
+  // watch函数已经实时同步了categoryAmountInput.value到分类项
+  // 计算结果会通过v-model自动更新到categoryAmountInput，然后通过watch同步到分类数组
 };
 
 onMounted(() => {
