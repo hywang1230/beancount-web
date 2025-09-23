@@ -464,6 +464,14 @@ const formatAmount = (amount: number) => {
   }).format(amount);
 };
 
+// 格式化金额（支持指定货币）
+const formatAmountWithCurrency = (amount: number, currency: string) => {
+  return new Intl.NumberFormat("zh-CN", {
+    style: "currency",
+    currency: currency || "CNY",
+  }).format(amount);
+};
+
 // 格式化每日汇总金额（不显示正负号）
 const formatGroupAmount = (amount: number) => {
   return new Intl.NumberFormat("zh-CN", {
@@ -507,8 +515,11 @@ const formatTransactionAmount = (transaction: any) => {
   }
   // 转账：保持不变
 
+  // 获取显示货币（优先使用转换后的货币）
+  const displayCurrency = transaction.currency || "CNY";
+  
   // 不显示正负号，统一取绝对值
-  return formatAmount(Math.abs(displayAmount));
+  return formatAmountWithCurrency(Math.abs(displayAmount), displayCurrency);
 };
 
 // 获取交易显示金额的正负性（用于颜色显示）
@@ -557,6 +568,7 @@ const convertTransactionData = (trans: any, fallbackId: string) => {
 
   let mainAccountName = "";
   let mainAmount = 0;
+  let mainCurrency = "CNY";
   let transactionType = "transfer";
 
   if (expensePostings.length > 0) {
@@ -573,6 +585,8 @@ const convertTransactionData = (trans: any, fallbackId: string) => {
     mainAccountName = accountNames;
     mainAmount = totalAmount;
     transactionType = "expense";
+    // 使用第一个支出分录的货币信息
+    mainCurrency = expensePostings[0]?.currency || "CNY";
   } else if (incomePostings.length > 0) {
     // 收入类：汇总所有收入分录的账户名和金额
     const accountNames = incomePostings
@@ -587,6 +601,8 @@ const convertTransactionData = (trans: any, fallbackId: string) => {
     mainAccountName = accountNames;
     mainAmount = totalAmount;
     transactionType = "income";
+    // 使用第一个收入分录的货币信息
+    mainCurrency = incomePostings[0]?.currency || "CNY";
   } else {
     // 转账：使用第一个分录
     const firstPosting = trans.postings?.[0];
@@ -598,6 +614,7 @@ const convertTransactionData = (trans: any, fallbackId: string) => {
           : firstPosting.amount || 0;
       mainAmount = amount;
       transactionType = "transfer";
+      mainCurrency = firstPosting.currency || "CNY";
     }
   }
 
@@ -610,6 +627,7 @@ const convertTransactionData = (trans: any, fallbackId: string) => {
     account: mainAccountName,
     date: trans.date,
     amount: mainAmount,
+    currency: mainCurrency,
     type: transactionType,
   };
 };
