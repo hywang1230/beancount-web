@@ -38,6 +38,9 @@ class AccountInfo(BaseModel):
     balance: Decimal
     currency: str
     account_type: str
+    # 添加原币金额和币种信息，用于多币种显示
+    original_balance: Optional[Decimal] = None
+    original_currency: Optional[str] = None
 
 class BalanceResponse(BaseModel):
     accounts: List[AccountInfo]
@@ -187,4 +190,46 @@ class AccountActionResponse(BaseModel):
     """账户操作响应"""
     success: bool
     message: str
-    account_name: str 
+    account_name: str
+
+# 新增：主币种和价格管理相关的 Schema
+class OperatingCurrencyResponse(BaseModel):
+    """主币种响应"""
+    operating_currency: str
+
+class OperatingCurrencyUpdate(BaseModel):
+    """主币种更新请求"""
+    operating_currency: str = Field(..., description="主币种代码，如 CNY, USD 等")
+
+class PriceEntry(BaseModel):
+    """价格条目"""
+    entry_date: date = Field(..., description="价格日期", alias="date")
+    from_currency: str = Field(..., description="源货币")
+    to_currency: str = Field(..., description="目标货币")
+    rate: Decimal = Field(..., description="汇率")
+    
+    model_config = {"populate_by_name": True}
+
+class PriceCreate(BaseModel):
+    """创建价格请求"""
+    entry_date: date = Field(..., description="价格日期", alias="date")
+    from_currency: str = Field(..., description="源货币")
+    to_currency: Optional[str] = Field(None, description="目标货币，默认为主币种")
+    rate: Decimal = Field(..., description="汇率")
+    
+    model_config = {"populate_by_name": True}
+
+class PriceResponse(BaseModel):
+    """价格响应"""
+    prices: List[PriceEntry]
+    total: int
+    page: int
+    page_size: int
+
+class PriceFilter(BaseModel):
+    """价格筛选参数"""
+    from_currency: Optional[str] = None
+    to_currency: Optional[str] = None
+    start_date: Optional[date] = None
+    end_date: Optional[date] = None
+    price_date: Optional[date] = None 

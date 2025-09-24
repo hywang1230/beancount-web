@@ -138,19 +138,29 @@ class ReportGenerator:
                 name=account,
                 balance=converted_balance,
                 currency=default_currency,
-                account_type=self.query_service.get_account_type(account)
+                account_type=self.query_service.get_account_type(account),
+                original_balance=balance,
+                original_currency=currency
             )
             
             if account.startswith('Income:'):
                 # 合并同名收入账户
                 if account in merged_income_accounts:
                     merged_income_accounts[account].balance += converted_balance
+                    # 如果有多个币种，显示为多币种账户
+                    if merged_income_accounts[account].original_currency != currency:
+                        merged_income_accounts[account].original_currency = "MIXED"
+                        merged_income_accounts[account].original_balance = None
                 else:
                     merged_income_accounts[account] = account_info
             elif account.startswith('Expenses:'):
                 # 合并同名支出账户
                 if account in merged_expense_accounts:
                     merged_expense_accounts[account].balance += converted_balance
+                    # 如果有多个币种，显示为多币种账户
+                    if merged_expense_accounts[account].original_currency != currency:
+                        merged_expense_accounts[account].original_currency = "MIXED"
+                        merged_expense_accounts[account].original_balance = None
                 else:
                     merged_expense_accounts[account] = account_info
         
@@ -231,7 +241,9 @@ class ReportGenerator:
                 name=account,
                 balance=balance,
                 currency=currency,
-                account_type=self.query_service.get_account_type(account)
+                account_type=self.query_service.get_account_type(account),
+                original_balance=balance,
+                original_currency=currency
             )
             
             if account.startswith('Assets:'):
@@ -272,7 +284,9 @@ class ReportGenerator:
                 name=acc.name,
                 balance=acc.balance,
                 currency=acc.currency,
-                account_type=acc.account_type
+                account_type=acc.account_type,
+                original_balance=acc.original_balance,
+                original_currency=acc.original_currency
             )
             
             # 转换到基础货币
@@ -283,6 +297,10 @@ class ReportGenerator:
             # 合并相同名称的账户（不同币种的同一账户）
             if display_acc.name in merged_accounts:
                 merged_accounts[display_acc.name].balance += display_acc.balance
+                # 如果有多个币种，显示为多币种账户
+                if merged_accounts[display_acc.name].original_currency != display_acc.original_currency:
+                    merged_accounts[display_acc.name].original_currency = "MIXED"
+                    merged_accounts[display_acc.name].original_balance = None
             else:
                 merged_accounts[display_acc.name] = display_acc
         

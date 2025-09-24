@@ -53,7 +53,7 @@
         <van-cell
           v-for="(posting, index) in transaction.postings"
           :key="index"
-          :value="formatAmount(posting.amount, posting.currency)"
+          :value="formatPostingAmount(posting)"
           :value-class="
             posting.amount && parseFloat(posting.amount) > 0
               ? 'positive'
@@ -151,6 +151,24 @@ const formatAmount = (
   }).format(numAmount);
 
   return formatted;
+};
+
+// 格式化分录金额（支持双币种显示）
+const formatPostingAmount = (posting: any) => {
+  if (posting.amount === undefined || posting.amount === null) return "0.00";
+
+  // 主显示金额（转换后的金额）
+  const mainAmount = formatAmount(posting.amount, posting.currency);
+  
+  // 检查是否有原始货币信息且与主币种不同
+  if (posting.original_currency && 
+      posting.original_amount && 
+      posting.original_currency !== posting.currency) {
+    const originalAmount = formatAmount(posting.original_amount, posting.original_currency);
+    return `${mainAmount} (${originalAmount})`;
+  }
+  
+  return mainAmount;
 };
 
 const getAccountType = (accountName: string): string => {

@@ -495,7 +495,7 @@ const getGroupAmountClass = (amount: number) => {
   return amount >= 0 ? "positive" : "negative";
 };
 
-// 格式化交易显示金额（转换为用户友好的显示方式）
+// 格式化交易显示金额（支持双币种显示）
 const formatTransactionAmount = (transaction: any) => {
   let displayAmount = transaction.amount;
 
@@ -512,7 +512,20 @@ const formatTransactionAmount = (transaction: any) => {
   const displayCurrency = transaction.currency || "CNY";
   
   // 不显示正负号，统一取绝对值
-  return formatAmountWithCurrency(Math.abs(displayAmount), displayCurrency);
+  const mainAmount = formatAmountWithCurrency(Math.abs(displayAmount), displayCurrency);
+  
+  // 检查是否有原始货币信息且与主币种不同
+  if (transaction.original_currency && 
+      transaction.original_amount && 
+      transaction.original_currency !== displayCurrency) {
+    const originalAmount = formatAmountWithCurrency(
+      Math.abs(Number(transaction.original_amount)), 
+      transaction.original_currency
+    );
+    return `${mainAmount} (${originalAmount})`;
+  }
+  
+  return mainAmount;
 };
 
 // 获取交易显示金额的正负性（用于颜色显示）

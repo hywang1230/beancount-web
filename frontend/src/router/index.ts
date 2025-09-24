@@ -109,6 +109,12 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/views/h5/Sync.vue"),
         meta: { title: "数据同步", platform: "h5", requiresAuth: true },
       },
+      {
+        path: "currency-settings",
+        name: "H5CurrencySettings",
+        component: () => import("@/views/h5/CurrencySettings.vue"),
+        meta: { title: "货币设置", platform: "h5", requiresAuth: true },
+      },
     ],
   },
 ];
