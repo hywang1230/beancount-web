@@ -79,7 +79,7 @@
       </van-cell>
     </van-cell-group>
 
-    <van-cell-group inset title="账户管理">
+    <van-cell-group inset title="账户管理" v-if="enableAuth">
       <van-cell
         title="登出"
         icon="sign-out"
@@ -91,7 +91,7 @@
     </van-cell-group>
 
     <van-cell-group inset title="应用信息">
-      <van-cell title="版本信息" icon="info-o" value="1.1.0" :border="false" />
+      <van-cell title="版本信息" icon="info-o" value="1.1.2" :border="false" />
 
       <van-cell
         title="关于我们"
@@ -124,6 +124,9 @@ const router = useRouter();
 const themeStore = useThemeStore();
 const authStore = useAuthStore();
 const showAbout = ref(false);
+
+// 检查是否需要认证
+const enableAuth = import.meta.env.VITE_ENABLE_AUTH === 'true';
 
 // 主题设置
 const themeSetting = computed({

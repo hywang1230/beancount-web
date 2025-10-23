@@ -74,4 +74,5 @@ cache.db
 /data/
 .cursor/
 
+frontend/dev-dist/
 backend/alembic/versions

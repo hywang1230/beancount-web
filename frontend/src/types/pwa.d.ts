@@ -13,3 +13,13 @@ declare module "virtual:pwa-register" {
     options?: RegisterSWOptions
   ): (reloadPage?: boolean) => Promise<void>;
 }
+
+// 环境变量类型定义
+interface ImportMetaEnv {
+  readonly VITE_ENABLE_AUTH: string;
+  // 其他环境变量...
+}
+
+interface ImportMeta {
+  readonly env: ImportMetaEnv;
+}

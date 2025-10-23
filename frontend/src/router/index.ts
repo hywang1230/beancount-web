@@ -131,6 +131,15 @@ const router = createRouter({
 
 // 路由守卫
 router.beforeEach(async (to, _from, next) => {
+  // 检查是否需要认证
+  const enableAuth = import.meta.env.VITE_ENABLE_AUTH === 'true';
+  
+  // 如果不需要认证，直接放行
+  if (!enableAuth) {
+    next();
+    return;
+  }
+  
   const authStore = useAuthStore();
 
   // 加载保存的token

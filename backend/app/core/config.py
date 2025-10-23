@@ -75,6 +75,9 @@ class Settings(BaseSettings):
     username: str = os.getenv("USERNAME", "admin")
     password: str = os.getenv("PASSWORD", "admin123")  # 这里可以设置默认密码
     
+    # 认证开关配置
+    enable_auth: bool = os.getenv("ENABLE_AUTH", "false").lower() == "true"
+    
     # 同步配置
     # 延迟同步的等待时间（秒），用于避免频繁同步
     sync_delay_seconds: int = int(os.getenv("SYNC_DELAY_SECONDS", "30"))

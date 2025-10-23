@@ -24,10 +24,23 @@ export const useAuthStore = defineStore("auth", () => {
   const authCheckInterval = 5 * 60 * 1000; // 认证检查间隔：5分钟
 
   // 计算属性
-  const isAuthenticated = computed(() => !!token.value);
+  const isAuthenticated = computed(() => {
+    // 如果不需要认证，直接返回true
+    const enableAuth = import.meta.env.VITE_ENABLE_AUTH === 'true';
+    if (!enableAuth) {
+      return true;
+    }
+    return !!token.value;
+  });
 
   // 从localStorage加载token
   const loadToken = () => {
+    // 如果不需要认证，不加载token
+    const enableAuth = import.meta.env.VITE_ENABLE_AUTH === 'true';
+    if (!enableAuth) {
+      return;
+    }
+    
     const savedToken = localStorage.getItem("beancount-auth-token");
     if (savedToken) {
       token.value = savedToken;
@@ -36,6 +49,12 @@ export const useAuthStore = defineStore("auth", () => {
 
   // 保存token到localStorage
   const saveToken = (newToken: string) => {
+    // 如果不需要认证，不保存token
+    const enableAuth = import.meta.env.VITE_ENABLE_AUTH === 'true';
+    if (!enableAuth) {
+      return;
+    }
+    
     token.value = newToken;
     localStorage.setItem("beancount-auth-token", newToken);
   };
@@ -50,6 +69,12 @@ export const useAuthStore = defineStore("auth", () => {
 
   // 登录
   const login = async (credentials: LoginCredentials): Promise<void> => {
+    // 如果不需要认证，直接返回
+    const enableAuth = import.meta.env.VITE_ENABLE_AUTH === 'true';
+    if (!enableAuth) {
+      return;
+    }
+    
     isLoading.value = true;
     try {
       const response = await fetch("/api/auth/login", {
@@ -80,6 +105,12 @@ export const useAuthStore = defineStore("auth", () => {
 
   // 登出
   const logout = async (): Promise<void> => {
+    // 如果不需要认证，直接返回
+    const enableAuth = import.meta.env.VITE_ENABLE_AUTH === 'true';
+    if (!enableAuth) {
+      return;
+    }
+    
     try {
       if (token.value) {
         await fetch("/api/auth/logout", {
@@ -98,6 +129,12 @@ export const useAuthStore = defineStore("auth", () => {
 
   // 获取用户信息
   const fetchUserInfo = async (): Promise<void> => {
+    // 如果不需要认证，不获取用户信息
+    const enableAuth = import.meta.env.VITE_ENABLE_AUTH === 'true';
+    if (!enableAuth) {
+      return;
+    }
+    
     if (!token.value) return;
 
     try {
@@ -125,6 +162,12 @@ export const useAuthStore = defineStore("auth", () => {
 
   // 检查token有效性（优化版本）
   const checkAuth = async (forceCheck = false): Promise<boolean> => {
+    // 如果不需要认证，直接返回true
+    const enableAuth = import.meta.env.VITE_ENABLE_AUTH === 'true';
+    if (!enableAuth) {
+      return true;
+    }
+    
     if (!token.value) return false;
 
     // 如果用户信息已存在且不是强制检查，直接返回true
@@ -154,6 +197,12 @@ export const useAuthStore = defineStore("auth", () => {
 
   // 轻量级认证检查（仅验证token存在和用户信息缓存）
   const isValidSession = (): boolean => {
+    // 如果不需要认证，直接返回true
+    const enableAuth = import.meta.env.VITE_ENABLE_AUTH === 'true';
+    if (!enableAuth) {
+      return true;
+    }
+    
     return !!(token.value && user.value);
   };
 
@@ -167,9 +216,11 @@ export const useAuthStore = defineStore("auth", () => {
     isAuthenticated,
 
     // 方法
-    loadToken,
     login,
     logout,
+    loadToken,
+    saveToken,
+    clearToken,
     fetchUserInfo,
     checkAuth,
     isValidSession,
