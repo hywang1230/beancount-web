@@ -16,10 +16,15 @@ const api = axios.create({
 // 请求拦截器
 api.interceptors.request.use(
   (config) => {
-    // 添加认证token
-    const authStore = useAuthStore();
-    if (authStore.token) {
-      config.headers.Authorization = `Bearer ${authStore.token}`;
+    // 检查是否需要认证
+    const enableAuth = import.meta.env.VITE_ENABLE_AUTH !== 'false';
+    
+    // 添加认证token（仅在需要认证时）
+    if (enableAuth) {
+      const authStore = useAuthStore();
+      if (authStore.token) {
+        config.headers.Authorization = `Bearer ${authStore.token}`;
+      }
     }
     return config;
   },
@@ -44,8 +49,11 @@ api.interceptors.response.use(
       console.error("API Error:", error);
     }
 
-    // 处理401未授权错误
-    if (error.response?.status === 401) {
+    // 检查是否需要认证
+    const enableAuth = import.meta.env.VITE_ENABLE_AUTH !== 'false';
+
+    // 处理401未授权错误（仅在需要认证时）
+    if (enableAuth && error.response?.status === 401) {
       const authStore = useAuthStore();
       authStore.logout();
       // 如果不是登录页面，重定向到登录页

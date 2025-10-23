@@ -67,16 +67,19 @@ settings.data_dir.mkdir(exist_ok=True)
 # 导入认证依赖
 from app.utils.auth import get_current_user
 
+# 根据认证开关决定是否添加认证依赖
+auth_dependencies = [] if not settings.enable_auth else [Depends(get_current_user)]
+
 # 注册API路由
 app.include_router(auth.router, prefix="/api/auth", tags=["认证"])
-app.include_router(transactions.router, prefix="/api/transactions", tags=["交易"], dependencies=[Depends(get_current_user)])
-app.include_router(reports.router, prefix="/api/reports", tags=["报表"], dependencies=[Depends(get_current_user)])
-app.include_router(accounts.router, prefix="/api/accounts", tags=["账户"], dependencies=[Depends(get_current_user)])
-app.include_router(files.router, prefix="/api/files", tags=["文件"], dependencies=[Depends(get_current_user)])
-app.include_router(recurring.router, prefix="/api/recurring", tags=["周期记账"], dependencies=[Depends(get_current_user)])
-app.include_router(sync.router, prefix="/api/sync", tags=["同步管理"], dependencies=[Depends(get_current_user)])
-app.include_router(settings_router.router, prefix="/api/settings", tags=["应用设置"], dependencies=[Depends(get_current_user)])
-app.include_router(beancount_options.router, prefix="/api/beancount", tags=["账本选项"], dependencies=[Depends(get_current_user)])
+app.include_router(transactions.router, prefix="/api/transactions", tags=["交易"], dependencies=auth_dependencies)
+app.include_router(reports.router, prefix="/api/reports", tags=["报表"], dependencies=auth_dependencies)
+app.include_router(accounts.router, prefix="/api/accounts", tags=["账户"], dependencies=auth_dependencies)
+app.include_router(files.router, prefix="/api/files", tags=["文件"], dependencies=auth_dependencies)
+app.include_router(recurring.router, prefix="/api/recurring", tags=["周期记账"], dependencies=auth_dependencies)
+app.include_router(sync.router, prefix="/api/sync", tags=["同步管理"], dependencies=auth_dependencies)
+app.include_router(settings_router.router, prefix="/api/settings", tags=["应用设置"], dependencies=auth_dependencies)
+app.include_router(beancount_options.router, prefix="/api/beancount", tags=["账本选项"], dependencies=auth_dependencies)
 
 # --- DEBUG: Print all registered routes ---
 from fastapi.routing import APIRoute

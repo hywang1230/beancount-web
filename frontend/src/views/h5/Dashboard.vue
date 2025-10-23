@@ -97,7 +97,13 @@ const themeStore = useThemeStore();
 
 const isDark = computed(() => themeStore.isDark);
 
-const showBalance = ref(true);
+// 从localStorage读取余额显示状态
+const getInitialShowBalance = (): boolean => {
+  const saved = localStorage.getItem("dashboard-show-balance");
+  return saved !== null ? saved === "true" : true;
+};
+
+const showBalance = ref(getInitialShowBalance());
 const totalBalance = ref(0);
 const totalAssets = ref(0);
 const totalLiabilities = ref(0);
@@ -114,9 +120,10 @@ const trendsOption = ref<any>(null);
 const trendsData = ref<any>(null);
 let chartInstance: echarts.ECharts | null = null;
 
-
 const toggleBalanceVisibility = () => {
   showBalance.value = !showBalance.value;
+  // 保存状态到localStorage
+  localStorage.setItem("dashboard-show-balance", showBalance.value.toString());
 };
 
 const formatAmount = (amount: number) => {
