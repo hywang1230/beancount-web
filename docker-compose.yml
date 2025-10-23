@@ -10,4 +10,6 @@ services:
     environment:
       - USERNAME=admin
       - PASSWORD=admin123
+      - ENABLE_AUTH=true
+      - VITE_ENABLE_AUTH=true
     restart: unless-stopped

@@ -126,7 +126,7 @@ const authStore = useAuthStore();
 const showAbout = ref(false);
 
 // 检查是否需要认证
-const enableAuth = computed(() => authStore.enableAuth);
+const enableAuth = import.meta.env.VITE_ENABLE_AUTH === 'true';
 
 // 主题设置
 const themeSetting = computed({
