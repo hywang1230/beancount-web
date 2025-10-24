@@ -12,7 +12,7 @@ from app.models.auth import TokenData, User, UserInDB
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Bearer token 安全认证
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 # 缓存密码哈希，避免每次请求重新计算
 _cached_password_hash: Optional[str] = None
@@ -63,14 +63,17 @@ async def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] =
     if not settings.enable_auth:
         return User(username=settings.username)
     
+    # 认证启用时的检查
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    if credentials is None:
+        raise credentials_exception
+    
     try:
-        if credentials is None:
-            raise credentials_exception
         payload = jwt.decode(credentials.credentials, settings.secret_key, algorithms=[settings.algorithm])
         username: str = payload.get("sub")
         if username is None:

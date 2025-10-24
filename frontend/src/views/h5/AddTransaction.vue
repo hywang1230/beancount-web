@@ -269,8 +269,7 @@ const onSubmit = async () => {
       (sum, cat) => sum + (parseFloat(cat.amount) || 0),
       0
     );
-    const expectedCategoriesSum =
-      activeTab.value === "income" ? -totalAmount : totalAmount;
+    const expectedCategoriesSum = totalAmount;
     const categoriesDiff = categoriesSum - expectedCategoriesSum;
     if (Math.abs(categoriesDiff) >= 0.01) {
       closeToast();
@@ -566,10 +565,22 @@ const loadTransactionData = async () => {
         // 支出交易：有支出分录和资产分录
         const assetPosting = assetPostings[0]; // 通常只有一个资产账户
 
-        // 构建分类数组（保留原始符号）
+        // 获取原始货币信息
+        const originalCurrency = assetPosting.original_currency;
+        const displayCurrency = assetPosting.currency;
+
+        // 构建分类数组：当有原始货币时使用原始金额
         const categories = expensePostings.map((p: any) => {
-          const amt =
-            typeof p.amount === "string" ? parseFloat(p.amount) : p.amount || 0;
+          let amt = typeof p.amount === "string" ? parseFloat(p.amount) : p.amount || 0;
+          
+          // 如果有原始货币信息且与显示货币不同，使用原始金额
+          if (p.original_currency && p.original_currency !== p.currency && 
+              p.original_amount !== undefined && p.original_amount !== null) {
+            amt = typeof p.original_amount === "string" 
+              ? parseFloat(p.original_amount) 
+              : p.original_amount;
+          }
+          
           return {
             categoryName: "",
             categoryDisplayName: formatAccountNameForCategory(p.account),
@@ -584,15 +595,27 @@ const loadTransactionData = async () => {
           0
         );
 
+        // 当有原始货币信息且与显示货币不同时，使用原始金额和原始货币
+        let displayAmount = totalExpenseAmount;
+        let editCurrency = displayCurrency || "CNY";
+        
+        if (originalCurrency && originalCurrency !== displayCurrency && assetPosting.original_amount !== undefined && assetPosting.original_amount !== null) {
+          // 使用原始金额和原始货币
+          displayAmount = typeof assetPosting.original_amount === "string" 
+            ? parseFloat(assetPosting.original_amount) 
+            : assetPosting.original_amount;
+          editCurrency = originalCurrency;
+        }
+
         // 更新支出表单数据
         const transactionData = {
-          amount: totalExpenseAmount.toString(),
+          amount: displayAmount.toString(),
           payee: transaction.payee || "",
           account: assetPosting.account,
           category: categories[0]?.category || "", // 主分类
           date: new Date(transaction.date),
           description: transaction.narration || "",
-          currency: assetPosting.currency || "CNY",
+          currency: editCurrency,
           flag: transaction.flag || "*",
           categories: categories,
         };
@@ -607,33 +630,59 @@ const loadTransactionData = async () => {
         // 收入交易：有收入分录和资产分录
         const assetPosting = assetPostings[0];
 
-        // 构建分类数组（保留原始符号）
+        // 获取原始货币信息，用于分类分配和编辑显示
+        const originalCurrency = assetPosting.original_currency;
+        const displayCurrency = assetPosting.currency;
+
+        // 构建分类数组（将负数取反为正数用于前端显示）
         const categories = incomePostings.map((p: any) => {
-          const amt =
-            typeof p.amount === "string" ? parseFloat(p.amount) : p.amount || 0;
+          let amt = typeof p.amount === "string" ? parseFloat(p.amount) : p.amount || 0;
+          
+          // 如果有原始货币信息且与显示货币不同，使用原始金额
+          if (p.original_currency && p.original_currency !== p.currency && 
+              p.original_amount !== undefined && p.original_amount !== null) {
+            amt = typeof p.original_amount === "string" 
+              ? parseFloat(p.original_amount) 
+              : p.original_amount;
+          }
+          
+          // 收入账户通常是负数，取绝对值显示
           return {
             categoryName: "",
             categoryDisplayName: formatAccountNameForCategory(p.account),
             category: p.account,
-            amount: String(amt),
+            amount: String(Math.abs(amt)),
           };
         });
 
-        // 计算总金额为分类金额之和（可为正负，保持一致性）
+        // 计算总金额为分类金额之和（都是正数）
         const totalIncomeAmount = categories.reduce(
           (sum: number, c: any) => sum + (parseFloat(c.amount) || 0),
           0
         );
-
+        
+        // 当有原始货币信息且与显示货币不同时，使用原始金额和原始货币
+        let displayAmount = totalIncomeAmount;
+        let editCurrency = displayCurrency || "CNY";
+        
+        if (originalCurrency && originalCurrency !== displayCurrency && assetPosting.original_amount !== undefined && assetPosting.original_amount !== null) {
+          // 使用原始金额和原始货币
+          displayAmount = Math.abs(
+            typeof assetPosting.original_amount === "string" 
+              ? parseFloat(assetPosting.original_amount) 
+              : assetPosting.original_amount
+          );
+          editCurrency = originalCurrency;
+        }
         // 更新收入表单数据
         const transactionData = {
-          amount: totalIncomeAmount.toString(),
+          amount: displayAmount.toString(),
           payee: transaction.payee || "",
           account: assetPosting.account,
           category: categories[0]?.category || "",
           date: new Date(transaction.date),
           description: transaction.narration || "",
-          currency: assetPosting.currency || "CNY",
+          currency: editCurrency,
           flag: transaction.flag || "*",
           categories: categories,
         };
