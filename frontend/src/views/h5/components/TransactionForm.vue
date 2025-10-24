@@ -246,10 +246,10 @@
               <van-field
                 :model-value="item.amount"
                 type="text"
-                placeholder="0.00"
+                placeholder="请输入金额"
                 class="amount-field-small"
                 readonly
-                :formatter="formatNumberInput"
+                :formatter="(val) => formatCategoryAmountDisplay(val, props.type)"
                 :rules="[
                   { validator: validateNumberInput, message: '请输入合法数字' },
                 ]"
@@ -457,7 +457,15 @@ watch(
         : localFormData.value.categories;
       
       if (targetCategories[index]) {
-        targetCategories[index].amount = newValue;
+        // 对于收入类型，需要将输入的正数转换为负数
+        let finalAmount = newValue;
+        if (props.type === "income" && newValue) {
+          const parsedAmount = parseFloat(newValue);
+          if (!isNaN(parsedAmount)) {
+            finalAmount = (-Math.abs(parsedAmount)).toString();
+          }
+        }
+        targetCategories[index].amount = finalAmount;
       }
     }
   }
@@ -732,7 +740,9 @@ const allocatedAmount = computed(() => {
 
   const total = targetCategories.reduce((sum, item) => {
     const amount = parseFloat(item.amount) || 0;
-    return sum + amount;
+    // 对于收入类型，内部存储为负数，需要取绝对值来计算已分配金额
+    const displayAmount = props.type === "income" ? Math.abs(amount) : amount;
+    return sum + displayAmount;
   }, 0);
 
   return total;
@@ -740,12 +750,15 @@ const allocatedAmount = computed(() => {
 
 const remainingAmount = computed(() => {
   const totalAmount = parseFloat(localFormData.value.amount) || 0;
+  // 计算已分配金额的绝对值（对于收入类型）
+  const allocated = allocatedAmount.value;
+  
   if (props.type === "income") {
     // 收入：期望 分配之和 = 总金额（都是正数）
-    return totalAmount - allocatedAmount.value;
+    return totalAmount - allocated;
   }
   // 支出/调整：期望 分配之和 = 总金额
-  return totalAmount - allocatedAmount.value;
+  return totalAmount - allocated;
 });
 
 // 检查单个分类是否完整
@@ -776,7 +789,9 @@ const isMultiCategoryValid = computed(() => {
   const totalAmount = parseFloat(localFormData.value.amount) || 0;
   const allocatedAmount = categories.reduce((sum, item) => {
     const amount = parseFloat(item.amount) || 0;
-    return sum + amount;
+    // 对于收入类型，内部存储为负数，需要取绝对值来计算已分配金额
+    const displayAmount = props.type === "income" ? Math.abs(amount) : amount;
+    return sum + displayAmount;
   }, 0);
   const diff =
     props.type === "income"
@@ -1389,13 +1404,34 @@ const showCategoryAmountKeyboard = (index: number) => {
     : localFormData.value.categories;
 
   // 设置当前分类的金额到键盘输入
-  categoryAmountInput.value = targetCategories[index]?.amount || "";
+  // 对于收入类型，需要显示绝对值（内部存储为负数）
+  const amount = targetCategories[index]?.amount || "";
+  if (props.type === "income" && amount) {
+    const parsedAmount = parseFloat(amount);
+    categoryAmountInput.value = Math.abs(parsedAmount).toString();
+  } else {
+    categoryAmountInput.value = amount;
+  }
   showCategoryAmountKeyboardVisible.value = true;
 };
 
 const onCategoryAmountKeyboardConfirm = () => {
-  // watch函数已经实时同步了categoryAmountInput.value到分类项
-  // 这里只需要关闭键盘并清空输入
+  // 获取当前编辑的分类数组
+  const targetCategories = isEditingMultiCategory.value
+    ? tempCategories.value
+    : localFormData.value.categories;
+
+  if (currentEditingCategoryIndex.value >= 0 && targetCategories[currentEditingCategoryIndex.value]) {
+    // 对于收入类型，需要将输入的正数转换为负数保存
+    let finalAmount = categoryAmountInput.value;
+    if (props.type === "income" && finalAmount) {
+      const parsedAmount = parseFloat(finalAmount);
+      if (!isNaN(parsedAmount)) {
+        finalAmount = (-Math.abs(parsedAmount)).toString();
+      }
+    }
+    targetCategories[currentEditingCategoryIndex.value].amount = finalAmount;
+  }
   showCategoryAmountKeyboardVisible.value = false;
   categoryAmountInput.value = "";
 };
@@ -1404,6 +1440,20 @@ const onCategoryAmountKeyboardConfirm = () => {
 const onCategoryAmountCalculate = () => {
   // watch函数已经实时同步了categoryAmountInput.value到分类项
   // 计算结果会通过v-model自动更新到categoryAmountInput，然后通过watch同步到分类数组
+};
+
+// 格式化分类金额显示，显示绝对值
+const formatCategoryAmountDisplay = (value: string, type: "expense" | "income" | "adjustment") => {
+  const amount = parseFloat(value);
+  if (isNaN(amount) || amount === 0) {
+    return ""; // 当金额为0或空时，不显示任何值
+  }
+  // 对于收入类型，内部存储为负数，显示时取绝对值
+  // 对于支出类型，内部存储为正数，直接显示
+  if (type === "income") {
+    return Math.abs(amount).toFixed(2);
+  }
+  return Math.abs(amount).toFixed(2);
 };
 
 onMounted(() => {
