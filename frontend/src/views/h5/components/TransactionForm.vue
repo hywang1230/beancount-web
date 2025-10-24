@@ -741,8 +741,8 @@ const allocatedAmount = computed(() => {
 const remainingAmount = computed(() => {
   const totalAmount = parseFloat(localFormData.value.amount) || 0;
   if (props.type === "income") {
-    // 收入：期望 分配之和 = -总金额
-    return totalAmount + allocatedAmount.value;
+    // 收入：期望 分配之和 = 总金额（都是正数）
+    return totalAmount - allocatedAmount.value;
   }
   // 支出/调整：期望 分配之和 = 总金额
   return totalAmount - allocatedAmount.value;
@@ -780,7 +780,7 @@ const isMultiCategoryValid = computed(() => {
   }, 0);
   const diff =
     props.type === "income"
-      ? totalAmount + allocatedAmount
+      ? totalAmount - allocatedAmount
       : totalAmount - allocatedAmount;
   const amountsMatch = Math.abs(diff) < 0.01;
 

@@ -269,8 +269,7 @@ const onSubmit = async () => {
       (sum, cat) => sum + (parseFloat(cat.amount) || 0),
       0
     );
-    const expectedCategoriesSum =
-      activeTab.value === "income" ? -totalAmount : totalAmount;
+    const expectedCategoriesSum = totalAmount;
     const categoriesDiff = categoriesSum - expectedCategoriesSum;
     if (Math.abs(categoriesDiff) >= 0.01) {
       closeToast();
