@@ -607,33 +607,52 @@ const loadTransactionData = async () => {
         // 收入交易：有收入分录和资产分录
         const assetPosting = assetPostings[0];
 
-        // 构建分类数组（保留原始符号）
+        // 构建分类数组（将负数取反为正数用于前端显示）
         const categories = incomePostings.map((p: any) => {
           const amt =
             typeof p.amount === "string" ? parseFloat(p.amount) : p.amount || 0;
+          // 收入账户通常是负数，取绝对值显示
           return {
             categoryName: "",
             categoryDisplayName: formatAccountNameForCategory(p.account),
             category: p.account,
-            amount: String(amt),
+            amount: String(Math.abs(amt)),
           };
         });
 
-        // 计算总金额为分类金额之和（可为正负，保持一致性）
+        // 计算总金额为分类金额之和（都是正数）
         const totalIncomeAmount = categories.reduce(
           (sum: number, c: any) => sum + (parseFloat(c.amount) || 0),
           0
         );
 
+
+        // 获取原始货币信息，用于编辑显示
+        const originalCurrency = assetPosting.original_currency;
+        const displayCurrency = assetPosting.currency;
+        
+        // 当有原始货币信息且与显示货币不同时，使用原始金额和原始货币
+        let displayAmount = totalIncomeAmount;
+        let editCurrency = displayCurrency || "CNY";
+        
+        if (originalCurrency && originalCurrency !== displayCurrency && assetPosting.original_amount !== undefined && assetPosting.original_amount !== null) {
+          // 使用原始金额和原始货币
+          displayAmount = Math.abs(
+            typeof assetPosting.original_amount === "string" 
+              ? parseFloat(assetPosting.original_amount) 
+              : assetPosting.original_amount
+          );
+          editCurrency = originalCurrency;
+        }
         // 更新收入表单数据
         const transactionData = {
-          amount: totalIncomeAmount.toString(),
+          amount: displayAmount.toString(),
           payee: transaction.payee || "",
           account: assetPosting.account,
           category: categories[0]?.category || "",
           date: new Date(transaction.date),
           description: transaction.narration || "",
-          currency: assetPosting.currency || "CNY",
+          currency: editCurrency,
           flag: transaction.flag || "*",
           categories: categories,
         };
