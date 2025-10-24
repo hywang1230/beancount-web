@@ -266,7 +266,12 @@ const onSubmit = async () => {
 
     // 先校验分类分配与总金额关系
     const categoriesSum = formData.value.categories.reduce(
-      (sum, cat) => sum + (parseFloat(cat.amount) || 0),
+      (sum, cat) => {
+        const amount = parseFloat(cat.amount) || 0;
+        // 对于收入类型，内部存储为负数，需要取绝对值来计算已分配金额
+        const displayAmount = activeTab.value === "income" ? Math.abs(amount) : amount;
+        return sum + displayAmount;
+      },
       0
     );
     const expectedCategoriesSum = totalAmount;
@@ -634,7 +639,7 @@ const loadTransactionData = async () => {
         const originalCurrency = assetPosting.original_currency;
         const displayCurrency = assetPosting.currency;
 
-        // 构建分类数组（将负数取反为正数用于前端显示）
+        // 构建分类数组（保持负数用于后续处理，前端展示时会显示绝对值）
         const categories = incomePostings.map((p: any) => {
           let amt = typeof p.amount === "string" ? parseFloat(p.amount) : p.amount || 0;
           
@@ -646,18 +651,19 @@ const loadTransactionData = async () => {
               : p.original_amount;
           }
           
-          // 收入账户通常是负数，取绝对值显示
+          // 收入账户通常是负数，保持为负数用于后续逻辑处理
+          // 前端表单显示时会通过 Math.abs 取绝对值
           return {
             categoryName: "",
             categoryDisplayName: formatAccountNameForCategory(p.account),
             category: p.account,
-            amount: String(Math.abs(amt)),
+            amount: String(amt), // 保持原始的负数值
           };
         });
 
-        // 计算总金额为分类金额之和（都是正数）
+        // 计算总金额为分类金额之和的绝对值（都是正数）
         const totalIncomeAmount = categories.reduce(
-          (sum: number, c: any) => sum + (parseFloat(c.amount) || 0),
+          (sum: number, c: any) => sum + Math.abs(parseFloat(c.amount) || 0),
           0
         );
         
@@ -666,7 +672,7 @@ const loadTransactionData = async () => {
         let editCurrency = displayCurrency || "CNY";
         
         if (originalCurrency && originalCurrency !== displayCurrency && assetPosting.original_amount !== undefined && assetPosting.original_amount !== null) {
-          // 使用原始金额和原始货币
+          // 使用原始金额的绝对值和原始货币
           displayAmount = Math.abs(
             typeof assetPosting.original_amount === "string" 
               ? parseFloat(assetPosting.original_amount) 
