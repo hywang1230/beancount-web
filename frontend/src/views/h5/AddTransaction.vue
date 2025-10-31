@@ -281,15 +281,14 @@ const onSubmit = async () => {
     const categoriesSum = formData.value.categories.reduce(
       (sum, cat) => {
         const amount = parseFloat(cat.amount) || 0;
-        // 对于支出类型，直接使用金额值
-        // 对于收入类型，使用绝对值来计算已分配金额（因为收入类型允许输入正数或负数）
-        const displayAmount = activeTab.value === "income" ? Math.abs(amount) : amount;
-        return sum + displayAmount;
+        // 对于所有类型，直接使用金额值（包括负数）
+        // 收入类型：总金额和分类金额的符号应该一致
+        return sum + amount;
       },
       0
     );
-    // 对于收入类型，总金额也需要取绝对值来比较
-    const expectedCategoriesSum = activeTab.value === "income" ? Math.abs(totalAmount) : totalAmount;
+    // 对于所有类型，直接使用总金额进行比较（包括负数）
+    const expectedCategoriesSum = totalAmount;
     const categoriesDiff = categoriesSum - expectedCategoriesSum;
     if (Math.abs(categoriesDiff) >= 0.01) {
       closeToast();
@@ -654,7 +653,9 @@ const loadTransactionData = async () => {
         const originalCurrency = assetPosting.original_currency;
         const displayCurrency = assetPosting.currency;
 
-        // 构建分类数组（保持负数用于后续处理，前端展示时会显示绝对值）
+        // 构建分类数组
+        // 注意：收入账户金额在存储时与用户输入相反（用户输入正数存储为负数，用户输入负数存储为正数）
+        // 所以加载时需要取反来恢复用户原始输入
         const categories = incomePostings.map((p: any) => {
           let amt = typeof p.amount === "string" ? parseFloat(p.amount) : p.amount || 0;
           
@@ -666,33 +667,33 @@ const loadTransactionData = async () => {
               : p.original_amount;
           }
           
-          // 收入账户通常是负数，保持为负数用于后续逻辑处理
-          // 前端表单显示时会通过 Math.abs 取绝对值
+          // 收入账户存储的金额与用户输入相反
+          // 用户输入正数 -> 存储负数；用户输入负数 -> 存储正数
+          // 所以加载时需要取反：显示金额 = -存储金额
+          // 这样当用户输入 +100 时显示 +100，输入 -100 时显示 -100
           return {
             categoryName: "",
             categoryDisplayName: formatAccountNameForCategory(p.account),
             category: p.account,
-            amount: String(amt), // 保持原始的负数值
+            amount: String(-amt), // 取反以恢复用户原始输入
           };
         });
 
-        // 计算总金额为分类金额之和的绝对值（都是正数）
-        const totalIncomeAmount = categories.reduce(
-          (sum: number, c: any) => sum + Math.abs(parseFloat(c.amount) || 0),
-          0
-        );
+        // 计算总金额：使用资产账户的金额（保持原始符号，支持负数）
+        // 资产账户金额的符号就是用户看到的金额符号
+        let assetAmount = typeof assetPosting.amount === "string" 
+          ? parseFloat(assetPosting.amount) 
+          : assetPosting.amount || 0;
         
         // 当有原始货币信息且与显示货币不同时，使用原始金额和原始货币
-        let displayAmount = totalIncomeAmount;
+        let displayAmount = assetAmount;
         let editCurrency = displayCurrency || "CNY";
         
         if (originalCurrency && originalCurrency !== displayCurrency && assetPosting.original_amount !== undefined && assetPosting.original_amount !== null) {
-          // 使用原始金额的绝对值和原始货币
-          displayAmount = Math.abs(
-            typeof assetPosting.original_amount === "string" 
-              ? parseFloat(assetPosting.original_amount) 
-              : assetPosting.original_amount
-          );
+          // 使用原始金额（保持原始符号，支持负数）
+          displayAmount = typeof assetPosting.original_amount === "string" 
+            ? parseFloat(assetPosting.original_amount) 
+            : assetPosting.original_amount;
           editCurrency = originalCurrency;
         }
         // 更新收入表单数据
