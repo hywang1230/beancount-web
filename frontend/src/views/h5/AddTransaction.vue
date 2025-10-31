@@ -247,7 +247,18 @@ const onSubmit = async () => {
     // 先添加分类的postings（支出或收入账户）
     for (const category of formData.value.categories) {
       if (category.category && category.amount) {
-        const categoryAmount = parseFloat(category.amount);
+        let categoryAmount = parseFloat(category.amount);
+        
+        // 对于收入类型：
+        // - 如果用户输入正数（如100），表示收入，收入账户存储为负数（-100）
+        // - 如果用户输入负数（如-100），表示退款/减少收入，收入账户存储为正数（100）
+        // 参考支出类型的逻辑：支出类型直接使用用户输入的值
+        // 收入类型：用户输入正数 -> 存储负数；用户输入负数 -> 存储正数
+        if (activeTab.value === "income") {
+          // 用户输入正数 -> 存储负数；用户输入负数 -> 存储正数
+          categoryAmount = -categoryAmount;
+        }
+        
         postings.push({
           account: category.category,
           amount: categoryAmount,
@@ -258,6 +269,8 @@ const onSubmit = async () => {
 
     // 后添加主账户posting（资产或负债账户）
     const totalAmount = parseFloat(formData.value.amount);
+    // 对于收入类型，主账户金额等于总金额（保持正负号）
+    // 对于支出类型，主账户金额是总金额的相反数
     postings.push({
       account: formData.value.account,
       amount: activeTab.value === "income" ? totalAmount : -totalAmount,
@@ -268,13 +281,15 @@ const onSubmit = async () => {
     const categoriesSum = formData.value.categories.reduce(
       (sum, cat) => {
         const amount = parseFloat(cat.amount) || 0;
-        // 对于收入类型，内部存储为负数，需要取绝对值来计算已分配金额
+        // 对于支出类型，直接使用金额值
+        // 对于收入类型，使用绝对值来计算已分配金额（因为收入类型允许输入正数或负数）
         const displayAmount = activeTab.value === "income" ? Math.abs(amount) : amount;
         return sum + displayAmount;
       },
       0
     );
-    const expectedCategoriesSum = totalAmount;
+    // 对于收入类型，总金额也需要取绝对值来比较
+    const expectedCategoriesSum = activeTab.value === "income" ? Math.abs(totalAmount) : totalAmount;
     const categoriesDiff = categoriesSum - expectedCategoriesSum;
     if (Math.abs(categoriesDiff) >= 0.01) {
       closeToast();
