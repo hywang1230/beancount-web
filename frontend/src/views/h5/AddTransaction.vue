@@ -82,7 +82,7 @@ import { calculateBottomButtonPosition, isPWAMode } from "@/utils/pwa";
 import TransactionForm from "@/views/h5/components/TransactionForm.vue";
 import TransferForm from "@/views/h5/components/TransferForm.vue";
 import { closeToast, showLoadingToast, showToast } from "vant";
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const router = useRouter();
@@ -206,32 +206,36 @@ const formatAccountNameForCategory = (accountName: string) => {
 };
 
 const resetForm = () => {
-  formData.value = {
-    amount: "",
-    payee: "",
-    account: "",
-    category: "",
-    date: new Date(),
-    description: "",
-    currency: "CNY",
-    flag: "*",
-    categories: [
-      { categoryName: "", categoryDisplayName: "", category: "", amount: "" },
-    ],
-  };
-
-  transferFormData.value = {
-    amount: "",
-    fromAccount: "",
-    toAccount: "",
-    date: new Date(),
-    description: "",
-    currency: "CNY",
-    flag: "*",
-  };
-
-  // 强制重新渲染表单组件
+  // 先递增formKey，触发组件重新创建
   formKey.value++;
+  
+  // 使用nextTick确保在下一个DOM更新周期后重置数据
+  // 这样可以避免旧数据被传递到新组件
+  nextTick(() => {
+    formData.value = {
+      amount: "",
+      payee: "",
+      account: "",
+      category: "",
+      date: new Date(),
+      description: "",
+      currency: "CNY",
+      flag: "*",
+      categories: [
+        { categoryName: "", categoryDisplayName: "", category: "", amount: "" },
+      ],
+    };
+
+    transferFormData.value = {
+      amount: "",
+      fromAccount: "",
+      toAccount: "",
+      date: new Date(),
+      description: "",
+      currency: "CNY",
+      flag: "*",
+    };
+  });
 };
 
 const onSubmit = async () => {

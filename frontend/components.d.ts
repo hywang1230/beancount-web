@@ -10,6 +10,7 @@ declare module 'vue' {
     CalculatorKeyboardExample: typeof import('./src/components/CalculatorKeyboardExample.vue')['default']
     NumberKeyboard: typeof import('./src/components/NumberKeyboard.vue')['default']
     PWAUpdatePrompt: typeof import('./src/components/PWAUpdatePrompt.vue')['default']
+    QuickActions: typeof import('./src/components/QuickActions.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     SyncStatusIndicator: typeof import('./src/components/SyncStatusIndicator.vue')['default']

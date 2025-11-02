@@ -5,6 +5,7 @@
       <SyncStatusIndicator />
     </div>
 
+    <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
     <!-- 账户概览卡片 -->
     <van-card class="balance-card">
       <template #title>
@@ -64,12 +65,24 @@
       />
       <van-cell title="结余" :value="formatAmount(monthlyStats.balance)" />
     </van-cell-group>
+    </van-pull-refresh>
+
+    <!-- 快捷记账按钮 -->
+    <van-floating-bubble
+      axis="xy"
+      icon="add"
+      @click="openQuickActions"
+    />
+
+    <!-- 快捷操作面板 -->
+    <QuickActions ref="quickActionsRef" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { getBalanceSheet, getMonthlySummary, getTrends } from "@/api/reports";
 import SyncStatusIndicator from "@/components/SyncStatusIndicator.vue";
+import QuickActions from "@/components/QuickActions.vue";
 import { useThemeStore } from "@/stores/theme";
 import { LineChart } from "echarts/charts";
 import {
@@ -107,6 +120,8 @@ const showBalance = ref(getInitialShowBalance());
 const totalBalance = ref(0);
 const totalAssets = ref(0);
 const totalLiabilities = ref(0);
+const refreshing = ref(false);
+const quickActionsRef = ref<InstanceType<typeof QuickActions>>();
 
 const monthlyStats = ref({
   income: 0,
@@ -332,6 +347,16 @@ const loadDashboardData = async () => {
       showToast("加载数据失败");
     }
   }
+};
+
+const onRefresh = async () => {
+  await loadDashboardData();
+  refreshing.value = false;
+  showToast("刷新成功");
+};
+
+const openQuickActions = () => {
+  quickActionsRef.value?.open();
 };
 
 onMounted(() => {

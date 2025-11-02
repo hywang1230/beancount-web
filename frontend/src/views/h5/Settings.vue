@@ -60,6 +60,30 @@
           <span class="cell-desc">设置主币种和汇率价格</span>
         </template>
       </van-cell>
+
+      <van-cell
+        title="BQL 查询"
+        icon="search"
+        is-link
+        @click="navigateTo('/h5/query')"
+        :border="false"
+      >
+        <template #label>
+          <span class="cell-desc">高级数据查询和分析</span>
+        </template>
+      </van-cell>
+
+      <van-cell
+        title="预算管理"
+        icon="chart-trending-o"
+        is-link
+        @click="navigateTo('/h5/budgets')"
+        :border="false"
+      >
+        <template #label>
+          <span class="cell-desc">设置和追踪预算执行</span>
+        </template>
+      </van-cell>
     </van-cell-group>
 
     <van-cell-group inset title="外观设置">

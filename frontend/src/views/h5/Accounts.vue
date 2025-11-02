@@ -1000,11 +1000,6 @@ const confirmRestoreAccount = async () => {
   }
 };
 
-const onRefresh = async () => {
-  await loadAccounts();
-  refreshing.value = false;
-};
-
 const loadAccounts = async () => {
   try {
     // 同时加载账户列表和归档账户
@@ -1048,6 +1043,12 @@ const loadAccounts = async () => {
       showToast("加载账户数据失败");
     }
   }
+};
+
+const onRefresh = async () => {
+  await loadAccounts();
+  refreshing.value = false;
+  showToast("刷新成功");
 };
 
 // 排序相关方法

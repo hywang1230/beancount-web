@@ -232,4 +232,91 @@ class PriceFilter(BaseModel):
     to_currency: Optional[str] = None
     start_date: Optional[date] = None
     end_date: Optional[date] = None
-    price_date: Optional[date] = None 
+    price_date: Optional[date] = None
+
+
+# BQL 查询相关 Schema
+class BQLQueryRequest(BaseModel):
+    """BQL 查询请求"""
+    query: str = Field(..., description="BQL 查询语句")
+
+
+class BQLQueryResponse(BaseModel):
+    """BQL 查询响应"""
+    success: bool
+    columns: List[str] = Field(default_factory=list)
+    rows: List[List[Any]] = Field(default_factory=list)
+    types: List[str] = Field(default_factory=list)
+    row_count: int = 0
+    error: Optional[str] = None
+
+
+class BQLQueryExample(BaseModel):
+    """BQL 查询示例"""
+    name: str
+    description: str
+    query: str
+
+
+class BQLFunction(BaseModel):
+    """BQL 函数"""
+    name: str
+    description: str
+    example: str
+
+
+class SavedQuery(BaseModel):
+    """保存的查询"""
+    id: Optional[int] = None
+    name: str = Field(..., description="查询名称")
+    description: Optional[str] = Field(None, description="查询描述")
+    query: str = Field(..., description="BQL 查询语句")
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+# 预算管理相关 Schema
+class BudgetCreate(BaseModel):
+    """创建预算请求"""
+    category: str = Field(..., description="支出类别，如 Expenses:Food")
+    period_type: str = Field(..., description="周期类型：month, quarter, year")
+    period_value: str = Field(..., description="周期值：2024-11, 2024-Q1, 2024")
+    amount: Decimal = Field(..., description="预算金额", gt=0)
+    currency: str = Field(default="CNY", description="货币")
+
+
+class BudgetUpdate(BaseModel):
+    """更新预算请求"""
+    amount: Optional[Decimal] = Field(None, description="预算金额", gt=0)
+
+
+class BudgetResponse(BaseModel):
+    """预算响应"""
+    id: int
+    category: str
+    period_type: str
+    period_value: str
+    amount: Decimal
+    currency: str
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class BudgetProgress(BaseModel):
+    """预算进度"""
+    budget: BudgetResponse
+    spent: Decimal = Field(..., description="已用金额")
+    remaining: Decimal = Field(..., description="剩余金额")
+    percentage: float = Field(..., description="使用百分比")
+    is_exceeded: bool = Field(..., description="是否超支")
+    days_remaining: Optional[int] = Field(None, description="剩余天数")
+
+
+class BudgetSummary(BaseModel):
+    """预算汇总"""
+    total_budget: Decimal
+    total_spent: Decimal
+    total_remaining: Decimal
+    overall_percentage: float
+    budgets: List[BudgetProgress]
+    currency: str 

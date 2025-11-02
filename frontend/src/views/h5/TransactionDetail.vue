@@ -1,10 +1,10 @@
 <template>
-  <div class="h5-transaction-detail">
+  <div class="h5-transaction-detail" @touchstart="onTouchStart" @touchmove="onTouchMove" @touchend="onTouchEnd">
     <div v-if="loading" class="loading-container">
       <van-loading size="24px" vertical>加载中...</van-loading>
     </div>
 
-    <div v-else-if="transaction" class="transaction-content">
+    <div v-else-if="transaction" class="transaction-content" :style="{ transform: `translateX(${swipeOffset}px)` }">
       <!-- 基本信息 -->
       <van-cell-group>
         <van-cell title="日期" :value="transaction.date" />
@@ -137,6 +137,12 @@ const loading = ref(true);
 const transaction = ref<any>(null);
 const accountTypes = ref<Record<string, string[]>>({});
 const showDeleteDialog = ref(false);
+
+// 手势滑动相关
+const swipeOffset = ref(0);
+let touchStartX = 0;
+let touchStartY = 0;
+let isSwiping = false;
 
 const formatAmount = (
   amount: string | number | undefined,
@@ -289,6 +295,50 @@ const confirmDelete = async () => {
   }
 };
 
+// 手势操作
+const onTouchStart = (e: TouchEvent) => {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+  isSwiping = false;
+};
+
+const onTouchMove = (e: TouchEvent) => {
+  if (!transaction.value) return;
+  
+  const touchCurrentX = e.touches[0].clientX;
+  const touchCurrentY = e.touches[0].clientY;
+  const deltaX = touchCurrentX - touchStartX;
+  const deltaY = touchCurrentY - touchStartY;
+  
+  // 判断是否为横向滑动
+  if (Math.abs(deltaX) > Math.abs(deltaY) && Math.abs(deltaX) > 10) {
+    isSwiping = true;
+    swipeOffset.value = deltaX * 0.3; // 添加阻尼效果
+  }
+};
+
+const onTouchEnd = () => {
+  if (!isSwiping) {
+    swipeOffset.value = 0;
+    return;
+  }
+  
+  // 根据滑动距离判断是否切换
+  if (Math.abs(swipeOffset.value) > 50) {
+    if (swipeOffset.value > 0) {
+      // 向右滑动，显示提示
+      showToast("已是第一条");
+    } else {
+      // 向左滑动，显示提示
+      showToast("已是最后一条");
+    }
+  }
+  
+  // 重置偏移
+  swipeOffset.value = 0;
+  isSwiping = false;
+};
+
 onMounted(async () => {
   await Promise.all([loadAccountTypes(), loadTransaction()]);
 });
@@ -299,6 +349,11 @@ onMounted(async () => {
   background-color: var(--van-background);
   min-height: 100vh;
   transition: background-color 0.3s ease;
+  overflow-x: hidden;
+}
+
+.transaction-content {
+  transition: transform 0.3s ease-out;
 }
 
 .loading-container {

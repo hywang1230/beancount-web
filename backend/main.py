@@ -7,7 +7,7 @@ import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 
-from app.routers import transactions, reports, accounts, files, recurring, auth, sync, settings as settings_router, beancount_options
+from app.routers import transactions, reports, accounts, files, recurring, auth, sync, settings as settings_router, beancount_options, query, budgets
 from app.core.config import settings
 from app.services.scheduler import scheduler
 from app.database import init_database
@@ -80,6 +80,8 @@ app.include_router(recurring.router, prefix="/api/recurring", tags=["周期记�
 app.include_router(sync.router, prefix="/api/sync", tags=["同步管理"], dependencies=auth_dependencies)
 app.include_router(settings_router.router, prefix="/api/settings", tags=["应用设置"], dependencies=auth_dependencies)
 app.include_router(beancount_options.router, prefix="/api/beancount", tags=["账本选项"], dependencies=auth_dependencies)
+app.include_router(query.router, prefix="/api/query", tags=["BQL查询"], dependencies=auth_dependencies)
+app.include_router(budgets.router, prefix="/api/budgets", tags=["预算管理"], dependencies=auth_dependencies)
 
 # --- DEBUG: Print all registered routes ---
 from fastapi.routing import APIRoute
