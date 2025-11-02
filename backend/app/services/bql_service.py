@@ -5,12 +5,8 @@ BQL (Beancount Query Language) 查询服务
 注意：Beancount 3.0 已移除内置的 query 模块
 此服务提供基于 beancount 核心 API 的简化查询功能
 """
-from typing import List, Dict, Any, Optional
-from datetime import datetime, date
-from decimal import Decimal
-from beancount.core import data, getters, realization
-from beancount.core.inventory import Inventory
-from collections import defaultdict
+from typing import List, Dict, Any
+from beancount.core import data, realization
 import re
 
 

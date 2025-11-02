@@ -39,7 +39,7 @@
             <template #title>
               <div class="budget-item-title">
                 <span>{{ getCategoryName(item.budget.category) }}</span>
-                <van-tag v-if="item.is_exceeded" type="danger" size="small">超支</van-tag>
+                <van-tag v-if="item.is_exceeded" type="danger">超支</van-tag>
               </div>
             </template>
             <template #label>
@@ -251,7 +251,8 @@ const loadBudgetSummary = async () => {
 // 加载支出类别
 const loadExpenseCategories = async () => {
   try {
-    const accounts = await getAccounts();
+    const response = await getAccounts();
+    const accounts = Array.isArray(response) ? response : (response?.data || []);
     categoryColumns.value = accounts
       .filter((acc: string) => acc.startsWith("Expenses:"))
       .sort()
