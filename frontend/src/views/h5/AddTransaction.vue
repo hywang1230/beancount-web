@@ -159,10 +159,8 @@ const buttonPosition = computed(() => calculateBottomButtonPosition());
 
 // 标签页切换处理
 const onTabChange = (tabName: string) => {
-  if (activeTab.value !== tabName) {
-    activeTab.value = tabName;
-    resetForm();
-  }
+  activeTab.value = tabName;
+  resetForm();
 };
 
 // 处理保存
