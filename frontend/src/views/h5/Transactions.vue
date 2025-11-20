@@ -414,54 +414,7 @@ const debouncedLoadTransactions = createDebounce(
   300
 );
 
-// 获取类型筛选的标题
-const getTypeTitle = () => {
-  const option = typeOptions.find((opt) => opt.value === filterType.value);
-  return option ? option.text : "全部类型";
-};
 
-// 获取账户筛选的标题
-const getAccountTitle = () => {
-  const option = accountOptions.value.find(
-    (opt) => opt.value === filterAccount.value
-  );
-  return option ? option.text.replace(/　/g, "") : "全部账户";
-};
-
-// 格式化日期范围显示
-const formatDateRangeDisplay = (startDateStr: string, endDateStr: string) => {
-  if (!startDateStr && !endDateStr) return "日期筛选";
-  if (startDateStr && endDateStr) {
-    const startDate = new Date(startDateStr);
-    const endDate = new Date(endDateStr);
-    const startFormatted = startDate.toLocaleDateString("zh-CN", {
-      month: "short",
-      day: "numeric",
-    });
-    const endFormatted = endDate.toLocaleDateString("zh-CN", {
-      month: "short",
-      day: "numeric",
-    });
-    return `${startFormatted} - ${endFormatted}`;
-  }
-  if (startDateStr) {
-    const startDate = new Date(startDateStr);
-    const startFormatted = startDate.toLocaleDateString("zh-CN", {
-      month: "short",
-      day: "numeric",
-    });
-    return `从 ${startFormatted}`;
-  }
-  if (endDateStr) {
-    const endDate = new Date(endDateStr);
-    const endFormatted = endDate.toLocaleDateString("zh-CN", {
-      month: "short",
-      day: "numeric",
-    });
-    return `到 ${endFormatted}`;
-  }
-  return "日期筛选";
-};
 
 // 手机端优化方法
 // 获取紧凑的类型标题
@@ -917,17 +870,7 @@ const restoreSearchState = () => {
   }
 };
 
-// 清除URL中的搜索参数
-const clearSearchParams = () => {
-  const query = { ...route.query };
-  delete query.search;
-  delete query.type;
-  delete query.account;
-  delete query.start_date;
-  delete query.end_date;
 
-  router.replace({ query });
-};
 
 // 更新URL中的搜索参数
 const updateSearchParams = () => {
@@ -957,26 +900,7 @@ const updateSearchParams = () => {
   router.replace({ query });
 };
 
-// 获取搜索标题
-const getSearchTitle = () => {
-  if (searchKeyword.value.trim()) {
-    return `搜索: ${searchKeyword.value.trim()}`;
-  }
-  return "搜索";
-};
 
-// 搜索处理
-const handleSearch = () => {
-  updateSearchParams();
-  onRefresh();
-};
-
-const handleClearSearch = () => {
-  searchKeyword.value = "";
-  searchKeywordInput.value = "";
-  clearSearchParams();
-  onRefresh();
-};
 
 // 搜索下拉菜单相关方法
 const handleSearchInputClear = () => {
@@ -990,20 +914,6 @@ const handleSearchInputConfirm = () => {
   searchDropdown.value?.toggle();
 };
 
-const handleSearchConfirm = () => {
-  searchKeyword.value = searchKeywordInput.value.trim();
-  updateSearchParams();
-  onRefresh();
-  searchDropdown.value?.toggle();
-};
-
-const handleSearchClear = () => {
-  searchKeyword.value = "";
-  searchKeywordInput.value = "";
-  updateSearchParams();
-  onRefresh();
-  searchDropdown.value?.toggle();
-};
 
 const onRefresh = async () => {
   // Refresh transaction list
