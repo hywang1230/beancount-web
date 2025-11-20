@@ -1,5 +1,23 @@
 <template>
   <div class="h5-transactions">
+    <!-- 搜索栏 -->
+    <van-sticky :offset-top="0">
+      <div class="search-bar">
+        <van-search
+          v-model="searchKeyword"
+          placeholder="搜索收付方、描述、金额..."
+          @search="handleSearch"
+          @clear="handleClearSearch"
+          @cancel="handleClearSearch"
+          show-action
+        >
+          <template #action>
+            <div @click="handleSearch">搜索</div>
+          </template>
+        </van-search>
+      </div>
+    </van-sticky>
+
     <!-- 筛选栏 -->
     <div class="filter-fixed-container">
       <div class="filter-bar">
@@ -210,6 +228,9 @@ const collapsedGroups = ref<Set<string>>(new Set());
 // 分页状态
 const currentPage = ref(1);
 const totalPages = ref(1);
+
+// 搜索关键词
+const searchKeyword = ref("");
 
 // 筛选条件
 const filterType = ref("all");
@@ -705,6 +726,16 @@ const deleteTransaction = async (transaction: any) => {
   }
 };
 
+// 搜索处理
+const handleSearch = () => {
+  onRefresh();
+};
+
+const handleClearSearch = () => {
+  searchKeyword.value = "";
+  onRefresh();
+};
+
 const onRefresh = async () => {
   // Refresh transaction list
 
@@ -802,8 +833,15 @@ const loadTransactionsInternal = async (
       params.end_date = endDate.value;
     }
 
-    // 如果没有设置日期范围，默认获取最近3个月的数据
-    if (!startDate.value && !endDate.value) {
+    // 搜索关键词
+    if (searchKeyword.value.trim()) {
+      // 支持搜索收付方、描述
+      params.payee = searchKeyword.value.trim();
+      params.narration = searchKeyword.value.trim();
+    }
+
+    // 如果没有设置日期范围且没有搜索，默认获取最近3个月的数据
+    if (!startDate.value && !endDate.value && !searchKeyword.value.trim()) {
       const today = new Date();
       const threeMonthsAgo = new Date();
       threeMonthsAgo.setMonth(today.getMonth() - 3);
@@ -1158,6 +1196,11 @@ onUnmounted(() => {
   background-color: var(--van-background);
   min-height: 100vh;
   transition: background-color 0.3s ease;
+}
+
+.search-bar {
+  background-color: var(--van-background-2);
+  padding: 8px 16px;
 }
 
 /* 固定筛选栏容器 */

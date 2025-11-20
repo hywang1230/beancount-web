@@ -115,6 +115,18 @@ const routes: RouteRecordRaw[] = [
         component: () => import("@/views/h5/CurrencySettings.vue"),
         meta: { title: "货币设置", platform: "h5", requiresAuth: true },
       },
+      {
+        path: "query",
+        name: "H5Query",
+        component: () => import("@/views/h5/Query.vue"),
+        meta: { title: "BQL 查询", platform: "h5", requiresAuth: true },
+      },
+      {
+        path: "budgets",
+        name: "H5Budgets",
+        component: () => import("@/views/h5/Budgets.vue"),
+        meta: { title: "预算管理", platform: "h5", requiresAuth: true },
+      },
     ],
   },
 ];

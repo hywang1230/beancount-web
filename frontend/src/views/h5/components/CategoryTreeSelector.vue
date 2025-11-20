@@ -39,6 +39,7 @@
 </template>
 
 <script setup lang="ts">
+import { getFrequentlyUsedCategories } from "@/utils/usageStats";
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
 interface Category {
@@ -111,7 +112,47 @@ const treeSelectItems = computed(() => {
     );
   }
 
-  // 将扁平的分类数据转换为树形结构
+  const items: TreeSelectItem[] = [];
+
+  // 1. 添加常用分类（仅在没有搜索关键字时显示）
+  if (!searchKeyword.value.trim()) {
+    const frequentCategoryNames = getFrequentlyUsedCategories(3);
+    // 过滤出存在的常用分类
+    const frequentCategories = frequentCategoryNames
+      .map((name) => props.categories.find((c) => c.name === name))
+      .filter((c): c is Category => c !== undefined);
+
+    if (frequentCategories.length > 0) {
+      const frequentChildren: TreeSelectChild[] = frequentCategories.map(
+        (category) => {
+          const parts = category.name.split(":");
+          let displayName: string;
+          if (parts.length === 2) {
+            displayName = formatCategoryName(parts[1]);
+          } else {
+            displayName = parts
+              .slice(2)
+              .map((part) => formatCategoryName(part))
+              .join(" - ");
+          }
+
+          return {
+            text: displayName,
+            id: category.name,
+            disabled: false,
+          };
+        }
+      );
+
+      items.push({
+        text: "常用分类",
+        children: frequentChildren,
+        disabled: false,
+      });
+    }
+  }
+
+  // 2. 将扁平的分类数据转换为树形结构
   const rootCategories = new Map<string, TreeSelectItem>();
 
   filteredCategories.forEach((category) => {
@@ -168,7 +209,9 @@ const treeSelectItems = computed(() => {
     }
   });
 
-  return Array.from(rootCategories.values());
+  items.push(...Array.from(rootCategories.values()));
+
+  return items;
 });
 
 // 搜索相关方法

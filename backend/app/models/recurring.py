@@ -1,8 +1,7 @@
-from sqlalchemy import Column, Integer, String, Date, Float, JSON, Boolean, DateTime, Text, ForeignKey
+from sqlalchemy import Column, Integer, String, Date, JSON, Boolean, DateTime, Text, ForeignKey
 from sqlalchemy.orm import relationship
 from app.database import Base
 from app.core.config import settings
-import datetime
 
 
 class Recurring(Base):

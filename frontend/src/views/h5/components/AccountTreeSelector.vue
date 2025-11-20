@@ -37,6 +37,7 @@
 
 <script setup lang="ts">
 import { getAccountsByType } from "@/api/accounts";
+import { getFrequentlyUsedAccounts } from "@/utils/usageStats";
 import { computed, onMounted, ref } from "vue";
 
 interface Account {
@@ -128,7 +129,50 @@ const treeSelectItems = computed(() => {
     );
   }
 
-  // 按二级分类分组
+  const items: TreeSelectItem[] = [];
+
+  // 1. 添加常用账户（仅在没有搜索关键字时显示）
+  if (!searchKeyword.value.trim()) {
+    const frequentAccountNames = getFrequentlyUsedAccounts(3);
+    // 过滤出当前可用类型且存在的常用账户
+    const frequentAccounts = frequentAccountNames
+      .map((name) => accounts.value.find((a) => a.name === name))
+      .filter((a): a is Account => {
+        if (!a) return false;
+        const type = getAccountType(a.name);
+        return props.accountTypes.includes(type);
+      });
+
+    if (frequentAccounts.length > 0) {
+      const frequentChildren: TreeSelectChild[] = frequentAccounts.map(
+        (account) => {
+          const parts = account.name.split(":");
+          const displayName =
+            parts.length > 2
+              ? formatAccountName(parts.slice(2).join(":"))
+              : formatAccountName(parts[parts.length - 1]);
+
+          return {
+            text: `${displayName}${
+              account.balance !== undefined
+                ? ` (¥${account.balance.toFixed(2)})`
+                : ""
+            }`,
+            id: account.name,
+            disabled: false,
+          };
+        }
+      );
+
+      items.push({
+        text: "常用账户",
+        children: frequentChildren,
+        disabled: false,
+      });
+    }
+  }
+
+  // 2. 按二级分类分组
   const categorized: Record<string, Account[]> = {};
   filteredAccounts.forEach((account) => {
     const parts = account.name.split(":");
@@ -142,7 +186,6 @@ const treeSelectItems = computed(() => {
   });
 
   // 转换为TreeSelect格式
-  const items: TreeSelectItem[] = [];
   Object.entries(categorized).forEach(([category, categoryAccounts]) => {
     // 确保有账户数据才创建分类
     if (!categoryAccounts || categoryAccounts.length === 0) {
@@ -225,6 +268,11 @@ const loadAccounts = async () => {
 // 显示选择器
 const show = () => {
   visible.value = true;
+  // 每次显示时重置选中项，以便用户可以看到常用账户
+  // 如果有选中的账户，可以尝试定位到该账户，但TreeSelect组件可能不支持自动展开
+  // 所以这里保持默认状态，或者如果想让用户看到常用账户，可以将activeMainIndex设为0
+  activeMainIndex.value = 0;
+  
   if (accounts.value.length === 0) {
     loadAccounts();
   }

@@ -79,10 +79,11 @@ import {
   validateTransaction,
 } from "@/api/transactions";
 import { calculateBottomButtonPosition, isPWAMode } from "@/utils/pwa";
+import { recordAccountUsage, recordCategoryUsage, getFrequentlyUsedAccounts, getFrequentlyUsedCategories } from "@/utils/usageStats";
 import TransactionForm from "@/views/h5/components/TransactionForm.vue";
 import TransferForm from "@/views/h5/components/TransferForm.vue";
 import { closeToast, showLoadingToast, showToast } from "vant";
-import { computed, onMounted, ref } from "vue";
+import { computed, nextTick, onMounted, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 
 const router = useRouter();
@@ -158,10 +159,8 @@ const buttonPosition = computed(() => calculateBottomButtonPosition());
 
 // 标签页切换处理
 const onTabChange = (tabName: string) => {
-  if (activeTab.value !== tabName) {
-    activeTab.value = tabName;
-    resetForm();
-  }
+  activeTab.value = tabName;
+  resetForm();
 };
 
 // 处理保存
@@ -206,32 +205,60 @@ const formatAccountNameForCategory = (accountName: string) => {
 };
 
 const resetForm = () => {
-  formData.value = {
-    amount: "",
-    payee: "",
-    account: "",
-    category: "",
-    date: new Date(),
-    description: "",
-    currency: "CNY",
-    flag: "*",
-    categories: [
-      { categoryName: "", categoryDisplayName: "", category: "", amount: "" },
-    ],
-  };
-
-  transferFormData.value = {
-    amount: "",
-    fromAccount: "",
-    toAccount: "",
-    date: new Date(),
-    description: "",
-    currency: "CNY",
-    flag: "*",
-  };
-
-  // 强制重新渲染表单组件
+  // 先递增formKey，触发组件重新创建
   formKey.value++;
+  
+  // 使用nextTick确保在下一个DOM更新周期后重置数据
+  // 这样可以避免旧数据被传递到新组件
+  nextTick(() => {
+    // 支出类型设置默认值
+    let defaultAccount = "";
+    let defaultCategory = "";
+    let defaultCategoryDisplayName = "";
+    
+    if (activeTab.value === "expense") {
+      const frequentAccounts = getFrequentlyUsedAccounts(1);
+      const frequentCategories = getFrequentlyUsedCategories(1);
+      
+      if (frequentAccounts.length > 0) {
+        defaultAccount = frequentAccounts[0];
+      }
+      
+      if (frequentCategories.length > 0) {
+        defaultCategory = frequentCategories[0];
+        defaultCategoryDisplayName = formatAccountNameForCategory(defaultCategory);
+      }
+    }
+    
+    formData.value = {
+      amount: "",
+      payee: "",
+      account: defaultAccount,
+      category: defaultCategory,
+      date: new Date(),
+      description: "",
+      currency: "CNY",
+      flag: "*",
+      categories: [
+        { 
+          categoryName: defaultCategory, 
+          categoryDisplayName: defaultCategoryDisplayName, 
+          category: defaultCategory, 
+          amount: "" 
+        },
+      ],
+    };
+
+    transferFormData.value = {
+      amount: "",
+      fromAccount: "",
+      toAccount: "",
+      date: new Date(),
+      description: "",
+      currency: "CNY",
+      flag: "*",
+    };
+  });
 };
 
 const onSubmit = async () => {
@@ -376,6 +403,14 @@ const onSubmit = async () => {
       // 新增模式：调用创建API
       await createTransaction(transactionData);
       showToast("保存成功");
+      
+      // 记录账户和分类使用情况（仅在新增时记录，编辑不重复记录）
+      recordAccountUsage(formData.value.account);
+      formData.value.categories.forEach((cat) => {
+        if (cat.category) {
+          recordCategoryUsage(cat.category);
+        }
+      });
     }
 
     closeToast();
@@ -474,6 +509,10 @@ const onTransferSubmit = async () => {
       // 新增模式：调用创建API
       await createTransaction(transferData);
       showToast("转账成功");
+      
+      // 记录两个账户的使用情况（仅在新增时记录，编辑不重复记录）
+      recordAccountUsage(transferFormData.value.fromAccount);
+      recordAccountUsage(transferFormData.value.toAccount);
     }
 
     closeToast();
@@ -502,6 +541,24 @@ onMounted(() => {
   const id = route.query.id as string;
   if (id) {
     loadTransactionData();
+  } else if (activeTab.value === "expense") {
+    // 新增模式且为支出类型，设置默认值
+    nextTick(() => {
+      const frequentAccounts = getFrequentlyUsedAccounts(1);
+      const frequentCategories = getFrequentlyUsedCategories(1);
+      
+      if (frequentAccounts.length > 0) {
+        formData.value.account = frequentAccounts[0];
+      }
+      
+      if (frequentCategories.length > 0) {
+        const defaultCategory = frequentCategories[0];
+        formData.value.category = defaultCategory;
+        formData.value.categories[0].category = defaultCategory;
+        formData.value.categories[0].categoryName = defaultCategory;
+        formData.value.categories[0].categoryDisplayName = formatAccountNameForCategory(defaultCategory);
+      }
+    });
   }
 });
 

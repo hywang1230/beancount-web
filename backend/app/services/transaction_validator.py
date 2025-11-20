@@ -2,8 +2,6 @@
 交易验证服务
 负责交易数据的验证和错误处理
 """
-import os
-import tempfile
 from typing import Dict, List
 from beancount import loader
 

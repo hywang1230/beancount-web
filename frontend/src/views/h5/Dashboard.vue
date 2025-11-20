@@ -5,6 +5,7 @@
       <SyncStatusIndicator />
     </div>
 
+    <van-pull-refresh v-model="refreshing" @refresh="onRefresh" success-text="刷新成功">
     <!-- 账户概览卡片 -->
     <van-card class="balance-card">
       <template #title>
@@ -64,6 +65,9 @@
       />
       <van-cell title="结余" :value="formatAmount(monthlyStats.balance)" />
     </van-cell-group>
+    </van-pull-refresh>
+
+
   </div>
 </template>
 
@@ -107,6 +111,7 @@ const showBalance = ref(getInitialShowBalance());
 const totalBalance = ref(0);
 const totalAssets = ref(0);
 const totalLiabilities = ref(0);
+const refreshing = ref(false);
 
 const monthlyStats = ref({
   income: 0,
@@ -334,6 +339,14 @@ const loadDashboardData = async () => {
   }
 };
 
+const onRefresh = async () => {
+  await loadDashboardData();
+  refreshing.value = false;
+  showToast("刷新成功");
+};
+
+
+
 onMounted(() => {
   loadDashboardData();
 });
@@ -362,7 +375,7 @@ watch(isDark, () => {
 .balance-card {
   margin-bottom: 16px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
   color: white;
 }
 
