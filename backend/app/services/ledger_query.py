@@ -26,7 +26,7 @@ class LedgerQuery:
     def get_transactions(self, filter_params: Optional[TransactionFilter] = None) -> List[TransactionResponse]:
         """获取交易列表"""
         entries, _, _ = self.loader.load_entries()
-        
+
         transactions = []
         for entry in entries:
             if isinstance(entry, Transaction):
@@ -36,26 +36,40 @@ class LedgerQuery:
                         continue
                     if filter_params.end_date and entry.date > filter_params.end_date:
                         continue
-                    if filter_params.payee and (not entry.payee or filter_params.payee.lower() not in entry.payee.lower()):
-                        continue
-                    if filter_params.narration and filter_params.narration.lower() not in entry.narration.lower():
-                        continue
+
+                    # 通用搜索关键词 - 搜索payee、narration或账户字段
+                    if filter_params.search:
+                        search_lower = filter_params.search.lower()
+                        payee_match = entry.payee and search_lower in entry.payee.lower()
+                        narration_match = entry.narration and search_lower in entry.narration.lower()
+                        # 同时搜索账户名称
+                        account_match = any(search_lower in posting.account.lower()
+                                          for posting in entry.postings)
+                        if not (payee_match or narration_match or account_match):
+                            continue
+                    else:
+                        # 单独的字段搜索
+                        if filter_params.payee and (not entry.payee or filter_params.payee.lower() not in entry.payee.lower()):
+                            continue
+                        if filter_params.narration and filter_params.narration.lower() not in entry.narration.lower():
+                            continue
+
                     if filter_params.account:
-                        account_match = any(filter_params.account in posting.account 
+                        account_match = any(filter_params.account in posting.account
                                           for posting in entry.postings)
                         if not account_match:
                             continue
-                    
+
                     # 交易类型筛选
                     if filter_params.transaction_type:
                         transaction_type = self._get_transaction_type(entry)
                         if transaction_type != filter_params.transaction_type:
                             continue
-                
+
                 # 转换为响应模型
                 transaction = self._convert_entry_to_response(entry)
                 transactions.append(transaction)
-        
+
         # 按日期降序排列
         transactions.sort(key=lambda x: x.date, reverse=True)
         return transactions

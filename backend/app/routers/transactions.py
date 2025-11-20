@@ -131,6 +131,7 @@ async def get_transactions(
     account: Optional[str] = Query(None, description="账户筛选"),
     payee: Optional[str] = Query(None, description="收付方筛选"),
     narration: Optional[str] = Query(None, description="摘要筛选"),
+    search: Optional[str] = Query(None, description="通用搜索关键词，同时搜索收付方和描述"),
     amount_min: Optional[float] = Query(None, description="最小金额筛选"),
     amount_max: Optional[float] = Query(None, description="最大金额筛选"),
     transaction_type: Optional[str] = Query(None, description="交易类型筛选：income, expense, transfer"),
@@ -149,6 +150,15 @@ async def get_transactions(
             max_amount=amount_max,
             transaction_type=transaction_type
         )
+
+        # 如果提供了通用搜索关键词，则设置payee和narration为搜索关键词
+        # 这样后端可以在payee或narration任一字段匹配时返回结果
+        if search:
+            # 清除单独的payee和narration筛选
+            filter_params.payee = None
+            filter_params.narration = None
+            # 设置搜索标记，由服务层处理
+            filter_params.search = search
         
         # 获取所有符合条件的交易
         all_transactions = beancount_service.get_transactions(filter_params)

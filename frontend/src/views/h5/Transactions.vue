@@ -1,44 +1,23 @@
 <template>
   <div class="h5-transactions">
-    <!-- 搜索栏 -->
-    <van-sticky :offset-top="0">
-      <div class="search-bar">
-        <van-search
-          v-model="searchKeyword"
-          placeholder="搜索收付方、描述、金额..."
-          @search="handleSearch"
-          @clear="handleClearSearch"
-          @cancel="handleClearSearch"
-          show-action
-        >
-          <template #action>
-            <div @click="handleSearch">搜索</div>
-          </template>
-        </van-search>
-      </div>
-    </van-sticky>
-
-    <!-- 筛选栏 -->
+    <!-- 筛选和搜索栏 -->
     <div class="filter-fixed-container">
-      <div class="filter-bar">
+      <div class="filter-search-bar">
+        <!-- 筛选菜单 - 手机端优化 -->
         <van-dropdown-menu
           class="transaction-filter-menu"
           active-color="#1989fa"
           overlay
           :close-on-click-overlay="true"
         >
+          <!-- 主要筛选项：类型和日期 -->
           <van-dropdown-item
             v-model="filterType"
             :options="typeOptions"
-            :title="getTypeTitle()"
+            :title="getCompactTypeTitle()"
           />
           <van-dropdown-item
-            v-model="filterAccount"
-            :options="accountOptions"
-            :title="getAccountTitle()"
-          />
-          <van-dropdown-item
-            :title="formatDateRangeDisplay(startDate, endDate)"
+            :title="getCompactDateTitle()"
             ref="dateFilterDropdown"
           >
             <div class="date-filter-panel">
@@ -90,6 +69,81 @@
                   class="apply-btn"
                 >
                   确定
+                </van-button>
+              </div>
+            </div>
+          </van-dropdown-item>
+
+          <!-- 合并筛选项：包含账户和搜索 -->
+          <van-dropdown-item
+            :title="getCombinedFilterTitle()"
+            ref="combinedFilterDropdown"
+          >
+            <div class="combined-filter-panel">
+              <!-- 搜索区域 -->
+              <div class="combined-filter-header">
+                <span class="filter-title">搜索交易</span>
+              </div>
+              <div class="search-input-container">
+                <van-field
+                  v-model="searchKeywordInput"
+                  placeholder="搜索收付方、描述、账户..."
+                  clearable
+                  @clear="handleSearchInputClear"
+                  @keyup.enter="handleSearchInputConfirm"
+                  class="search-input-field"
+                >
+                  <template #right-icon>
+                    <van-icon name="search" @click="handleSearchInputConfirm" />
+                  </template>
+                </van-field>
+              </div>
+
+              <!-- 账户筛选区域 -->
+              <div class="account-filter-section">
+                <div class="account-filter-header">
+                  <span class="section-title">账户筛选</span>
+                </div>
+                <div class="account-options-container">
+                  <van-cell-group class="account-options">
+                    <van-cell
+                      v-for="option in compactAccountOptions"
+                      :key="option.value"
+                      :title="option.text"
+                      clickable
+                      @click="selectAccount(option.value)"
+                      :class="{ 'active-account': filterAccount === option.value }"
+                    >
+                      <template #right-icon>
+                        <van-icon
+                          v-if="filterAccount === option.value"
+                          name="success"
+                          color="#1989fa"
+                        />
+                      </template>
+                    </van-cell>
+                  </van-cell-group>
+                </div>
+              </div>
+
+              <!-- 操作按钮 -->
+              <div class="combined-filter-actions">
+                <van-button
+                  v-if="hasActiveFilters"
+                  type="default"
+                  size="normal"
+                  @click="clearCombinedFilters"
+                  class="clear-btn"
+                >
+                  清除筛选
+                </van-button>
+                <van-button
+                  type="primary"
+                  size="normal"
+                  @click="applyCombinedFilters"
+                  class="apply-btn"
+                >
+                  应用
                 </van-button>
               </div>
             </div>
@@ -214,7 +268,7 @@ const route = useRoute();
 const requestManager = new RequestManager();
 
 // 高亮显示的交易ID（从URL参数获取）
-const highlightTransactionId = ref((route.query.highlight as string) || "");
+const highlightTransactionId = ref("");
 
 // 响应式数据
 const refreshing = ref(false);
@@ -231,6 +285,13 @@ const totalPages = ref(1);
 
 // 搜索关键词
 const searchKeyword = ref("");
+// 搜索框输入关键词（用于下拉菜单中的输入框）
+const searchKeywordInput = ref("");
+
+// 搜索下拉菜单引用
+const searchDropdown = ref();
+// 合并筛选下拉菜单引用
+const combinedFilterDropdown = ref();
 
 // 筛选条件
 const filterType = ref("all");
@@ -402,6 +463,86 @@ const formatDateRangeDisplay = (startDateStr: string, endDateStr: string) => {
   return "日期筛选";
 };
 
+// 手机端优化方法
+// 获取紧凑的类型标题
+const getCompactTypeTitle = () => {
+  const typeMap: Record<string, string> = {
+    all: "类型",
+    income: "收入",
+    expense: "支出",
+    transfer: "转账",
+  };
+  return typeMap[filterType.value] || "类型";
+};
+
+// 获取紧凑的日期标题
+const getCompactDateTitle = () => {
+  if (!startDate.value && !endDate.value) return "日期";
+  if (startDate.value && endDate.value) {
+    const start = new Date(startDate.value);
+    const end = new Date(endDate.value);
+    if (start.toDateString() === end.toDateString()) {
+      return start.toLocaleDateString("zh-CN", { month: "short", day: "numeric" });
+    }
+    return "范围";
+  }
+  return startDate.value || endDate.value ? "已选" : "日期";
+};
+
+// 获取合并筛选标题
+const getCombinedFilterTitle = () => {
+  const parts = [];
+  if (searchKeyword.value.trim()) parts.push("搜索");
+  if (filterAccount.value !== "all") parts.push("账户");
+
+  if (parts.length === 0) return "更多";
+  return parts.join(" + ");
+};
+
+// 精简的账户选项
+const compactAccountOptions = computed(() => {
+  // 只返回前10个最常用的账户选项
+  const allOptions = accountOptions.value;
+  const priorityOptions = allOptions.filter(opt =>
+    opt.value === "all" ||
+    opt.value.includes("Assets:Bank") ||
+    opt.value.includes("Assets:Cash") ||
+    opt.value.includes("Expenses:Food") ||
+    opt.value.includes("Expenses:Transport")
+  );
+
+  if (priorityOptions.length >= 8) {
+    return priorityOptions.slice(0, 8);
+  }
+
+  return allOptions.slice(0, 8);
+});
+
+// 选择账户
+const selectAccount = (accountValue: string) => {
+  filterAccount.value = accountValue;
+};
+
+// 检查是否有激活的筛选条件
+const hasActiveFilters = computed(() => {
+  return searchKeyword.value.trim() || filterAccount.value !== "all";
+});
+
+// 清除合并筛选
+const clearCombinedFilters = () => {
+  searchKeyword.value = "";
+  searchKeywordInput.value = "";
+  filterAccount.value = "all";
+};
+
+// 应用合并筛选
+const applyCombinedFilters = () => {
+  searchKeyword.value = searchKeywordInput.value.trim();
+  updateSearchParams();
+  onRefresh();
+  combinedFilterDropdown.value?.toggle();
+};
+
 // 格式化日期范围值显示
 const formatDateRangeValue = (startDateStr: string, endDateStr: string) => {
   if (!startDateStr && !endDateStr) return "点击选择";
@@ -474,6 +615,8 @@ const isActiveRange = (range: string) => {
 
 // 应用日期筛选
 const applyDateFilter = () => {
+  // 更新URL参数
+  updateSearchParams();
   dateFilterDropdown.value?.toggle();
 };
 
@@ -663,7 +806,28 @@ const convertTransactionData = (trans: any, fallbackId: string) => {
 
 const viewTransaction = (transaction: any) => {
   const transactionId = transaction.transaction_id || transaction.id;
-  router.push(`/h5/transactions/${transactionId}`);
+
+  // 保存当前搜索状态到URL参数
+  const searchParams = new URLSearchParams();
+  if (searchKeyword.value.trim()) {
+    searchParams.set('search', searchKeyword.value.trim());
+  }
+  if (filterType.value !== 'all') {
+    searchParams.set('type', filterType.value);
+  }
+  if (filterAccount.value !== 'all') {
+    searchParams.set('account', filterAccount.value);
+  }
+  if (startDate.value) {
+    searchParams.set('start_date', startDate.value);
+  }
+  if (endDate.value) {
+    searchParams.set('end_date', endDate.value);
+  }
+
+  const queryString = searchParams.toString();
+  const targetUrl = `/h5/transactions/${transactionId}${queryString ? '?' + queryString : ''}`;
+  router.push(targetUrl);
 };
 
 const editTransaction = (transaction: any) => {
@@ -726,14 +890,119 @@ const deleteTransaction = async (transaction: any) => {
   }
 };
 
+// 从URL查询参数恢复搜索状态
+const restoreSearchState = () => {
+  const query = route.query;
+
+  if (query.search && typeof query.search === 'string') {
+    searchKeyword.value = query.search;
+    searchKeywordInput.value = query.search;
+  }
+  if (query.type && typeof query.type === 'string') {
+    filterType.value = query.type;
+  }
+  if (query.account && typeof query.account === 'string') {
+    filterAccount.value = query.account;
+  }
+  if (query.start_date && typeof query.start_date === 'string') {
+    startDate.value = query.start_date;
+  }
+  if (query.end_date && typeof query.end_date === 'string') {
+    endDate.value = query.end_date;
+  }
+
+  // 保留highlight参数用于高亮显示交易
+  if (query.highlight && typeof query.highlight === 'string') {
+    highlightTransactionId.value = query.highlight;
+  }
+};
+
+// 清除URL中的搜索参数
+const clearSearchParams = () => {
+  const query = { ...route.query };
+  delete query.search;
+  delete query.type;
+  delete query.account;
+  delete query.start_date;
+  delete query.end_date;
+
+  router.replace({ query });
+};
+
+// 更新URL中的搜索参数
+const updateSearchParams = () => {
+  const query: any = {};
+
+  if (searchKeyword.value.trim()) {
+    query.search = searchKeyword.value.trim();
+  }
+  if (filterType.value !== 'all') {
+    query.type = filterType.value;
+  }
+  if (filterAccount.value !== 'all') {
+    query.account = filterAccount.value;
+  }
+  if (startDate.value) {
+    query.start_date = startDate.value;
+  }
+  if (endDate.value) {
+    query.end_date = endDate.value;
+  }
+
+  // 保留highlight参数
+  if (highlightTransactionId.value) {
+    query.highlight = highlightTransactionId.value;
+  }
+
+  router.replace({ query });
+};
+
+// 获取搜索标题
+const getSearchTitle = () => {
+  if (searchKeyword.value.trim()) {
+    return `搜索: ${searchKeyword.value.trim()}`;
+  }
+  return "搜索";
+};
+
 // 搜索处理
 const handleSearch = () => {
+  updateSearchParams();
   onRefresh();
 };
 
 const handleClearSearch = () => {
   searchKeyword.value = "";
+  searchKeywordInput.value = "";
+  clearSearchParams();
   onRefresh();
+};
+
+// 搜索下拉菜单相关方法
+const handleSearchInputClear = () => {
+  searchKeywordInput.value = "";
+};
+
+const handleSearchInputConfirm = () => {
+  searchKeyword.value = searchKeywordInput.value.trim();
+  updateSearchParams();
+  onRefresh();
+  searchDropdown.value?.toggle();
+};
+
+const handleSearchConfirm = () => {
+  searchKeyword.value = searchKeywordInput.value.trim();
+  updateSearchParams();
+  onRefresh();
+  searchDropdown.value?.toggle();
+};
+
+const handleSearchClear = () => {
+  searchKeyword.value = "";
+  searchKeywordInput.value = "";
+  updateSearchParams();
+  onRefresh();
+  searchDropdown.value?.toggle();
 };
 
 const onRefresh = async () => {
@@ -833,11 +1102,10 @@ const loadTransactionsInternal = async (
       params.end_date = endDate.value;
     }
 
-    // 搜索关键词
+    // 搜索关键词 - 支持搜索收付方、描述、账户
     if (searchKeyword.value.trim()) {
-      // 支持搜索收付方、描述
-      params.payee = searchKeyword.value.trim();
-      params.narration = searchKeyword.value.trim();
+      // 使用通用搜索字段，后端会同时搜索payee、narration和account字段
+      params.search = searchKeyword.value.trim();
     }
 
     // 如果没有设置日期范围且没有搜索，默认获取最近3个月的数据
@@ -1142,6 +1410,7 @@ const onDateRangeConfirm = (dates: Date[]) => {
     startDate.value = dates[0].toLocaleDateString("en-CA");
     endDate.value = dates[1].toLocaleDateString("en-CA");
     showDateRangeCalendar.value = false;
+    // URL参数会通过watch自动更新
   }
 };
 
@@ -1149,6 +1418,9 @@ const onDateRangeConfirm = (dates: Date[]) => {
 const clearDateRange = () => {
   startDate.value = "";
   endDate.value = "";
+
+  // 更新URL参数
+  updateSearchParams();
 
   // 关闭下拉菜单
   dateFilterDropdown.value?.toggle();
@@ -1170,6 +1442,9 @@ watch(
     finished.value = false;
     loading.value = false;
 
+    // 更新URL参数
+    updateSearchParams();
+
     // 防抖加载
     debouncedLoadTransactions(true);
   },
@@ -1178,6 +1453,9 @@ watch(
 
 onMounted(async () => {
   // Component mounted
+
+  // 首先恢复搜索状态
+  restoreSearchState();
 
   loadAccountOptions();
   await loadTransactions(true);
@@ -1198,11 +1476,6 @@ onUnmounted(() => {
   transition: background-color 0.3s ease;
 }
 
-.search-bar {
-  background-color: var(--van-background-2);
-  padding: 8px 16px;
-}
-
 /* 固定筛选栏容器 */
 .filter-fixed-container {
   position: fixed;
@@ -1216,21 +1489,27 @@ onUnmounted(() => {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
 }
 
-.filter-bar {
+.filter-search-bar {
+  display: flex;
+  align-items: center;
   background-color: transparent;
+  padding: 4px 0;
 }
 
-/* 交易筛选菜单样式 */
+/* 筛选菜单样式 - 现在占据全部宽度 */
 .transaction-filter-menu {
+  flex: 1;
+  min-width: 0;
   background-color: var(--van-background);
 }
+
 
 /* 自定义筛选菜单栏样式 */
 :deep(.transaction-filter-menu .van-dropdown-menu__bar) {
   background-color: var(--van-background);
   box-shadow: none;
   border-bottom: none;
-  height: 48px;
+  height: 44px; /* 与搜索栏高度匹配 */
   display: flex;
 }
 
@@ -1248,7 +1527,7 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 48px;
+  height: 44px; /* 与菜单栏高度匹配 */
   padding: 0 32px 0 12px;
   position: relative;
   white-space: nowrap;
@@ -1287,7 +1566,7 @@ onUnmounted(() => {
 
 /* 交易内容包装器 */
 .transactions-content-wrapper {
-  margin-top: 48px; /* 为固定筛选栏留出空间，调整为精确高度 */
+  margin-top: 48px; /* 筛选栏的高度 + 导航栏高度 */
 }
 
 /* 日期筛选面板 */
@@ -1308,6 +1587,116 @@ onUnmounted(() => {
   font-size: 16px;
   font-weight: 600;
   color: var(--van-text-color);
+}
+
+/* 搜索筛选面板 */
+.search-filter-panel {
+  background-color: var(--van-background);
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 0;
+}
+
+.search-filter-header {
+  padding: 16px 16px 8px;
+  border-bottom: 1px solid var(--van-border-color);
+  background-color: var(--van-background);
+}
+
+.search-input-container {
+  padding: 16px;
+  background-color: var(--van-background);
+}
+
+.search-input-field {
+  background-color: var(--van-background-2);
+  border-radius: 8px;
+}
+
+.search-input-field :deep(.van-field__control) {
+  font-size: 14px;
+  padding: 8px 12px;
+}
+
+.search-filter-actions {
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  background-color: var(--van-background);
+  border-top: 1px solid var(--van-border-color);
+}
+
+/* 合并筛选面板 */
+.combined-filter-panel {
+  background-color: var(--van-background);
+  max-height: 80vh;
+  overflow-y: auto;
+  border-radius: 0;
+}
+
+.combined-filter-header {
+  padding: 16px 16px 8px;
+  border-bottom: 1px solid var(--van-border-color);
+  background-color: var(--van-background);
+}
+
+.account-filter-section {
+  background-color: var(--van-background);
+}
+
+.account-filter-header {
+  padding: 16px 16px 8px;
+  background-color: var(--van-background);
+}
+
+.section-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--van-text-color-2);
+}
+
+.account-options-container {
+  background-color: var(--van-background);
+}
+
+.account-options {
+  margin: 0;
+}
+
+.account-options :deep(.van-cell) {
+  padding: 12px 16px;
+  font-size: 14px;
+  color: var(--van-text-color);
+  border-bottom: 1px solid var(--van-border-color);
+}
+
+.account-options :deep(.van-cell:last-child) {
+  border-bottom: none;
+}
+
+.account-options :deep(.van-cell.active-account) {
+  background-color: var(--van-blue-light);
+  color: #1989fa;
+}
+
+.combined-filter-actions {
+  padding: 16px;
+  display: flex;
+  gap: 12px;
+  background-color: var(--van-background);
+  border-top: 1px solid var(--van-border-color);
+}
+
+/* 筛选菜单在手机端的适配 */
+@media (max-width: 480px) {
+  :deep(.transaction-filter-menu .van-dropdown-menu__title) {
+    font-size: 13px;
+    padding: 0 20px 0 8px;
+  }
+
+  :deep(.transaction-filter-menu .van-dropdown-menu__bar) {
+    height: 44px;
+  }
 }
 
 .date-options {
