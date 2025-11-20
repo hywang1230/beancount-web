@@ -149,8 +149,6 @@ class RecurringTransactionResponse(RecurringTransactionBase):
     last_executed: Optional[date] = None
     next_execution: Optional[date] = None
 
-    class Config:
-        orm_mode = True
 
 class RecurringExecutionLog(BaseModel):
     """周期记账执行日志"""

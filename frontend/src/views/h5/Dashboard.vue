@@ -67,22 +67,13 @@
     </van-cell-group>
     </van-pull-refresh>
 
-    <!-- 快捷记账按钮 -->
-    <van-floating-bubble
-      axis="xy"
-      icon="add"
-      @click="openQuickActions"
-    />
 
-    <!-- 快捷操作面板 -->
-    <QuickActions ref="quickActionsRef" />
   </div>
 </template>
 
 <script setup lang="ts">
 import { getBalanceSheet, getMonthlySummary, getTrends } from "@/api/reports";
 import SyncStatusIndicator from "@/components/SyncStatusIndicator.vue";
-import QuickActions from "@/components/QuickActions.vue";
 import { useThemeStore } from "@/stores/theme";
 import { LineChart } from "echarts/charts";
 import {
@@ -121,7 +112,6 @@ const totalBalance = ref(0);
 const totalAssets = ref(0);
 const totalLiabilities = ref(0);
 const refreshing = ref(false);
-const quickActionsRef = ref<InstanceType<typeof QuickActions>>();
 
 const monthlyStats = ref({
   income: 0,
@@ -355,9 +345,7 @@ const onRefresh = async () => {
   showToast("刷新成功");
 };
 
-const openQuickActions = () => {
-  quickActionsRef.value?.open();
-};
+
 
 onMounted(() => {
   loadDashboardData();
@@ -387,7 +375,7 @@ watch(isDark, () => {
 .balance-card {
   margin-bottom: 16px;
   border-radius: 12px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #2c3e50 0%, #3498db 100%);
   color: white;
 }
 

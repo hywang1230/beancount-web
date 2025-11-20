@@ -1,8 +1,6 @@
-from sqlalchemy import Column, Integer, String, Text, DateTime, UniqueConstraint
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy import Column, Integer, String, DateTime, UniqueConstraint
 from app.database import Base
 from app.core.config import settings
-import json
 from typing import List, Dict, Any
 
 

@@ -3,7 +3,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import uvicorn
-import os
 from pathlib import Path
 from contextlib import asynccontextmanager
 
@@ -11,7 +10,6 @@ from app.routers import transactions, reports, accounts, files, recurring, auth,
 from app.core.config import settings
 from app.services.scheduler import scheduler
 from app.database import init_database
-# from app.services.github_sync_service import github_sync_service # No longer a global singleton
 import logging
 
 logger = logging.getLogger(__name__)
