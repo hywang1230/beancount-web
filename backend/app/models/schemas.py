@@ -64,6 +64,7 @@ class TransactionFilter(BaseModel):
     account: Optional[str] = None
     payee: Optional[str] = None
     narration: Optional[str] = None
+    search: Optional[str] = None  # 通用搜索关键词，同时搜索payee和narration字段
     min_amount: Optional[Decimal] = None
     max_amount: Optional[Decimal] = None
     transaction_type: Optional[str] = None  # 交易类型：income, expense, transfer
