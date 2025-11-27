@@ -342,7 +342,7 @@ const onSubmit = async () => {
       date: formData.value.date.toLocaleDateString("en-CA"),
       flag: "*", // 默认标记
       payee: formData.value.payee,
-      narration: formData.value.description || formData.value.payee,
+      narration: formData.value.description,
       postings,
     };
 
