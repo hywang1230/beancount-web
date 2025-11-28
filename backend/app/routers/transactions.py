@@ -61,10 +61,17 @@ def format_transaction_content(transaction_data: dict) -> str:
     narration = transaction_data.get("narration", "")
     
     # 构建头部行
+    # Beancount 格式规则：
+    # - 如果有 payee，必须同时提供 payee 和 narration（即使 narration 为空）
+    # - 如果没有 payee 但有 narration，只提供 narration
+    # - 格式：date flag "payee" "narration" 或 date flag "narration"
     header_parts = [date_str, flag]
     if payee:
+        # 有 payee 时，必须同时输出 payee 和 narration
         header_parts.append(f'"{payee}"')
-    if narration:
+        header_parts.append(f'"{narration}"')  # 即使为空也要输出
+    elif narration:
+        # 没有 payee 但有 narration 时，只输出 narration
         header_parts.append(f'"{narration}"')
     
     lines.append(" ".join(header_parts))
