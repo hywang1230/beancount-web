@@ -615,7 +615,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import { showToast } from "vant";
 import { computed, onMounted, ref, watch } from "vue";
 import VChart from "vue-echarts";
-import { useRouter, onBeforeRouteLeave } from "vue-router";
+import { useRouter } from "vue-router";
 
 import {
   getBalanceSheet,
@@ -726,9 +726,7 @@ const restoreState = () => {
     }
 
     // 恢复状态
-    if (state.activeTab) {
-      activeTab.value = state.activeTab;
-    }
+    if (state.activeTab) activeTab.value = state.activeTab;
     if (state.asOfDate) asOfDate.value = state.asOfDate;
     if (state.assetExpandedItems) assetExpandedItems.value = state.assetExpandedItems;
     if (state.liabilityExpandedItems) liabilityExpandedItems.value = state.liabilityExpandedItems;
@@ -748,10 +746,6 @@ const restoreState = () => {
     sessionStorage.removeItem(STORAGE_KEY);
     return false;
   }
-};
-
-const clearState = () => {
-  sessionStorage.removeItem(STORAGE_KEY);
 };
 
 // 选择器选项
@@ -1284,7 +1278,7 @@ const onTabChange = (tabName: string) => {
       break;
   }
 
-  // 保存当前标签页的状态（用于页面刷新时恢复）
+  // 保存状态变化
   saveState();
 };
 
@@ -1338,15 +1332,6 @@ const onDateRangeConfirm = (dates: Date[]) => {
     saveState();
   }
 };
-
-// 路由离开守卫 - 当用户离开报表页面时清除状态
-onBeforeRouteLeave((to) => {
-  // 如果是离开报表页面到其他页面，清除保存的状态
-  // 但跳转到账户流水页面时不清除，因为用户可能很快会返回
-  if (to.name !== 'AccountJournal') {
-    clearState();
-  }
-});
 
 onMounted(() => {
   // 尝试恢复之前的状态
