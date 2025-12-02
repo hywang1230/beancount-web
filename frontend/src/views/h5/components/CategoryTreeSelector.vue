@@ -39,7 +39,7 @@
 </template>
 
 <script setup lang="ts">
-import { getFrequentlyUsedCategories } from "@/utils/usageStats";
+import { getFrequentCategories } from "@/api/transactions";
 import { computed, nextTick, onMounted, onUnmounted, ref } from "vue";
 
 interface Category {
@@ -84,6 +84,7 @@ const selectedCategoryId = ref("");
 const activeMainIndex = ref(0);
 const searchKeyword = ref("");
 const treeSelectHeight = ref(400);
+const frequentCategoryNames = ref<string[]>([]);
 
 // 格式化分类名称
 const formatCategoryName = (name: string) => {
@@ -115,10 +116,9 @@ const treeSelectItems = computed(() => {
   const items: TreeSelectItem[] = [];
 
   // 1. 添加常用分类（仅在没有搜索关键字时显示）
-  if (!searchKeyword.value.trim()) {
-    const frequentCategoryNames = getFrequentlyUsedCategories(3);
+  if (!searchKeyword.value.trim() && frequentCategoryNames.value.length > 0) {
     // 过滤出存在的常用分类
-    const frequentCategories = frequentCategoryNames
+    const frequentCategories = frequentCategoryNames.value
       .map((name) => props.categories.find((c) => c.name === name))
       .filter((c): c is Category => c !== undefined);
 
@@ -316,11 +316,24 @@ const calculateTreeSelectHeight = () => {
   }
 };
 
+// 加载常用分类
+const loadFrequentCategories = async () => {
+  try {
+    frequentCategoryNames.value = await getFrequentCategories(3);
+  } catch (error) {
+    console.error("加载常用分类失败:", error);
+    frequentCategoryNames.value = [];
+  }
+};
+
 // 显示选择器
-const show = () => {
+const show = async () => {
   visible.value = true;
   selectedCategoryId.value = "";
   activeMainIndex.value = 0;
+  
+  // 加载常用分类
+  await loadFrequentCategories();
 
   // 延迟计算高度，确保DOM完全渲染
   nextTick(() => {
