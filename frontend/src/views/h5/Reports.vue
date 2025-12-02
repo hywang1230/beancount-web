@@ -641,6 +641,9 @@ use([
   GridComponent,
 ]);
 
+// 状态持久化相关
+const STORAGE_KEY = 'reports_page_state';
+
 // 基础数据
 const loading = ref(false);
 const activeTab = ref("balance-sheet");
@@ -681,6 +684,69 @@ const showMonthPicker = ref(false);
 // 日历组件相关
 const showAsOfDateCalendar = ref(false);
 const showDateRangeCalendar = ref(false);
+
+// 状态保存和恢复函数
+const saveState = () => {
+  const state = {
+    activeTab: activeTab.value,
+    // 资产负债表状态
+    asOfDate: asOfDate.value,
+    assetExpandedItems: assetExpandedItems.value,
+    liabilityExpandedItems: liabilityExpandedItems.value,
+    equityExpandedItems: equityExpandedItems.value,
+    subGroupExpandedItems: subGroupExpandedItems.value,
+    // 损益表状态
+    startDate: startDate.value,
+    endDate: endDate.value,
+    incomeExpandedItems: incomeExpandedItems.value,
+    expenseExpandedItems: expenseExpandedItems.value,
+    // 趋势分析状态
+    trendsMonths: trendsMonths.value,
+    // 月度报告状态
+    selectedYear: selectedYear.value,
+    selectedMonth: selectedMonth.value,
+    // 保存时间戳，用于判断数据是否过期（可选）
+    timestamp: Date.now(),
+  };
+  sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+};
+
+const restoreState = () => {
+  try {
+    const savedState = sessionStorage.getItem(STORAGE_KEY);
+    if (!savedState) return false;
+
+    const state = JSON.parse(savedState);
+
+    // 检查数据是否过期（超过24小时则不恢复，确保数据新鲜度）
+    const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    if (state.timestamp && state.timestamp < oneDayAgo) {
+      sessionStorage.removeItem(STORAGE_KEY);
+      return false;
+    }
+
+    // 恢复状态
+    if (state.activeTab) activeTab.value = state.activeTab;
+    if (state.asOfDate) asOfDate.value = state.asOfDate;
+    if (state.assetExpandedItems) assetExpandedItems.value = state.assetExpandedItems;
+    if (state.liabilityExpandedItems) liabilityExpandedItems.value = state.liabilityExpandedItems;
+    if (state.equityExpandedItems) equityExpandedItems.value = state.equityExpandedItems;
+    if (state.subGroupExpandedItems) subGroupExpandedItems.value = state.subGroupExpandedItems;
+    if (state.startDate) startDate.value = state.startDate;
+    if (state.endDate) endDate.value = state.endDate;
+    if (state.incomeExpandedItems) incomeExpandedItems.value = state.incomeExpandedItems;
+    if (state.expenseExpandedItems) expenseExpandedItems.value = state.expenseExpandedItems;
+    if (state.trendsMonths) trendsMonths.value = state.trendsMonths;
+    if (state.selectedYear) selectedYear.value = state.selectedYear;
+    if (state.selectedMonth) selectedMonth.value = state.selectedMonth;
+
+    return true;
+  } catch (error) {
+    console.warn('恢复报表页面状态失败:', error);
+    sessionStorage.removeItem(STORAGE_KEY);
+    return false;
+  }
+};
 
 // 选择器选项
 const trendsOptions = [
@@ -1154,6 +1220,18 @@ const generateTrendsChart = () => {
   };
 };
 
+// 监听折叠状态变化，保存状态
+watch([
+  assetExpandedItems,
+  liabilityExpandedItems,
+  equityExpandedItems,
+  subGroupExpandedItems,
+  incomeExpandedItems,
+  expenseExpandedItems
+], () => {
+  saveState();
+}, { deep: true });
+
 // 监听主题变化，重新生成图表
 watch(
   () => themeStore.isDark,
@@ -1199,24 +1277,30 @@ const onTabChange = (tabName: string) => {
       loadMonthlyReport();
       break;
   }
+
+  // 保存状态变化
+  saveState();
 };
 
 const onTrendsConfirm = ({ selectedOptions }: any) => {
   trendsMonths.value = selectedOptions[0].value;
   showTrendsPicker.value = false;
   loadTrends();
+  saveState();
 };
 
 const onYearConfirm = ({ selectedOptions }: any) => {
   selectedYear.value = selectedOptions[0].value;
   showYearPicker.value = false;
   loadMonthlyReport();
+  saveState();
 };
 
 const onMonthConfirm = ({ selectedOptions }: any) => {
   selectedMonth.value = selectedOptions[0].value;
   showMonthPicker.value = false;
   loadMonthlyReport();
+  saveState();
 };
 
 // 日历确认处理函数
@@ -1224,6 +1308,7 @@ const onAsOfDateConfirm = (date: Date) => {
   asOfDate.value = date.toLocaleDateString("en-CA");
   showAsOfDateCalendar.value = false;
   loadBalanceSheet();
+  saveState();
 };
 
 // 获取默认日期范围
@@ -1244,13 +1329,29 @@ const onDateRangeConfirm = (dates: Date[]) => {
     endDate.value = dates[1].toLocaleDateString("en-CA");
     showDateRangeCalendar.value = false;
     loadIncomeStatement();
+    saveState();
   }
 };
 
 onMounted(() => {
-  // 默认加载资产负债表
-  loadBalanceSheet();
+  // 尝试恢复之前的状态
+  const stateRestored = restoreState();
+
+  if (stateRestored) {
+    // 如果状态恢复成功，根据恢复的标签页加载对应数据
+    onTabChange(activeTab.value);
+  } else {
+    // 如果没有保存的状态，默认加载资产负债表
+    loadBalanceSheet();
+  }
 });
+
+// 组件卸载时可以清理状态（可选，取决于需求）
+// 这里选择不清理，因为用户可能在短时间内返回页面
+// 如果需要在每次进入时都有全新状态，可以取消下面代码的注释
+// onUnmounted(() => {
+//   clearState();
+// });
 </script>
 
 <style scoped>
