@@ -37,7 +37,7 @@
 
 <script setup lang="ts">
 import { getAccountsByType } from "@/api/accounts";
-import { getFrequentlyUsedAccounts } from "@/utils/usageStats";
+import { getFrequentAccounts } from "@/api/transactions";
 import { computed, onMounted, ref } from "vue";
 
 interface Account {
@@ -81,6 +81,7 @@ const accounts = ref<Account[]>([]);
 const selectedAccountId = ref("");
 const activeMainIndex = ref(0);
 const searchKeyword = ref("");
+const frequentAccountNames = ref<string[]>([]);
 
 // TreeSelect 高度计算
 const treeSelectHeight = computed(() => {
@@ -132,10 +133,9 @@ const treeSelectItems = computed(() => {
   const items: TreeSelectItem[] = [];
 
   // 1. 添加常用账户（仅在没有搜索关键字时显示）
-  if (!searchKeyword.value.trim()) {
-    const frequentAccountNames = getFrequentlyUsedAccounts(3);
+  if (!searchKeyword.value.trim() && frequentAccountNames.value.length > 0) {
     // 过滤出当前可用类型且存在的常用账户
-    const frequentAccounts = frequentAccountNames
+    const frequentAccounts = frequentAccountNames.value
       .map((name) => accounts.value.find((a) => a.name === name))
       .filter((a): a is Account => {
         if (!a) return false;
@@ -257,11 +257,24 @@ const loadAccounts = async () => {
       name: accountName,
       balance: undefined, // 余额信息暂时不可用，可以后续从其他API获取
     }));
+    
+    // 同时加载常用账户
+    await loadFrequentAccounts();
   } catch (error) {
     console.error("加载账户失败:", error);
     accounts.value = [];
   } finally {
     loading.value = false;
+  }
+};
+
+// 加载常用账户
+const loadFrequentAccounts = async () => {
+  try {
+    frequentAccountNames.value = await getFrequentAccounts(3);
+  } catch (error) {
+    console.error("加载常用账户失败:", error);
+    frequentAccountNames.value = [];
   }
 };
 

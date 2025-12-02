@@ -125,3 +125,18 @@ export const migrateTransactionsByYear = () => {
 export const cleanupEmptyYearlyFiles = () => {
   return api.delete("/transactions/years/cleanup");
 };
+
+// 获取常用账户列表
+export const getFrequentAccounts = (limit: number = 3, days: number = 30): Promise<string[]> => {
+  return api.get("/transactions/stats/frequent-accounts", { 
+    params: { limit, days } 
+  });
+};
+
+// 获取常用分类列表
+export const getFrequentCategories = (limit: number = 3, days: number = 30): Promise<string[]> => {
+  return api.get("/transactions/stats/frequent-categories", { 
+    params: { limit, days } 
+  });
+};
+

@@ -494,4 +494,90 @@ async def delete_transaction(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"删除交易失败: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"删除交易失败: {str(e)}")
+
+@router.get("/stats/frequent-accounts", response_model=List[str])
+async def get_frequent_accounts(
+    limit: int = Query(3, description="返回数量", ge=1, le=10),
+    days: int = Query(30, description="统计天数", ge=1, le=365)
+):
+    """获取最近常用的账户列表(基于实际交易记录)"""
+    try:
+        from datetime import datetime, timedelta
+        from collections import defaultdict
+        
+        # 计算时间范围
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=days)
+        
+        # 获取时间范围内的所有交易
+        filter_params = TransactionFilter(
+            start_date=start_date,
+            end_date=end_date
+        )
+        transactions = beancount_service.get_transactions(filter_params)
+        
+        # 统计账户使用次数
+        account_usage = defaultdict(int)
+        for transaction in transactions:
+            # TransactionResponse 是 Pydantic 对象,需要通过属性访问
+            for posting in transaction.postings:
+                account = posting.account
+                # 只统计资产和负债账户(用于记账的主账户)
+                if account and (account.startswith("Assets:") or account.startswith("Liabilities:")):
+                    account_usage[account] += 1
+        
+        # 按使用次数排序并返回前N个
+        sorted_accounts = sorted(
+            account_usage.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+        
+        return [account for account, _ in sorted_accounts[:limit]]
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取常用账户失败: {str(e)}")
+
+@router.get("/stats/frequent-categories", response_model=List[str])
+async def get_frequent_categories(
+    limit: int = Query(3, description="返回数量", ge=1, le=10),
+    days: int = Query(30, description="统计天数", ge=1, le=365)
+):
+    """获取最近常用的分类列表(基于实际交易记录)"""
+    try:
+        from datetime import datetime, timedelta
+        from collections import defaultdict
+        
+        # 计算时间范围
+        end_date = datetime.now().date()
+        start_date = end_date - timedelta(days=days)
+        
+        # 获取时间范围内的所有交易
+        filter_params = TransactionFilter(
+            start_date=start_date,
+            end_date=end_date
+        )
+        transactions = beancount_service.get_transactions(filter_params)
+        
+        # 统计分类使用次数
+        category_usage = defaultdict(int)
+        for transaction in transactions:
+            # TransactionResponse 是 Pydantic 对象,需要通过属性访问
+            for posting in transaction.postings:
+                account = posting.account
+                # 统计支出和收入分类
+                if account and (account.startswith("Expenses:") or account.startswith("Income:")):
+                    category_usage[account] += 1
+        
+        # 按使用次数排序并返回前N个
+        sorted_categories = sorted(
+            category_usage.items(),
+            key=lambda x: x[1],
+            reverse=True
+        )
+        
+        return [category for category, _ in sorted_categories[:limit]]
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"获取常用分类失败: {str(e)}") 
