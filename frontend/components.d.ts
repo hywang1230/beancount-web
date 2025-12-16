@@ -7,6 +7,7 @@ export {}
 
 declare module 'vue' {
   export interface GlobalComponents {
+    AIAssistant: typeof import('./src/components/AIAssistant.vue')['default']
     CalculatorKeyboardExample: typeof import('./src/components/CalculatorKeyboardExample.vue')['default']
     NumberKeyboard: typeof import('./src/components/NumberKeyboard.vue')['default']
     PWAUpdatePrompt: typeof import('./src/components/PWAUpdatePrompt.vue')['default']

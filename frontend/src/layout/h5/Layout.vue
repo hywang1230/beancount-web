@@ -77,6 +77,9 @@
         </van-cell-group>
       </div>
     </van-popup>
+
+    <!-- AI助手 -->
+    <AIAssistant />
   </div>
 </template>
 
@@ -85,6 +88,7 @@ import { useAuthStore } from "@/stores/auth";
 import { showConfirmDialog, showToast } from "vant";
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import AIAssistant from "@/components/AIAssistant.vue";
 
 const route = useRoute();
 const router = useRouter();

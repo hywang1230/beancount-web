@@ -78,6 +78,9 @@ class Settings(BaseSettings):
     # 认证开关配置
     enable_auth: bool = os.getenv("ENABLE_AUTH", "false").lower() == "true"
     
+    # AI API Keys 配置
+    dashscope_api_key: str = os.getenv("DASHSCOPE_API_KEY", "")
+    
     # 同步配置
     # 延迟同步的等待时间（秒），用于避免频繁同步
     sync_delay_seconds: int = int(os.getenv("SYNC_DELAY_SECONDS", "30"))
@@ -89,6 +92,7 @@ class Settings(BaseSettings):
         "case_sensitive": False,
         "extra": "ignore"
     }
+    
 
 # 创建全局设置实例
 settings = Settings()

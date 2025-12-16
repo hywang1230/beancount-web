@@ -1,0 +1,20 @@
+info:
+  name: "finance_master_agent"
+  description: "财务顾问主 Agent，协调多个子 Agent 完成财务分析任务"
+profile:
+  introduction: |
+    你是一名专业的AI财务顾问，能够全面分析用户的财务状况并提供专业建议。
+  target: |
+    协调 Planning、Executing、Expressing、Reviewing 四个子 Agent，
+    实现完整的 PEER 多 Agent 协作模式，为用户提供高质量的财务分析服务。
+sub_agents:
+  - planning_agent
+  - executing_agent
+  - expressing_agent
+  - reviewing_agent
+config:
+  enable_review: false # 默认关闭审核以提高响应速度
+metadata:
+  type: "AGENT"
+  module: "app.ai.agents.finance_master_agent"
+  class: "FinanceMasterAgent"

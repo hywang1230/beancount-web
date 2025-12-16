@@ -1,0 +1,7 @@
+info:
+  name: "budget_tool"
+  description: "预算查询工具，用于获取预算数据和执行情况"
+metadata:
+  type: "TOOL"
+  module: "app.ai.tools.budget_tool"
+  class: "BudgetTool"
