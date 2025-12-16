@@ -326,6 +326,91 @@ class AIService:
             
             return answer
     
+    async def chat_stream(self, messages: List[Dict[str, str]]):
+        """
+        流式多轮对话
+        
+        Args:
+            messages: 对话历史，格式为[{"role": "user/assistant", "content": "..."}]
+            
+        Yields:
+            响应文本块
+        """
+        if not self.api_key:
+            yield {"type": "error", "content": "未配置DASHSCOPE_API_KEY环境变量"}
+            return
+        
+        try:
+            # 获取财务数据作为系统上下文
+            financial_data = await self._gather_financial_data()
+            
+            # 构建系统消息
+            system_message = self._build_system_message(financial_data)
+            
+            # 流式调用LLM
+            async for chunk in self._call_llm_chat_stream(system_message, messages):
+                yield {"type": "content", "content": chunk}
+            
+            yield {"type": "done", "content": ""}
+            
+        except Exception as e:
+            logger.error(f"AI流式对话失败: {e}")
+            yield {"type": "error", "content": str(e)}
+
+    async def _call_llm_chat_stream(self, system_message: str, messages: List[Dict[str, str]]):
+        """流式调用LLM进行多轮对话"""
+        all_messages = [{"role": "system", "content": system_message}]
+        all_messages.extend(messages)
+        
+        request_body = {
+            "model": self.model,
+            "messages": all_messages,
+            "temperature": 0.7,
+            "max_tokens": 2000,
+            "stream": True  # 启用流式输出
+        }
+        
+        logger.info("========== LLM 流式调用开始 (_call_llm_chat_stream) ==========")
+        logger.info(f"API Base: {self.api_base}")
+        logger.info(f"Model: {self.model}")
+        logger.info(f"API Key (前8位): {self.api_key[:8] if self.api_key else 'None'}...")
+        logger.info(f"消息数量: {len(all_messages)}")
+        
+        async with httpx.AsyncClient(timeout=120.0) as client:
+            async with client.stream(
+                "POST",
+                f"{self.api_base}/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {self.api_key}",
+                    "Content-Type": "application/json"
+                },
+                json=request_body
+            ) as response:
+                logger.info(f"响应状态码: {response.status_code}")
+                
+                if response.status_code != 200:
+                    error_text = await response.aread()
+                    logger.error(f"响应错误内容: {error_text}")
+                    raise Exception(f"API调用失败: {response.status_code}")
+                
+                # 处理 SSE 流
+                async for line in response.aiter_lines():
+                    if line.startswith("data: "):
+                        data = line[6:]  # 移除 "data: " 前缀
+                        if data.strip() == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data)
+                            if "choices" in chunk and len(chunk["choices"]) > 0:
+                                delta = chunk["choices"][0].get("delta", {})
+                                content = delta.get("content", "")
+                                if content:
+                                    yield content
+                        except json.JSONDecodeError:
+                            continue
+        
+        logger.info("========== LLM 流式调用结束 (_call_llm_chat_stream) ==========")
+
     async def _call_llm_chat(self, system_message: str, messages: List[Dict[str, str]]) -> str:
         """调用LLM进行多轮对话"""
         all_messages = [{"role": "system", "content": system_message}]

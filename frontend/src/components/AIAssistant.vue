@@ -51,8 +51,8 @@
             </div>
           </div>
 
-          <!-- 加载中 -->
-          <div v-if="isLoading" class="message assistant">
+          <!-- 加载中 - 只在流式内容还没开始时显示 -->
+          <div v-if="isLoading && messages.length > 0 && messages[messages.length - 1].role === 'assistant' && !messages[messages.length - 1].content" class="message assistant">
             <div class="message-content">
               <div class="loading-dots">
                 <span></span>
@@ -158,38 +158,80 @@ const sendMessage = async () => {
   await nextTick();
   scrollToBottom();
 
+  // 添加一个空的 AI 消息用于流式更新
+  const assistantMessageIndex = messages.value.length;
+  messages.value.push({
+    role: 'assistant',
+    content: ''
+  });
+
   try {
-    const response = await fetch('/api/ai/chat', {
+    const response = await fetch('/api/ai/chat/stream', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        messages: messages.value.map(m => ({
+        messages: messages.value.slice(0, -1).map(m => ({
           role: m.role,
           content: m.content
         }))
       })
     });
 
-    const data = await response.json();
-
-    if (data.success) {
-      messages.value.push({
-        role: 'assistant',
-        content: data.response
-      });
-    } else {
-      messages.value.push({
-        role: 'assistant',
-        content: `抱歉，出现了问题：${data.error || '未知错误'}`
-      });
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
+
+    const reader = response.body?.getReader();
+    const decoder = new TextDecoder();
+
+    if (!reader) {
+      throw new Error('无法获取响应流');
+    }
+
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      
+      // 处理 SSE 数据 (格式: data: {...}\n\n)
+      const lines = buffer.split('\n\n');
+      buffer = lines.pop() || ''; // 保留不完整的行
+
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          try {
+            const data = JSON.parse(line.slice(6));
+            
+            if (data.type === 'content') {
+              // 追加内容到 AI 消息
+              messages.value[assistantMessageIndex].content += data.content;
+              // 滚动到底部
+              await nextTick();
+              scrollToBottom();
+            } else if (data.type === 'error') {
+              messages.value[assistantMessageIndex].content = `抱歉，出现了问题：${data.content}`;
+            }
+            // type === 'done' 时不需要处理
+          } catch (e) {
+            console.error('解析 SSE 数据失败:', e);
+          }
+        }
+      }
+    }
+
+    // 如果没有收到任何内容，显示错误
+    if (!messages.value[assistantMessageIndex].content) {
+      messages.value[assistantMessageIndex].content = '抱歉，未能获取到回复';
+    }
+
   } catch (error: any) {
-    messages.value.push({
-      role: 'assistant',
-      content: `网络错误，请稍后重试：${error.message}`
-    });
+    messages.value[assistantMessageIndex].content = `网络错误，请稍后重试：${error.message}`;
   } finally {
     isLoading.value = false;
     await nextTick();

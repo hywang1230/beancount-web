@@ -1,7 +1,9 @@
 """
 AI分析路由
 """
+import json
 from fastapi import APIRouter, HTTPException
+from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from typing import List, Optional, Dict, Any
 
@@ -79,6 +81,31 @@ async def chat(request: ChatRequest):
     )
 
 
+@router.post("/chat/stream")
+async def chat_stream(request: ChatRequest):
+    """
+    流式多轮对话接口
+    
+    使用 Server-Sent Events (SSE) 返回流式响应
+    """
+    messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
+    
+    async def generate():
+        async for chunk in ai_service.chat_stream(messages):
+            # SSE 格式: data: {json}\n\n
+            yield f"data: {json.dumps(chunk, ensure_ascii=False)}\n\n"
+    
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"  # 禁用nginx缓冲
+        }
+    )
+
+
 @router.get("/status")
 async def get_status():
     """
@@ -88,6 +115,6 @@ async def get_status():
     
     return {
         "enabled": has_api_key,
-        "model": "qwen-plus",
+        "model": "qwen3-max",
         "provider": "dashscope"
     }
