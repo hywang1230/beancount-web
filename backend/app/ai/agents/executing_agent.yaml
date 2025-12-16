@@ -1,0 +1,17 @@
+info:
+  name: "executing_agent"
+  description: "数据执行 Agent，负责根据子问题调用工具获取相关数据"
+profile:
+  introduction: |
+    你是一名财务数据执行专家，负责根据分析需求调用相应的工具获取数据。
+  target: |
+    根据规划的子问题，调用 ledger_tool、budget_tool、report_tool 获取所需数据。
+action:
+  tool:
+    - ledger_tool
+    - budget_tool
+    - report_tool
+metadata:
+  type: "AGENT"
+  module: "app.ai.agents.executing_agent"
+  class: "ExecutingAgent"

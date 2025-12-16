@@ -1,11 +1,7 @@
-[CORE]
-# 日志级别
-log_level = "INFO"
+[CORE_PACKAGE]
+# 默认扫描路径配置
+default_scan_packages = ['app.ai.agents', 'app.ai.tools', 'app.ai.llm']
 
-[LLM]
-# 默认使用通义千问
-default = "dashscope_llm"
-
-[AGENT]
-# 默认Agent配置
-default_max_iterations = 10
+[CUSTOM_KEY]
+# 从环境变量读取 API Key
+dashscope_api_key = "${DASHSCOPE_API_KEY}"

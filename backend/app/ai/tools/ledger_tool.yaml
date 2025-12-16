@@ -1,0 +1,7 @@
+info:
+  name: "ledger_tool"
+  description: "账本查询工具，用于获取 Beancount 账本数据，包括交易记录、账户列表、当月摘要等"
+metadata:
+  type: "TOOL"
+  module: "app.ai.tools.ledger_tool"
+  class: "LedgerTool"

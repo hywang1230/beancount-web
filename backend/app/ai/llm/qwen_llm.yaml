@@ -1,0 +1,12 @@
+info:
+  name: "qwen_llm"
+  description: "通义千问 LLM - 使用 DashScope API"
+metadata:
+  type: "LLM"
+  module: "app.ai.llm.dashscope_llm"
+  class: "DashScopeLLM"
+llm_config:
+  model_name: "qwen3-max"
+  temperature: 0.7
+  max_tokens: 2000
+  api_base: "https://dashscope.aliyuncs.com/compatible-mode/v1"

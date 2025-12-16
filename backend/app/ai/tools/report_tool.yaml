@@ -1,0 +1,7 @@
+info:
+  name: "report_tool"
+  description: "财务报表工具，用于生成资产负债表、损益表、月度汇总和趋势分析"
+metadata:
+  type: "TOOL"
+  module: "app.ai.tools.report_tool"
+  class: "ReportTool"

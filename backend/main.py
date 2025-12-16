@@ -82,13 +82,6 @@ app.include_router(query.router, prefix="/api/query", tags=["BQL查询"], depend
 app.include_router(budgets.router, prefix="/api/budgets", tags=["预算管理"], dependencies=auth_dependencies)
 app.include_router(ai.router, prefix="/api/ai", tags=["AI分析"], dependencies=auth_dependencies)
 
-# --- DEBUG: Print all registered routes ---
-from fastapi.routing import APIRoute
-for route in app.routes:
-    if isinstance(route, APIRoute):
-        print(f"Path: {route.path}, Name: {route.name}, Methods: {route.methods}")
-# --- END DEBUG ---
-
 @app.get("/api")
 async def api_root():
     return {"message": "Beancount Web API", "version": "1.0.0"}

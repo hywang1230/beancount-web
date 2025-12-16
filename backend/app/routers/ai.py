@@ -1,5 +1,7 @@
 """
 AI分析路由
+
+使用 AgentUniverse PEER 多 Agent 架构提供 AI 服务接口。
 """
 import json
 from fastapi import APIRouter, HTTPException
@@ -35,6 +37,9 @@ class AIResponse(BaseModel):
     response: Optional[str] = None
     error: Optional[str] = None
     data_summary: Optional[Dict[str, Any]] = None
+    analysis_type: Optional[str] = None
+    sub_questions: Optional[List[str]] = None
+    quality_score: Optional[int] = None
 
 
 @router.post("/analyze", response_model=AIResponse)
@@ -42,7 +47,11 @@ async def analyze(request: AnalyzeRequest):
     """
     财务分析接口
     
-    根据用户问题分析账本数据，给出建议
+    使用 PEER 多 Agent 架构分析账本数据：
+    - Planning Agent: 问题规划
+    - Executing Agent: 数据执行
+    - Expressing Agent: 结论表达
+    - Reviewing Agent: 质量审核 (可选)
     """
     result = await ai_service.analyze(request.query, request.context)
     
@@ -55,7 +64,9 @@ async def analyze(request: AnalyzeRequest):
     return AIResponse(
         success=True,
         response=result["response"],
-        data_summary=result.get("data_summary")
+        analysis_type=result.get("analysis_type"),
+        sub_questions=result.get("sub_questions"),
+        quality_score=result.get("quality_score")
     )
 
 
@@ -64,7 +75,7 @@ async def chat(request: ChatRequest):
     """
     多轮对话接口
     
-    支持上下文连续对话
+    支持上下文连续对话，使用 PEER 多 Agent 架构。
     """
     messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
     result = await ai_service.chat(messages)
@@ -86,7 +97,8 @@ async def chat_stream(request: ChatRequest):
     """
     流式多轮对话接口
     
-    使用 Server-Sent Events (SSE) 返回流式响应
+    使用 Server-Sent Events (SSE) 返回流式响应。
+    PEER 流程的 Plan 和 Execute 阶段正常执行，Express 阶段流式输出。
     """
     messages = [{"role": msg.role, "content": msg.content} for msg in request.messages]
     
@@ -110,11 +122,7 @@ async def chat_stream(request: ChatRequest):
 async def get_status():
     """
     获取AI服务状态
-    """
-    has_api_key = hasattr(ai_service, "api_key")
     
-    return {
-        "enabled": has_api_key,
-        "model": "qwen3-max",
-        "provider": "dashscope"
-    }
+    返回服务配置和可用 Agent 列表。
+    """
+    return ai_service.get_status()

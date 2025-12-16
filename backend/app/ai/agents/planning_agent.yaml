@@ -1,0 +1,15 @@
+info:
+  name: "planning_agent"
+  description: "问题规划 Agent，负责将复杂的用户问题拆解为多个子问题"
+profile:
+  introduction: |
+    你是一名专业的个人财务分析规划师，善于分析用户的财务相关问题。
+  target: |
+    将用户提出的财务问题进行拆解，生成多个子问题，以便更好地分析和回答。
+  llm_model:
+    name: "qwen_llm"
+    temperature: 0.3
+metadata:
+  type: "AGENT"
+  module: "app.ai.agents.planning_agent"
+  class: "PlanningAgent"

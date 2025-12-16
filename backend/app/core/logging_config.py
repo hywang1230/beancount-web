@@ -3,6 +3,7 @@
 """
 import logging
 import sys
+import os
 from pathlib import Path
 from typing import Optional
 from app.core.config import settings
@@ -15,10 +16,14 @@ class BeancountLogger:
     _configured = False
     
     @classmethod
-    def setup_logging(cls, log_level: str = "INFO", log_dir: Optional[Path] = None):
+    def setup_logging(cls, log_level: str = None, log_dir: Optional[Path] = None):
         """设置全局日志配置"""
         if cls._configured:
             return
+        
+        # 优先从环境变量读取日志级别，默认 INFO
+        if log_level is None:
+            log_level = os.getenv("LOG_LEVEL", "INFO")
         
         # 设置日志级别
         numeric_level = getattr(logging, log_level.upper(), logging.INFO)
@@ -120,4 +125,5 @@ def log_operation(logger_name: str, operation: str, success: bool = True, detail
 
 
 # 初始化日志配置
+# 使用环境变量 LOG_LEVEL 或默认 DEBUG
 BeancountLogger.setup_logging()
