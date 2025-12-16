@@ -1,11 +1,14 @@
 info:
   name: "executing_agent"
-  description: "数据执行 Agent，负责根据子问题调用工具获取相关数据"
+  description: "数据执行 Agent，负责根据子问题智能调用工具获取相关数据"
 profile:
   introduction: |
-    你是一名财务数据执行专家，负责根据分析需求调用相应的工具获取数据。
+    你是一名财务数据执行专家，能够智能识别问题意图并调用相应的工具获取数据。
   target: |
-    根据规划的子问题，调用 ledger_tool、budget_tool、report_tool 获取所需数据。
+    使用 LLM 智能识别用户问题的意图和时间参数，调用合适的工具获取所需数据。
+  llm_model:
+    name: "qwen_llm"
+    temperature: 0.1
 action:
   tool:
     - ledger_tool
