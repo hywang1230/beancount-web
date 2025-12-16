@@ -1,0 +1,11 @@
+[CORE]
+# 日志级别
+log_level = "INFO"
+
+[LLM]
+# 默认使用通义千问
+default = "dashscope_llm"
+
+[AGENT]
+# 默认Agent配置
+default_max_iterations = 10

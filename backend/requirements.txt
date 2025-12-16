@@ -19,3 +19,4 @@ aiofiles
 black
 isort
 flake8
+httpx
