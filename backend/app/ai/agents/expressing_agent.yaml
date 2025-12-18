@@ -39,9 +39,13 @@ profile:
     6. 适当给出理财建议，但要贴合实际情况
     7. 回答使用中文，语言要简洁专业
     8. 金额保留2位小数
-  llm_model:
-    name: "qwen_llm"
-    temperature: 0.7
+llm_model:
+  name: "dashscope_llm"
+  model_name: "qwen-max"
+llm_config:
+  temperature: 0.7
+  max_tokens: 2000
+  top_p: 0.9
 metadata:
   type: "AGENT"
   module: "app.ai.agents.expressing_agent"

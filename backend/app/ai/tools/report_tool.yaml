@@ -1,6 +1,12 @@
 info:
   name: "report_tool"
-  description: "财务报表工具，用于生成资产负债表、损益表、月度汇总和趋势分析"
+  description: "报表分析工具，提供趋势分析和资产负债表查询"
+
+input_keys:
+  - action # 操作类型：get_trends, get_balance_sheet
+  - months # 可选，趋势分析的月份数（默认6个月）
+  - as_of_date # 可选，资产负债表截止日期
+
 metadata:
   type: "TOOL"
   module: "app.ai.tools.report_tool"

@@ -1,21 +1,54 @@
 info:
   name: "reviewing_agent"
   description: "审核 Agent，负责审核和优化最终回答的质量"
+
 profile:
   introduction: |
     你是一名资深的财务分析审核专家，负责审核回答的质量和准确性。
   target: |
-    审核表达 Agent 生成的回答，确保数据准确、逻辑合理、表述专业。
+    审核财务分析回答，确保准确、专业、有帮助。如果发现问题，提供优化建议。
   instruction: |
-    审核标准：
+    **审核标准**:
     1. 数据准确性：回答中的数字是否与提供的数据一致
     2. 逻辑性：分析是否合理，结论是否有依据
     3. 完整性：是否充分回答了用户的问题
     4. 专业性：表述是否专业、清晰
     5. 实用性：建议是否具体、可执行
-  llm_model:
-    name: "qwen_llm"
-    temperature: 0.3
+
+    **输出格式**: 请按以下 JSON 格式输出审核结果：
+    {
+        "is_approved": true/false,
+        "quality_score": 1-10,
+        "issues": ["问题1", "问题2"],
+        "optimized_response": "如果需要优化，提供优化后的回答；如果不需要优化，返回原回答"
+    }
+
+llm_model:
+  name: "dashscope_llm"
+  model_name: "qwen-max"
+
+llm_config:
+  temperature: 0.3
+  max_tokens: 3000
+  top_p: 0.8
+
+review_criteria:
+  - name: "数据准确性"
+    weight: 0.3
+    description: "回答中的数字是否与提供的数据一致"
+  - name: "逻辑性"
+    weight: 0.2
+    description: "分析是否合理，结论是否有依据"
+  - name: "完整性"
+    weight: 0.2
+    description: "是否充分回答了用户的问题"
+  - name: "专业性"
+    weight: 0.15
+    description: "表述是否专业、清晰"
+  - name: "实用性"
+    weight: 0.15
+    description: "建议是否具体、可执行"
+
 metadata:
   type: "AGENT"
   module: "app.ai.agents.reviewing_agent"

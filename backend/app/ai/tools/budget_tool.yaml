@@ -1,6 +1,13 @@
 info:
   name: "budget_tool"
-  description: "预算查询工具，用于获取预算数据和执行情况"
+  description: "预算查询工具，提供预算数据和执行情况查询"
+
+input_keys:
+  - action # 操作类型：get_budgets, get_budget_progress, get_budget_summary
+  - period_type # 可选，周期类型：month/quarter/year
+  - period_value # 可选，周期值
+  - budget_id # 可选，预算ID（get_budget_progress 时必需）
+
 metadata:
   type: "TOOL"
   module: "app.ai.tools.budget_tool"

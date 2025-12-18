@@ -27,7 +27,9 @@ class PlanningAgent(Agent):
     
     @property
     def description(self) -> str:
-        return "问题规划 Agent，负责将复杂的用户问题拆解为多个子问题"
+        """从 YAML 配置读取描述"""
+        config = self._load_config()
+        return config.get('info', {}).get('description', '规划 Agent')
     
     def _build_prompt(self, user_question: str) -> str:
         """构建规划提示词"""

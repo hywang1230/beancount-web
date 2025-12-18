@@ -1,19 +1,79 @@
 info:
   name: "executing_agent"
-  description: "数据执行 Agent，负责根据子问题智能调用工具获取相关数据"
+  description: "执行 Agent，负责调用工具获取数据"
+
 profile:
   introduction: |
-    你是一名财务数据执行专家，能够智能识别问题意图并调用相应的工具获取数据。
+    你是一名专业的数据执行专家，能够根据问题智能选择合适的工具获取所需数据。
   target: |
-    使用 LLM 智能识别用户问题的意图和时间参数，调用合适的工具获取所需数据。
-  llm_model:
-    name: "qwen_llm"
-    temperature: 0.1
+    根据规划的子问题，调用相应的工具获取财务数据，并整理成结构化的数据摘要。
+  instruction: |
+    **可用工具**:
+    - ledger_tool: 账本查询（交易记录、收支摘要）
+    - budget_tool: 预算管理（预算执行情况）
+    - report_tool: 报表分析（趋势、资产负债表）
+
+    **执行流程**:
+    1. 分析子问题，确定所需工具和参数
+    2. 使用 LLM 进行智能意图识别
+    3. 调用数据工具获取信息
+    4. 整理并返回结构化数据摘要
+
+  # 意图识别提示词模板
+  intent_recognition_prompt: |
+    分析用户财务问题，输出需要调用的工具和参数（JSON格式）。
+
+    **可用工具**
+
+    1. time_parser_tool - 时间解析（优先使用）
+       - parse_time: 解析时间表达式，参数 time_expression
+       - 支持：上个月、8.5-9.12、第一季度、今年等
+       - 返回：start_date, end_date (YYYY-MM-DD 格式)
+
+    2. ledger_tool - 账本查询
+       - get_current_month_summary: 当月收支摘要
+       - get_period_summary: 指定时间段收支（需 start_date, end_date 参数，格式 YYYY-MM-DD）
+       
+    3. budget_tool - 预算查询
+       - get_budget_summary: 预算执行情况
+       
+    4. report_tool - 趋势报表
+       - get_trends: 收支趋势（可选 months 参数）
+       - get_balance_sheet: 资产负债表
+
+    **时间处理流程**
+    1. 如果问题包含时间表达式（如"上个月"、"8月"、"8.5-9.12"），先调用 time_parser_tool
+    2. 使用解析后的 start_date 和 end_date 调用 ledger_tool.get_period_summary
+
+    **输出格式**
+
+    ```json
+    {{
+      "tool_calls": [
+        {{"tool": "time_parser_tool", "action": "parse_time", "params": {{"time_expression": "上个月"}}}},
+        {{"tool": "ledger_tool", "action": "get_period_summary", "params": {{"start_date": "2025-11-01", "end_date": "2025-11-30"}}}}
+      ]
+    }}
+    ```
+
+    用户问题: {question}
+
+    输出JSON：
+
+llm_model:
+  name: "dashscope_llm"
+  model_name: "qwen-max"
+
+llm_config:
+  temperature: 0.1
+  max_tokens: 500
+
 action:
-  tool:
+  tool_name_list:
     - ledger_tool
     - budget_tool
     - report_tool
+
 metadata:
   type: "AGENT"
   module: "app.ai.agents.executing_agent"

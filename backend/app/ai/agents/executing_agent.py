@@ -15,6 +15,7 @@ from app.ai.tools.base import ToolInput
 from app.ai.tools.ledger_tool import ledger_tool
 from app.ai.tools.budget_tool import budget_tool
 from app.ai.tools.report_tool import report_tool
+from app.ai.tools.time_parser_tool import time_parser_tool
 
 logger = logging.getLogger(__name__)
 
@@ -27,53 +28,31 @@ class ExecutingAgent(Agent):
     使用 LLM 进行智能意图识别和参数提取。
     """
     
-    # 用于意图识别的系统提示词
-    INTENT_RECOGNITION_PROMPT = """分析用户财务问题，输出需要调用的工具和参数（JSON格式）。
-
-**可用工具**
-
-1. ledger_tool - 账本查询
-   - get_current_month_summary: 当月收支摘要
-   - get_period_summary: 指定时间段收支（需 start_date, end_date 参数，格式 YYYY-MM-DD）
-   
-2. budget_tool - 预算查询
-   - get_budget_summary: 预算执行情况
-
-3. report_tool - 趋势报表
-   - get_trends: 收支趋势（可选 months 参数）
-   - get_balance_sheet: 资产负债表
-
-**时间识别**（今天: {today}）
-
-- 本月/这个月 → get_current_month_summary
-- 上月 → get_period_summary，上月1日至月末
-- 今年 → get_period_summary，{year}-01-01 至 {today}
-- 去年 → get_period_summary，上年1月1日至12月31日
-- N月 → get_period_summary，该月范围
-- YYYY年N月 → get_period_summary，该月范围
-- YYYY年 → get_period_summary，该年范围
-
-**输出格式**
-
-```json
-{{
-  "tool_calls": [
-    {{"tool": "ledger_tool", "action": "get_period_summary", "params": {{"start_date": "2025-01-01", "end_date": "2025-12-16"}}}}
-  ]
-}}
-```
-
-用户问题: {question}
-
-输出JSON："""
-
     def __init__(self):
         """初始化执行 Agent"""
+        super().__init__()
         self.tools = {
             "ledger": ledger_tool,
             "budget": budget_tool,
-            "report": report_tool
+            "report": report_tool,
+            "time_parser": time_parser_tool
         }
+        # 从配置加载意图识别提示词
+        self._intent_prompt_template = None
+    
+    def _get_intent_recognition_prompt(self) -> str:
+        """从 YAML 配置获取意图识别提示词模板"""
+        if self._intent_prompt_template is None:
+            config = self._load_config()
+            profile = config.get('profile', {})
+            self._intent_prompt_template = profile.get('intent_recognition_prompt', '')
+            
+            # 如果配置中没有，使用默认模板
+            if not self._intent_prompt_template:
+                logger.warning(f"[{self.name}] 配置中未找到 intent_recognition_prompt，使用默认模板")
+                self._intent_prompt_template = "分析用户问题: {question}"
+        
+        return self._intent_prompt_template
     
     @property
     def name(self) -> str:
@@ -81,7 +60,9 @@ class ExecutingAgent(Agent):
     
     @property
     def description(self) -> str:
-        return "数据执行 Agent，负责根据子问题调用工具获取相关数据"
+        """从 YAML 配置读取描述"""
+        config = self._load_config()
+        return config.get('info', {}).get('description', '执行 Agent')
     
     async def _analyze_intent_with_llm(self, question: str) -> Optional[List[Dict[str, Any]]]:
         """
@@ -91,24 +72,27 @@ class ExecutingAgent(Agent):
             question: 用户问题
             
         Returns:
-            工具调用列表，如果分析失败则返回 None
+            工具调用列表，如 [{"tool": "ledger_tool", "action": "get_period_summary", "params": {...}}]
         """
-        from app.ai.llm.dashscope_llm import get_llm
-        
         try:
-            llm = get_llm()
-            now = datetime.now()
-            today = now.strftime("%Y-%m-%d")
-            year = now.year
+            from app.ai.llm.dashscope_llm import get_llm
+            from app.ai.utils import parse_llm_json_response
             
-            prompt = self.INTENT_RECOGNITION_PROMPT.format(
-                today=today,
-                year=year,
-                question=question
-            )
+            llm = get_llm()
+            
+            # 获取配置化的提示词模板
+            prompt_template = self._get_intent_recognition_prompt()
+            
+            # 格式化提示词
+            prompt = prompt_template.format(question=question)
             
             messages = [{"role": "user", "content": prompt}]
-            response = await llm.call(messages, temperature=0.1, max_tokens=500)
+            
+            # 获取 LLM 参数
+            llm_params = self._get_llm_params()
+            
+            logger.debug(f"[ExecutingAgent] 使用 LLM 分析意图，问题: {question}")
+            response = await llm.call(messages, **llm_params)
             
             logger.debug(f"[意图识别] LLM 原始响应: {response}")
             
@@ -131,119 +115,6 @@ class ExecutingAgent(Agent):
             logger.warning(f"[意图识别] LLM 分析失败: {e}")
             return None
     
-    def _parse_time_expression(self, text: str) -> Optional[Tuple[datetime, datetime]]:
-        """
-        解析时间表达式，返回 (start_date, end_date) 元组
-        
-        支持的表达式：
-        - 上个月、上月、前一个月
-        - 上上个月、前两个月
-        - 今年、本年
-        - 去年、上一年
-        - YYYY年 (如: 2024年)
-        - 上周、上一周
-        - 最近N天、过去N天
-        - N月、N月份 (如: 11月、11月份)
-        - YYYY年N月 (如: 2024年11月)
-        """
-        today = datetime.now().date()
-        text_lower = text.lower()
-        
-        # 上个月/上月
-        if re.search(r'上个?月|前一个月', text_lower):
-            last_month = today.replace(day=1) - timedelta(days=1)
-            start = last_month.replace(day=1)
-            end = last_month
-            return (datetime.combine(start, datetime.min.time()),
-                    datetime.combine(end, datetime.max.time()))
-        
-        # 上上个月/前两个月
-        if re.search(r'上上个?月|前两个月', text_lower):
-            two_months_ago = today.replace(day=1) - timedelta(days=1)
-            two_months_ago = two_months_ago.replace(day=1) - timedelta(days=1)
-            start = two_months_ago.replace(day=1)
-            end = (start.replace(day=28) + timedelta(days=4)).replace(day=1) - timedelta(days=1)
-            return (datetime.combine(start, datetime.min.time()),
-                    datetime.combine(end, datetime.max.time()))
-        
-        # 今年/本年
-        if re.search(r'今年|本年', text_lower):
-            start = datetime(today.year, 1, 1).date()
-            end = today  # 截止到今天
-            return (datetime.combine(start, datetime.min.time()),
-                    datetime.combine(end, datetime.max.time()))
-        
-        # YYYY年 格式 (如: 2024年，不带月份)
-        year_only_match = re.search(r'(\d{4})年(?!\d{1,2}月)', text)
-        if year_only_match:
-            year = int(year_only_match.group(1))
-            start = datetime(year, 1, 1).date()
-            # 如果是当前年份，截止到今天；否则截止到年底
-            if year == today.year:
-                end = today
-            else:
-                end = datetime(year, 12, 31).date()
-            return (datetime.combine(start, datetime.min.time()),
-                    datetime.combine(end, datetime.max.time()))
-        
-        # 去年/上一年
-        if re.search(r'去年|上一?年', text_lower):
-            last_year = today.year - 1
-            start = datetime(last_year, 1, 1).date()
-            end = datetime(last_year, 12, 31).date()
-            return (datetime.combine(start, datetime.min.time()),
-                    datetime.combine(end, datetime.max.time()))
-        
-        # 上周/上一周
-        if re.search(r'上一?周', text_lower):
-            # 找到上周一
-            days_since_monday = today.weekday()
-            last_monday = today - timedelta(days=days_since_monday + 7)
-            last_sunday = last_monday + timedelta(days=6)
-            return (datetime.combine(last_monday, datetime.min.time()),
-                    datetime.combine(last_sunday, datetime.max.time()))
-        
-        # 最近/过去N天
-        days_match = re.search(r'(?:最近|过去|近)(\d+)天', text_lower)
-        if days_match:
-            n_days = int(days_match.group(1))
-            start = today - timedelta(days=n_days)
-            return (datetime.combine(start, datetime.min.time()),
-                    datetime.combine(today, datetime.max.time()))
-        
-        # YYYY年N月 格式 (如: 2024年11月)
-        year_month_match = re.search(r'(\d{4})年(\d{1,2})月', text)
-        if year_month_match:
-            year = int(year_month_match.group(1))
-            month = int(year_month_match.group(2))
-            start = datetime(year, month, 1).date()
-            # 计算月末
-            if month == 12:
-                end = datetime(year + 1, 1, 1).date() - timedelta(days=1)
-            else:
-                end = datetime(year, month + 1, 1).date() - timedelta(days=1)
-            return (datetime.combine(start, datetime.min.time()),
-                    datetime.combine(end, datetime.max.time()))
-        
-        # N月/N月份 格式 (如: 11月、11月份) - 默认为当年
-        month_match = re.search(r'(\d{1,2})月份?(?!\d)', text)
-        if month_match:
-            month = int(month_match.group(1))
-            if 1 <= month <= 12:
-                year = today.year
-                # 如果指定的月份大于当前月份，可能是指去年
-                if month > today.month:
-                    year = today.year - 1
-                start = datetime(year, month, 1).date()
-                if month == 12:
-                    end = datetime(year + 1, 1, 1).date() - timedelta(days=1)
-                else:
-                    end = datetime(year, month + 1, 1).date() - timedelta(days=1)
-                return (datetime.combine(start, datetime.min.time()),
-                        datetime.combine(end, datetime.max.time()))
-        
-        return None
-    
     def _determine_tools_needed(self, sub_questions: List[str], analysis_type: str) -> List[Dict[str, Any]]:
         """
         根据子问题确定需要调用的工具
@@ -261,30 +132,16 @@ class ExecutingAgent(Agent):
         keywords_check = " ".join(sub_questions)
         keywords_check_lower = keywords_check.lower()
         
-        # 首先尝试解析时间表达式
-        date_range = self._parse_time_expression(keywords_check)
+        # 注意：时间解析现在由 LLM 意图识别和 time_parser_tool 处理
+        # 此方法仅作为 LLM 意图识别失败时的简单回退逻辑
         
-        # 账本/交易相关
+        # 账本/交易相关 - 默认查询当月
         if any(kw in keywords_check_lower for kw in ["交易", "消费", "花", "支出", "收入", "账单", "明细", "多少钱", "开支", "花费", "最大", "最多", "最高"]):
-            if date_range:
-                # 使用解析出的时间范围
-                start_date, end_date = date_range
-                logger.info(f"检测到时间表达式，使用时间范围: {start_date.date()} ~ {end_date.date()}")
-                tool_calls.append({
-                    "tool": "ledger",
-                    "action": "get_period_summary",
-                    "params": {
-                        "start_date": start_date.strftime("%Y-%m-%d"),
-                        "end_date": end_date.strftime("%Y-%m-%d")
-                    }
-                })
-            elif "本月" in keywords_check_lower or not any(kw in keywords_check_lower for kw in ["上个月", "上月", "去年", "上周", "上年", "今年", "本年"]):
-                # 默认查询当月
-                tool_calls.append({
-                    "tool": "ledger",
-                    "action": "get_current_month_summary",
-                    "params": {}
-                })
+            tool_calls.append({
+                "tool": "ledger",
+                "action": "get_current_month_summary",
+                "params": {}
+            })
         
         # 预算相关
         if any(kw in keywords_check_lower for kw in ["预算", "超支", "额度", "控制"]):
@@ -310,24 +167,13 @@ class ExecutingAgent(Agent):
                 "params": {}
             })
         
-        # 如果没有匹配到任何工具，默认获取当月摘要
+        # 如果没有匹配到任何工具，默认获取当月摘要（作为回退）
         if not tool_calls:
-            if date_range:
-                start_date, end_date = date_range
-                tool_calls.append({
-                    "tool": "ledger",
-                    "action": "get_period_summary",
-                    "params": {
-                        "start_date": start_date.strftime("%Y-%m-%d"),
-                        "end_date": end_date.strftime("%Y-%m-%d")
-                    }
-                })
-            else:
-                tool_calls.append({
-                    "tool": "ledger",
-                    "action": "get_current_month_summary",
-                    "params": {}
-                })
+            tool_calls.append({
+                "tool": "ledger",
+                "action": "get_current_month_summary",
+                "params": {}
+            })
         
         return tool_calls
     

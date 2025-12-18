@@ -74,8 +74,7 @@ class ReportTool(Tool):
                     "total_liabilities": float(result.total_liabilities),
                     "net_worth": float(result.net_worth),
                     "currency": result.currency,
-                    "assets_count": len(result.assets) if result.assets else 0,
-                    "liabilities_count": len(result.liabilities) if result.liabilities else 0
+                    "accounts_count": len(result.accounts) if result.accounts else 0
                 }
             }
         except Exception as e:
@@ -110,8 +109,8 @@ class ReportTool(Tool):
                     "total_expenses": float(result.total_expenses),
                     "net_income": float(result.net_income),
                     "currency": result.currency,
-                    "income_items_count": len(result.income) if result.income else 0,
-                    "expense_items_count": len(result.expenses) if result.expenses else 0
+                    "income_items_count": len(result.income_accounts) if result.income_accounts else 0,
+                    "expense_items_count": len(result.expense_accounts) if result.expense_accounts else 0
                 }
             }
         except Exception as e:
