@@ -26,7 +26,9 @@ class ExpressingAgent(Agent):
     
     @property
     def description(self) -> str:
-        return "结论表达 Agent，负责根据数据生成自然语言回答"
+        """从 YAML 配置读取描述"""
+        config = self._load_config()
+        return config.get('info', {}).get('description', '表达 Agent')
     
     def _build_prompt(self, original_question: str, data_summary: str) -> str:
         """构建表达提示词"""

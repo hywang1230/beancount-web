@@ -115,7 +115,7 @@
     </van-cell-group>
 
     <van-cell-group inset title="应用信息">
-      <van-cell title="版本信息" icon="info-o" value="3.0.0" :border="false" />
+      <van-cell title="版本信息" icon="info-o" value="3.0.2" :border="false" />
 
       <van-cell
         title="关于我们"

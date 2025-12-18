@@ -34,7 +34,8 @@ class LedgerTool(Tool):
 - get_transactions: 获取交易记录，可选参数: start_date, end_date, account, payee, limit
 - get_accounts: 获取所有账户列表
 - get_payees: 获取所有收付方列表
-- get_current_month_summary: 获取当月收支摘要和交易明细"""
+- get_current_month_summary: 获取当月收支摘要和交易明细
+- get_period_summary: 获取指定时间段的收支摘要，必需参数: start_date, end_date (格式: YYYY-MM-DD)"""
     
     def execute(self, tool_input: ToolInput) -> Dict[str, Any]:
         """执行账本查询"""
@@ -48,6 +49,8 @@ class LedgerTool(Tool):
             return self._get_payees()
         elif action == "get_current_month_summary":
             return self._get_current_month_summary()
+        elif action == "get_period_summary":
+            return self._get_period_summary(tool_input)
         else:
             return {"success": False, "error": f"不支持的操作类型: {action}"}
     
@@ -248,6 +251,132 @@ class LedgerTool(Tool):
             }
         except Exception as e:
             logger.error(f"获取当月摘要失败: {e}", exc_info=True)
+            return {"success": False, "error": str(e)}
+    
+    def _get_period_summary(self, tool_input: ToolInput) -> Dict[str, Any]:
+        """获取指定时间段的收支摘要"""
+        from app.services.beancount_service import beancount_service
+        from app.models.schemas import TransactionFilter
+        
+        try:
+            # 获取日期参数
+            start_date_str = tool_input.get_data("start_date")
+            end_date_str = tool_input.get_data("end_date")
+            
+            if not start_date_str or not end_date_str:
+                return {"success": False, "error": "必须提供 start_date 和 end_date 参数"}
+            
+            # 解析日期
+            if isinstance(start_date_str, str):
+                start_date = datetime.strptime(start_date_str, "%Y-%m-%d").date()
+            else:
+                start_date = start_date_str
+            
+            if isinstance(end_date_str, str):
+                end_date = datetime.strptime(end_date_str, "%Y-%m-%d").date()
+            else:
+                end_date = end_date_str
+            
+            # 强制重新加载数据
+            beancount_service.loader.load_entries(force_reload=True)
+            
+            logger.info(f"="*60)
+            logger.info(f"[LedgerTool] 获取时间段摘要: {start_date} ~ {end_date}")
+            
+            # 获取损益表
+            income_statement = beancount_service.get_income_statement(start_date, end_date)
+            
+            # 获取资产负债表（截止到结束日期）
+            balance_sheet = beancount_service.get_balance_sheet(end_date)
+            
+            # 获取交易明细
+            filter_params = TransactionFilter(start_date=start_date, end_date=end_date)
+            transactions = beancount_service.get_transactions(filter_params)
+            
+            # 打印摘要信息
+            logger.info(f"[LedgerTool] 收入总额: {income_statement.total_income}")
+            logger.info(f"[LedgerTool] 支出总额: {income_statement.total_expenses}")
+            logger.info(f"[LedgerTool] 净收入: {income_statement.net_income}")
+            logger.info(f"[LedgerTool] 当期交易数量: {len(transactions)}")
+            logger.info(f"="*60)
+            
+            def extract_category_name(raw_category: str) -> str:
+                """提取分类的中文名称，去除字母前缀"""
+                import re
+                match = re.match(r'^[A-Za-z0-9]+-(.+)$', raw_category)
+                if match:
+                    return match.group(1)
+                return raw_category
+            
+            # 构建支出账户分类汇总
+            expense_by_category = {}
+            for acc in income_statement.expense_accounts:
+                parts = acc.name.split(":")
+                if len(parts) >= 2:
+                    raw_category = parts[1]
+                    category = extract_category_name(raw_category)
+                else:
+                    category = acc.name
+                
+                if category not in expense_by_category:
+                    expense_by_category[category] = {
+                        "category": category,
+                        "amount": 0.0,
+                        "accounts": []
+                    }
+                expense_by_category[category]["amount"] += float(acc.balance)
+                expense_by_category[category]["accounts"].append({
+                    "name": acc.name,
+                    "amount": float(acc.balance)
+                })
+            
+            # 构建收入账户分类汇总
+            income_by_category = {}
+            for acc in income_statement.income_accounts:
+                parts = acc.name.split(":")
+                if len(parts) >= 2:
+                    raw_category = parts[1]
+                    category = extract_category_name(raw_category)
+                else:
+                    category = acc.name
+                
+                if category not in income_by_category:
+                    income_by_category[category] = {
+                        "category": category,
+                        "amount": 0.0,
+                        "accounts": []
+                    }
+                income_by_category[category]["amount"] += abs(float(acc.balance))
+                income_by_category[category]["accounts"].append({
+                    "name": acc.name,
+                    "amount": abs(float(acc.balance))
+                })
+            
+            # 构建时间段描述
+            period_desc = f"{start_date.year}年{start_date.month}月{start_date.day}日 至 {end_date.year}年{end_date.month}月{end_date.day}日"
+            
+            return {
+                "success": True,
+                "period": period_desc,
+                "start_date": start_date.isoformat(),
+                "end_date": end_date.isoformat(),
+                "period_summary": {
+                    "total_income": float(income_statement.total_income),
+                    "total_expenses": float(income_statement.total_expenses),
+                    "net_income": float(income_statement.net_income)
+                },
+                "balance": {
+                    "total_assets": float(balance_sheet.total_assets),
+                    "total_liabilities": float(balance_sheet.total_liabilities),
+                    "net_worth": float(balance_sheet.net_worth)
+                },
+                "expense_by_category": list(expense_by_category.values()),
+                "income_by_category": list(income_by_category.values()),
+                "transactions_count": len(transactions),
+                "transactions": [self._format_transaction(t) for t in transactions]
+            }
+        except Exception as e:
+            logger.error(f"获取时间段摘要失败: {e}", exc_info=True)
             return {"success": False, "error": str(e)}
     
     def _format_transaction(self, tx) -> Dict[str, Any]:

@@ -1,19 +1,42 @@
 info:
   name: "finance_master_agent"
-  description: "财务顾问主 Agent，协调多个子 Agent 完成财务分析任务"
+  description: "财务顾问主 Agent，协调 PEER 多 Agent 架构"
+
 profile:
   introduction: |
-    你是一名专业的AI财务顾问，能够全面分析用户的财务状况并提供专业建议。
+    你是一名专业的 AI 财务顾问，能够全面分析用户的财务状况并提供专业建议。
   target: |
     协调 Planning、Executing、Expressing、Reviewing 四个子 Agent，
     实现完整的 PEER 多 Agent 协作模式，为用户提供高质量的财务分析服务。
+  instruction: |
+    **PEER 工作流程**:
+    1. Plan: 调用 planning_agent 拆解问题
+    2. Execute: 调用 executing_agent 获取数据
+    3. Express: 调用 expressing_agent 生成回答
+    4. Review: 调用 reviewing_agent 优化回答（可配置）
+
+    **质量标准**:
+    - 回答必须基于真实数据，不能臆造
+    - 分析要清晰、专业、有洞察力
+    - 建议要具体、可操作
+
+llm_model:
+  name: "dashscope_llm"
+  model_name: "qwen-max"
+
+llm_config:
+  temperature: 0.5
+  max_tokens: 4000
+
 sub_agents:
   - planning_agent
   - executing_agent
   - expressing_agent
   - reviewing_agent
+
 config:
-  enable_review: false # 默认关闭审核以提高响应速度
+  enable_review: true # 开启审核以保证输出质量
+
 metadata:
   type: "AGENT"
   module: "app.ai.agents.finance_master_agent"

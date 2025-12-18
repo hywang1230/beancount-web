@@ -9,16 +9,22 @@
       <van-icon :name="isOpen ? 'cross' : 'chat-o'" size="24" />
     </div>
 
-    <!-- 对话框 -->
-    <transition name="slide-up">
-      <div v-if="isOpen" class="ai-dialog">
-        <div class="ai-header">
-          <div class="ai-title">
-            <van-icon name="smile-o" size="20" />
-            <span>AI财务助手</span>
-          </div>
-          <van-icon name="cross" size="20" @click="isOpen = false" class="close-btn" />
-        </div>
+    <!-- 全屏对话框 -->
+    <van-popup
+      v-model:show="isOpen"
+      position="right"
+      :style="{ width: '100%', height: '100%' }"
+      teleport="body"
+      :overlay="false"
+      class="ai-popup"
+    >
+      <div class="ai-container">
+        <van-nav-bar
+          title="AI财务助手"
+          left-text="取消"
+          left-arrow
+          @click-left="isOpen = false"
+        />
 
         <div class="ai-messages" ref="messagesRef">
           <!-- 欢迎消息 -->
@@ -84,7 +90,7 @@
           </van-field>
         </div>
       </div>
-    </transition>
+    </van-popup>
   </div>
 </template>
 
@@ -256,14 +262,13 @@ const formatMessage = (content: string): string => {
 </script>
 
 <style scoped>
-.ai-assistant {
+
+/* 浮动按钮样式 */
+.ai-fab {
   position: fixed;
   bottom: 80px;
   right: 16px;
   z-index: 999;
-}
-
-.ai-fab {
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -283,52 +288,23 @@ const formatMessage = (content: string): string => {
 }
 
 .ai-fab.is-open {
-  background: linear-gradient(135deg, #ff7675 0%, #fd79a8 100%);
+  display: none; 
 }
 
-.ai-dialog {
-  position: fixed;
-  top: 46px;  /* 顶部导航栏高度 */
-  left: 0;
-  right: 0;
-  bottom: 50px;  /* 底部tabbar高度 */
-  width: 100vw;
-  height: auto;
-  background: var(--van-background-2);
-  border-radius: 0;
-  box-shadow: none;
+/* 弹出层 */
+.ai-popup {
+  z-index: 2000 !important;
+}
+
+/* 弹出层容器 */
+.ai-container {
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  z-index: 1000;
+  height: 100%;
+  background: var(--van-background-2);
 }
 
-.ai-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 16px;
-  background: linear-gradient(135deg, #00b894 0%, #00cec9 100%);
-  color: white;
-}
-
-.ai-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-weight: 600;
-}
-
-.close-btn {
-  cursor: pointer;
-  opacity: 0.8;
-  transition: opacity 0.2s;
-}
-
-.close-btn:hover {
-  opacity: 1;
-}
-
+/* 消息列表区域 */
 .ai-messages {
   flex: 1;
   overflow-y: auto;
@@ -336,12 +312,16 @@ const formatMessage = (content: string): string => {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  /* 确保底部有足够空间不被输入框遮挡 */
+  padding-bottom: 20px;
 }
 
+/* 欢迎消息样式 */
 .welcome-message {
   text-align: center;
   padding: 20px;
   color: var(--van-text-color);
+  margin-top: 40px;
 }
 
 .welcome-icon {
@@ -376,6 +356,7 @@ const formatMessage = (content: string): string => {
   transform: scale(1.05);
 }
 
+/* 消息气泡样式 */
 .message {
   display: flex;
   max-width: 85%;
@@ -417,12 +398,12 @@ const formatMessage = (content: string): string => {
   }
 }
 
-/* Vant深色模式类名适配 */
 .van-theme-dark .message.assistant .message-content {
   background: #2c2c2c;
   color: #e0e0e0;
 }
 
+/* Markdown 内容样式 */
 .message-text :deep(p) {
   margin: 0 0 8px 0;
 }
@@ -444,6 +425,7 @@ const formatMessage = (content: string): string => {
   font-size: 13px;
 }
 
+/* 加载动画 */
 .loading-dots {
   display: flex;
   gap: 4px;
@@ -474,10 +456,13 @@ const formatMessage = (content: string): string => {
   }
 }
 
+/* 输入框区域 */
 .ai-input {
   padding: 12px;
   border-top: 1px solid var(--van-border-color);
   background: var(--van-background-2);
+  /* 适配底部安全区 */
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
 }
 
 .ai-input :deep(.van-field) {
@@ -518,17 +503,5 @@ const formatMessage = (content: string): string => {
 
 .van-theme-dark .ai-input :deep(.van-field__control::placeholder) {
   color: #888888;
-}
-
-/* 动画 */
-.slide-up-enter-active,
-.slide-up-leave-active {
-  transition: all 0.3s ease;
-}
-
-.slide-up-enter-from,
-.slide-up-leave-to {
-  opacity: 0;
-  transform: translateY(20px);
 }
 </style>

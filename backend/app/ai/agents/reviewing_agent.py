@@ -27,7 +27,9 @@ class ReviewingAgent(Agent):
     
     @property
     def description(self) -> str:
-        return "审核 Agent，负责审核和优化最终回答的质量"
+        """从 YAML 配置读取描述"""
+        config = self._load_config()
+        return config.get('info', {}).get('description', '审核 Agent')
     
     def _build_prompt(self, original_question: str, response: str, data_summary: str) -> str:
         """构建审核提示词"""

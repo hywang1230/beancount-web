@@ -1,6 +1,15 @@
 info:
   name: "ledger_tool"
-  description: "账本查询工具，用于获取 Beancount 账本数据，包括交易记录、账户列表、当月摘要等"
+  description: "账本查询工具，提供 Beancount 账本数据的查询能力"
+
+input_keys:
+  - action # 操作类型：get_current_month_summary, get_period_summary, get_transactions 等
+  - start_date # 可选，开始日期 (YYYY-MM-DD)
+  - end_date # 可选，结束日期 (YYYY-MM-DD)
+  - account # 可选，账户筛选
+  - payee # 可选，收付方筛选
+  - limit # 可选，返回记录数限制
+
 metadata:
   type: "TOOL"
   module: "app.ai.tools.ledger_tool"

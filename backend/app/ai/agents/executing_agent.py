@@ -6,13 +6,16 @@
 """
 import json
 import logging
-from typing import List, Dict, Any
+import re
+from datetime import datetime, timedelta
+from typing import List, Dict, Any, Optional, Tuple
 
 from app.ai.agents.base import Agent, AgentInput, AgentOutput
 from app.ai.tools.base import ToolInput
 from app.ai.tools.ledger_tool import ledger_tool
 from app.ai.tools.budget_tool import budget_tool
 from app.ai.tools.report_tool import report_tool
+from app.ai.tools.time_parser_tool import time_parser_tool
 
 logger = logging.getLogger(__name__)
 
@@ -22,15 +25,34 @@ class ExecutingAgent(Agent):
     执行 Agent
     
     根据规划的子问题，调用相应的工具获取数据。
+    使用 LLM 进行智能意图识别和参数提取。
     """
     
     def __init__(self):
         """初始化执行 Agent"""
+        super().__init__()
         self.tools = {
             "ledger": ledger_tool,
             "budget": budget_tool,
-            "report": report_tool
+            "report": report_tool,
+            "time_parser": time_parser_tool
         }
+        # 从配置加载意图识别提示词
+        self._intent_prompt_template = None
+    
+    def _get_intent_recognition_prompt(self) -> str:
+        """从 YAML 配置获取意图识别提示词模板"""
+        if self._intent_prompt_template is None:
+            config = self._load_config()
+            profile = config.get('profile', {})
+            self._intent_prompt_template = profile.get('intent_recognition_prompt', '')
+            
+            # 如果配置中没有，使用默认模板
+            if not self._intent_prompt_template:
+                logger.warning(f"[{self.name}] 配置中未找到 intent_recognition_prompt，使用默认模板")
+                self._intent_prompt_template = "分析用户问题: {question}"
+        
+        return self._intent_prompt_template
     
     @property
     def name(self) -> str:
@@ -38,7 +60,60 @@ class ExecutingAgent(Agent):
     
     @property
     def description(self) -> str:
-        return "数据执行 Agent，负责根据子问题调用工具获取相关数据"
+        """从 YAML 配置读取描述"""
+        config = self._load_config()
+        return config.get('info', {}).get('description', '执行 Agent')
+    
+    async def _analyze_intent_with_llm(self, question: str) -> Optional[List[Dict[str, Any]]]:
+        """
+        使用 LLM 分析用户意图，提取工具调用参数
+        
+        Args:
+            question: 用户问题
+            
+        Returns:
+            工具调用列表，如 [{"tool": "ledger_tool", "action": "get_period_summary", "params": {...}}]
+        """
+        try:
+            from app.ai.llm.dashscope_llm import get_llm
+            from app.ai.utils import parse_llm_json_response
+            
+            llm = get_llm()
+            
+            # 获取配置化的提示词模板
+            prompt_template = self._get_intent_recognition_prompt()
+            
+            # 格式化提示词
+            prompt = prompt_template.format(question=question)
+            
+            messages = [{"role": "user", "content": prompt}]
+            
+            # 获取 LLM 参数
+            llm_params = self._get_llm_params()
+            
+            logger.debug(f"[ExecutingAgent] 使用 LLM 分析意图，问题: {question}")
+            response = await llm.call(messages, **llm_params)
+            
+            logger.debug(f"[意图识别] LLM 原始响应: {response}")
+            
+            # 提取 JSON
+            json_match = re.search(r'\{[\s\S]*\}', response)
+            if json_match:
+                result = json.loads(json_match.group())
+                tool_calls = result.get("tool_calls", [])
+                
+                if tool_calls:
+                    logger.info(f"[意图识别] LLM 识别成功: {len(tool_calls)} 个工具调用")
+                    for call in tool_calls:
+                        logger.info(f"  - {call.get('tool')}.{call.get('action')}: {call.get('params', {})}")
+                    return tool_calls
+            
+            logger.warning(f"[意图识别] 无法从 LLM 响应中提取有效 JSON")
+            return None
+            
+        except Exception as e:
+            logger.warning(f"[意图识别] LLM 分析失败: {e}")
+            return None
     
     def _determine_tools_needed(self, sub_questions: List[str], analysis_type: str) -> List[Dict[str, Any]]:
         """
@@ -54,10 +129,14 @@ class ExecutingAgent(Agent):
         tool_calls = []
         
         # 基于分析类型和关键词确定需要的工具
-        keywords_check = " ".join(sub_questions).lower()
+        keywords_check = " ".join(sub_questions)
+        keywords_check_lower = keywords_check.lower()
         
-        # 账本/交易相关
-        if any(kw in keywords_check for kw in ["交易", "消费", "花", "支出", "收入", "本月", "账单", "明细"]):
+        # 注意：时间解析现在由 LLM 意图识别和 time_parser_tool 处理
+        # 此方法仅作为 LLM 意图识别失败时的简单回退逻辑
+        
+        # 账本/交易相关 - 默认查询当月
+        if any(kw in keywords_check_lower for kw in ["交易", "消费", "花", "支出", "收入", "账单", "明细", "多少钱", "开支", "花费", "最大", "最多", "最高"]):
             tool_calls.append({
                 "tool": "ledger",
                 "action": "get_current_month_summary",
@@ -65,7 +144,7 @@ class ExecutingAgent(Agent):
             })
         
         # 预算相关
-        if any(kw in keywords_check for kw in ["预算", "超支", "额度", "控制"]):
+        if any(kw in keywords_check_lower for kw in ["预算", "超支", "额度", "控制"]):
             tool_calls.append({
                 "tool": "budget",
                 "action": "get_budget_summary",
@@ -73,7 +152,7 @@ class ExecutingAgent(Agent):
             })
         
         # 报表/趋势相关
-        if any(kw in keywords_check for kw in ["趋势", "变化", "对比", "历史", "走势"]):
+        if any(kw in keywords_check_lower for kw in ["趋势", "变化", "对比", "历史", "走势"]):
             tool_calls.append({
                 "tool": "report",
                 "action": "get_trends",
@@ -81,14 +160,14 @@ class ExecutingAgent(Agent):
             })
         
         # 资产相关
-        if any(kw in keywords_check for kw in ["资产", "负债", "净值", "财产"]):
+        if any(kw in keywords_check_lower for kw in ["资产", "负债", "净值", "财产"]):
             tool_calls.append({
                 "tool": "report",
                 "action": "get_balance_sheet",
                 "params": {}
             })
         
-        # 如果没有匹配到任何工具，默认获取当月摘要
+        # 如果没有匹配到任何工具，默认获取当月摘要（作为回退）
         if not tool_calls:
             tool_calls.append({
                 "tool": "ledger",
@@ -112,17 +191,28 @@ class ExecutingAgent(Agent):
             )
         
         try:
-            # 确定需要调用的工具
-            tool_calls = self._determine_tools_needed(sub_questions, analysis_type)
+            # 构建完整的查询文本
+            full_question = original_question or " ".join(sub_questions)
+            
+            # 优先尝试使用 LLM 进行意图识别
+            tool_calls = await self._analyze_intent_with_llm(full_question)
+            
+            # 如果 LLM 分析失败，回退到关键词匹配
+            if not tool_calls:
+                logger.info("[意图识别] LLM 分析未返回结果，回退到关键词匹配")
+                tool_calls = self._determine_tools_needed(sub_questions, analysis_type)
             
             logger.info(f"执行数据查询: 子问题数={len(sub_questions)}, 工具调用数={len(tool_calls)}")
             
             # 执行工具调用
             collected_data = {}
             for call in tool_calls:
-                tool_name = call["tool"]
-                action = call["action"]
-                params = call["params"]
+                tool_name = call.get("tool", "")
+                action = call.get("action", "")
+                params = call.get("params", {})
+                
+                # 处理 LLM 可能返回的工具名称格式（如 "ledger_tool" -> "ledger"）
+                tool_name = tool_name.replace("_tool", "")
                 
                 tool = self.tools.get(tool_name)
                 if tool:
@@ -134,6 +224,8 @@ class ExecutingAgent(Agent):
                         logger.info(f"工具调用成功: {tool_name}.{action}")
                     else:
                         logger.warning(f"工具调用失败: {tool_name}.{action} - {result.get('error')}")
+                else:
+                    logger.warning(f"未知工具: {tool_name}")
             
             # 构建数据摘要
             data_summary = self._build_data_summary(collected_data)
@@ -215,6 +307,66 @@ class ExecutingAgent(Agent):
                     desc = f"{tx.get('payee', '')} {tx.get('narration', '')}".strip() or ""
                     postings = tx.get("postings", [])
                     # 包含账户信息，帮助 AI 理解每笔交易的分类
+                    amounts = [f"{p.get('account', '')}: {p.get('amount', 0):.2f} {p.get('currency', 'CNY')}" for p in postings]
+                    tx_details.append(f"  - {date} {desc}: {', '.join(amounts)}")
+                
+                summary_parts.append(f"""【交易明细】(共{len(transactions)}笔)
+{chr(10).join(tx_details)}""")
+        
+        # 处理时间段摘要 (get_period_summary)
+        if "ledger_get_period_summary" in collected_data:
+            data = collected_data["ledger_get_period_summary"]
+            period_summary = data.get("period_summary", {})
+            balance = data.get("balance", {})
+            period = data.get("period", "指定时间段")
+            
+            summary_parts.append(f"""【{period} 收支情况】
+- 收入总额: {period_summary.get('total_income', 0):.2f} 元
+- 支出总额: {period_summary.get('total_expenses', 0):.2f} 元
+- 结余: {period_summary.get('net_income', 0):.2f} 元
+- 交易笔数: {data.get('transactions_count', 0)} 笔""")
+            
+            summary_parts.append(f"""【资产负债情况】(截止 {data.get('end_date', '')})
+- 总资产: {balance.get('total_assets', 0):.2f} 元
+- 总负债: {balance.get('total_liabilities', 0):.2f} 元
+- 净资产: {balance.get('net_worth', 0):.2f} 元""")
+            
+            # 添加按账户分类的支出汇总
+            expense_by_category = data.get("expense_by_category", [])
+            if expense_by_category:
+                category_lines = []
+                sorted_expenses = sorted(expense_by_category, key=lambda x: x.get('amount', 0), reverse=True)
+                for cat in sorted_expenses:
+                    category_name = cat.get('category', '')
+                    amount = cat.get('amount', 0)
+                    sub_accounts = cat.get('accounts', [])
+                    sub_details = ", ".join([f"{acc.get('name', '')}: {acc.get('amount', 0):.2f}" for acc in sub_accounts])
+                    category_lines.append(f"  - {category_name}: {amount:.2f} 元 ({sub_details})")
+                
+                summary_parts.append(f"""【按账户分类的支出汇总】
+{chr(10).join(category_lines)}""")
+            
+            # 添加按账户分类的收入汇总
+            income_by_category = data.get("income_by_category", [])
+            if income_by_category:
+                income_lines = []
+                sorted_incomes = sorted(income_by_category, key=lambda x: x.get('amount', 0), reverse=True)
+                for cat in sorted_incomes:
+                    category_name = cat.get('category', '')
+                    amount = cat.get('amount', 0)
+                    income_lines.append(f"  - {category_name}: {amount:.2f} 元")
+                
+                summary_parts.append(f"""【按账户分类的收入汇总】
+{chr(10).join(income_lines)}""")
+            
+            # 添加交易明细
+            transactions = data.get("transactions", [])
+            if transactions:
+                tx_details = []
+                for tx in transactions:
+                    date = tx.get("date", "")
+                    desc = f"{tx.get('payee', '')} {tx.get('narration', '')}".strip() or ""
+                    postings = tx.get("postings", [])
                     amounts = [f"{p.get('account', '')}: {p.get('amount', 0):.2f} {p.get('currency', 'CNY')}" for p in postings]
                     tx_details.append(f"  - {date} {desc}: {', '.join(amounts)}")
                 

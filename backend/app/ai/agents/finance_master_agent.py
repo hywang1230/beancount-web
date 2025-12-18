@@ -32,8 +32,9 @@ class FinanceMasterAgent(Agent):
         初始化主 Agent
         
         Args:
-            enable_review: 是否启用审核阶段（可关闭以提高响应速度）
+            enable_review: 是否启用审核阶段（默认开启以保证输出质量）
         """
+        super().__init__()
         self.enable_review = enable_review
         self.planning_agent = planning_agent
         self.executing_agent = executing_agent
@@ -46,7 +47,9 @@ class FinanceMasterAgent(Agent):
     
     @property
     def description(self) -> str:
-        return "财务顾问主 Agent，协调多个子 Agent 完成财务分析任务"
+        """从 YAML 配置读取描述"""
+        config = self._load_config()
+        return config.get('info', {}).get('description', '财务顾问主 Agent')
     
     async def run(self, agent_input: AgentInput) -> AgentOutput:
         """
@@ -312,4 +315,4 @@ class FinanceMasterAgent(Agent):
 
 
 # Agent 实例
-finance_master_agent = FinanceMasterAgent(enable_review=False)  # 默认关闭审核以提高速度
+finance_master_agent = FinanceMasterAgent(enable_review=True)  # 开启审核以保证输出质量
